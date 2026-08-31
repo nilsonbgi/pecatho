@@ -26,71 +26,84 @@ export default function AnunciantesPage() {
 
   useEffect(() => {
     let active = true;
-    setMetaLoading(true);
-    Promise.all([
-      supabase.from("categories").select("id,name").eq("display", true).order("name"),
-      supabase.from("states").select("id,uf,name").order("name"),
-    ])
-      .then(([categoriesResult, statesResult]) => {
-        if (!active) return;
+    const loadMetadata = async () => {
+      setMetaLoading(true);
+      try {
+        const [categoriesResult, statesResult] = await Promise.all([
+          supabase.from("categories").select("id,name").eq("display", true).order("name"),
+          supabase.from("states").select("id,uf,name").order("name"),
+        ]);
         if (categoriesResult.error) throw categoriesResult.error;
         if (statesResult.error) throw statesResult.error;
+        if (!active) return;
         setCategories(categoriesResult.data ?? []);
         setStates(statesResult.data ?? []);
-      })
-      .catch((err) => {
+      } catch (err: unknown) {
         console.error("Erro ao carregar filtros públicos", err);
         if (active) setError("Não foi possível carregar as categorias e os Estados.");
-      })
-      .finally(() => { if (active) setMetaLoading(false); });
+      } finally {
+        if (active) setMetaLoading(false);
+      }
+    };
+    void loadMetadata();
     return () => { active = false; };
   }, [supabase]);
 
   useEffect(() => {
     let active = true;
-    setCityId("");
-    if (!stateId) { setCities([]); return; }
-    setCitiesLoading(true);
-    supabase.from("cities").select("id,name,state_id").eq("state_id", Number(stateId)).order("name").limit(1000)
-      .then(({ data, error: queryError }) => {
-        if (!active) return;
+    const loadCities = async () => {
+      setCityId("");
+      if (!stateId) { setCities([]); setCitiesLoading(false); return; }
+      setCitiesLoading(true);
+      try {
+        const { data, error: queryError } = await supabase
+          .from("cities")
+          .select("id,name,state_id")
+          .eq("state_id", Number(stateId))
+          .order("name")
+          .limit(1000);
         if (queryError) throw queryError;
-        setCities(data ?? []);
-      })
-      .catch((err) => {
+        if (active) setCities(data ?? []);
+      } catch (err: unknown) {
         console.error("Erro ao carregar cidades", err);
         if (active) setCities([]);
-      })
-      .finally(() => { if (active) setCitiesLoading(false); });
+      } finally {
+        if (active) setCitiesLoading(false);
+      }
+    };
+    void loadCities();
     return () => { active = false; };
   }, [stateId, supabase]);
 
   useEffect(() => {
     let active = true;
-    setLoading(true); setError("");
-    let request = supabase
-      .from("advertiser_profiles")
-      .select("id,slug,title,display_name,summary,city_id,state_id,category_id,verification_status,created_at")
-      .eq("status", "published")
-      .order("created_at", { ascending: false })
-      .limit(48);
-    if (categoryId) request = request.eq("category_id", Number(categoryId));
-    if (stateId) request = request.eq("state_id", Number(stateId));
-    if (cityId) request = request.eq("city_id", Number(cityId));
-    if (query.trim()) {
-      const clean = query.trim().replace(/[%_,]/g, " ");
-      request = request.or(`title.ilike.%${clean}%,display_name.ilike.%${clean}%,summary.ilike.%${clean}%`);
-    }
-    request.then(({ data, error: queryError }) => {
-      if (!active) return;
-      if (queryError) throw queryError;
-      setAdvertisers(data ?? []);
-    })
-      .catch((err) => {
+    const loadAdvertisers = async () => {
+      setLoading(true); setError("");
+      let request = supabase
+        .from("advertiser_profiles")
+        .select("id,slug,title,display_name,summary,city_id,state_id,category_id,verification_status,created_at")
+        .eq("status", "published")
+        .order("created_at", { ascending: false })
+        .limit(48);
+      if (categoryId) request = request.eq("category_id", Number(categoryId));
+      if (stateId) request = request.eq("state_id", Number(stateId));
+      if (cityId) request = request.eq("city_id", Number(cityId));
+      if (query.trim()) {
+        const clean = query.trim().replace(/[%_,]/g, " ");
+        request = request.or(`title.ilike.%${clean}%,display_name.ilike.%${clean}%,summary.ilike.%${clean}%`);
+      }
+      try {
+        const { data, error: queryError } = await request;
+        if (queryError) throw queryError;
+        if (active) setAdvertisers(data ?? []);
+      } catch (err: unknown) {
         console.error("Erro ao carregar anunciantes", err);
         if (active) { setAdvertisers([]); setError("Não foi possível carregar os anunciantes publicados."); }
-      })
-      .finally(() => { if (active) setLoading(false); });
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    void loadAdvertisers();
     return () => { active = false; };
   }, [categoryId, stateId, cityId, query, supabase]);
 
