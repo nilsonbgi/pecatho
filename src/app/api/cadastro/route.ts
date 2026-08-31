@@ -8,14 +8,10 @@ function isAdult(value: string) { const d = new Date(`${value}T00:00:00Z`); if (
 async function geocode(address: string, cep: string) {
   try {
     const url = new URL("https://nominatim.openstreetmap.org/search");
-    url.searchParams.set("format", "jsonv2");
-    url.searchParams.set("limit", "1");
-    url.searchParams.set("countrycodes", "br");
-    url.searchParams.set("q", `${address}, Brasil, CEP ${cep}`);
+    url.searchParams.set("format", "jsonv2"); url.searchParams.set("limit", "1"); url.searchParams.set("countrycodes", "br"); url.searchParams.set("q", `${address}, Brasil, CEP ${cep}`);
     const response = await fetch(url, { headers: { "User-Agent": "Pecatho/1.0 (localizacao@pecatho.com.br)" }, cache: "no-store" });
     if (!response.ok) return null;
-    const data = await response.json();
-    const first = Array.isArray(data) ? data[0] : null;
+    const data = await response.json(); const first = Array.isArray(data) ? data[0] : null;
     if (!first?.lat || !first?.lon) return null;
     return { latitude: Number(first.lat), longitude: Number(first.lon) };
   } catch { return null; }
@@ -24,22 +20,30 @@ async function geocode(address: string, cep: string) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { userId, name, email, cpf, birthDate, phone, cep, street, number, complement, neighborhood, city, uf } = body ?? {};
-    if (!userId || !name || !email || !validCpf(cpf) || !isAdult(birthDate) || digits(cep).length !== 8 || !street || !number || !neighborhood || !city || !uf) return NextResponse.json({ error: "Dados cadastrais inválidos ou incompletos." }, { status: 400 });
+    const { userId, name, email, cpf, birthDate, phone, cep, street, number, complement, neighborhood, city, uf, ibgeCode } = body ?? {};
+    if (!userId || !name || !email || !validCpf(cpf) || !isAdult(birthDate) || digits(cep).length !== 8 || !street || !number || !neighborhood || !city || !uf || !/^\d{7}$/.test(String(ibgeCode || ""))) return NextResponse.json({ error: "Dados cadastrais inválidos ou incompletos." }, { status: 400 });
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.NEXT_PUBLIC_SUPABASE_URL) return NextResponse.json({ error: "Configuração do servidor indisponível." }, { status: 500 });
     const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
     const { data: authUser, error: authError } = await admin.auth.admin.getUserById(userId);
     if (authError || !authUser.user || authUser.user.email?.toLowerCase() !== String(email).toLowerCase()) return NextResponse.json({ error: "Usuário de autenticação não pôde ser validado." }, { status: 401 });
+
+    const { data: cityRow, error: cityError } = await admin.from("cities").select("id,state_id,name,ibge_code").eq("ibge_code", String(ibgeCode)).maybeSingle();
+    if (cityError || !cityRow) return NextResponse.json({ error: "O município retornado pelo CEP não está cadastrado na base territorial do Pecatho." }, { status: 422 });
+    const { data: stateRow, error: stateError } = await admin.from("states").select("id,uf,name").eq("id", cityRow.state_id).maybeSingle();
+    if (stateError || !stateRow || stateRow.uf !== String(uf).toUpperCase()) return NextResponse.json({ error: "A UF retornada pelo CEP não corresponde ao município validado." }, { status: 422 });
+    if (cityRow.name.toLocaleLowerCase("pt-BR") !== String(city).toLocaleLowerCase("pt-BR")) return NextResponse.json({ error: "A cidade retornada pelo CEP não corresponde à base territorial do Pecatho." }, { status: 422 });
+
     const { data: existing } = await admin.from("profiles").select("id").eq("cpf", digits(cpf)).neq("id", userId).maybeSingle();
     if (existing) return NextResponse.json({ error: "Este CPF já está associado a outra conta." }, { status: 409 });
     const { error: profileError } = await admin.from("profiles").upsert({ id: userId, display_name: name, legal_name: name, email, phone, cpf: digits(cpf), birth_date: birthDate }, { onConflict: "id" });
     if (profileError) return NextResponse.json({ error: "Não foi possível salvar os dados pessoais." }, { status: 500 });
+
     await admin.from("user_addresses").update({ is_primary: false }).eq("user_id", userId);
     const coordinates = await geocode(`${street}, ${number}, ${neighborhood}, ${city}, ${uf}`, digits(cep));
     const publicLatitude = coordinates ? Number(coordinates.latitude.toFixed(2)) : null;
     const publicLongitude = coordinates ? Number(coordinates.longitude.toFixed(2)) : null;
-    const { error: addressError } = await admin.from("user_addresses").insert({ user_id: userId, address_type: "primary", zipcode: digits(cep), street, number, complement: complement || null, latitude: coordinates?.latitude ?? null, longitude: coordinates?.longitude ?? null, public_latitude: publicLatitude, public_longitude: publicLongitude, location_visibility: coordinates ? "approximate" : "private", is_primary: true });
+    const { error: addressError } = await admin.from("user_addresses").insert({ user_id: userId, address_type: "primary", zipcode: digits(cep), street, number, complement: complement || null, city_id: cityRow.id, state_id: cityRow.state_id, latitude: coordinates?.latitude ?? null, longitude: coordinates?.longitude ?? null, public_latitude: publicLatitude, public_longitude: publicLongitude, location_visibility: coordinates ? "approximate" : "private", is_primary: true });
     if (addressError) return NextResponse.json({ error: "Não foi possível salvar o endereço." }, { status: 500 });
-    return NextResponse.json({ ok: true, locationReady: Boolean(coordinates) });
+    return NextResponse.json({ ok: true, locationReady: Boolean(coordinates), cityId: cityRow.id, stateId: cityRow.state_id });
   } catch { return NextResponse.json({ error: "Não foi possível concluir o cadastro." }, { status: 500 }); }
 }
