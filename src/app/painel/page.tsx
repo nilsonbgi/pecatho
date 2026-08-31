@@ -30,6 +30,7 @@ export default async function Painel() {
           <article className="card"><h2>Meu anúncio</h2><p>{advertiser ? advertiser.title : "Você ainda não criou seu anúncio."}</p><Link className="secondaryButton" href="/painel/anuncio">{advertiser ? "Editar anúncio" : "Criar anúncio"}</Link></article>
           <article className="card"><h2>Publicação</h2><p>{advertiser ? publicationStatus[advertiser.status] || advertiser.status : "Ainda não iniciada"}</p></article>
           <article className="card"><h2>Verificação</h2><p>{advertiser ? verificationStatus[advertiser.verification_status] || advertiser.verification_status : "Ainda não iniciada"}</p></article>
+          <article className="card"><h2>Base territorial</h2><p>Estados e municípios oficiais do IBGE.</p><Link className="secondaryButton" href="/painel/localidades">Gerenciar localidades</Link></article>
         </section>
       </section>
     </main>
