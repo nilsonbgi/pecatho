@@ -14,10 +14,35 @@ export default function LoginPage() {
     e.preventDefault();
     setBusy(true);
     setError("");
-    const { error } = await createClient().auth.signInWithPassword({ email, password });
-    if (error) setError(error.message);
-    else window.location.href = "/painel";
-    setBusy(false);
+
+    try {
+      const supabase = createClient();
+      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      if (authError) {
+        setError(authError.message);
+        return;
+      }
+
+      const userId = data.user?.id;
+      if (!userId) {
+        setError("A autenticação foi concluída, mas o usuário não foi retornado.");
+        return;
+      }
+
+      const { data: adminRole } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .in("role", ["super_admin", "admin", "moderator", "support", "finance"])
+        .limit(1)
+        .maybeSingle();
+
+      window.location.href = adminRole?.role ? "/admin" : "/painel";
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível conectar ao serviço de autenticação.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
