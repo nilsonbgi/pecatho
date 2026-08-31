@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/browser";
 
 type Advertiser = { id: string; slug: string | null; title: string | null; display_name: string | null; summary: string | null; city_id: number | null; state_id: number | null; category_id: number | null; verification_status: string | null };
 type Category = { id: number; name: string };
@@ -18,45 +19,84 @@ export default function AnunciantesPage() {
   const [cityId, setCityId] = useState("");
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [metaLoading, setMetaLoading] = useState(true);
   const [citiesLoading, setCitiesLoading] = useState(false);
   const [error, setError] = useState("");
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
-    fetch("/api/public/advertisers?mode=meta", { cache: "no-store" })
-      .then(async (r) => { const data = await r.json(); if (!r.ok) throw new Error(data.error); return data; })
-      .then((data) => { setCategories(data.categories || []); setStates(data.states || []); })
-      .catch(() => setError("Não foi possível carregar os filtros de localização."));
-  }, []);
+    let active = true;
+    setMetaLoading(true);
+    Promise.all([
+      supabase.from("categories").select("id,name").eq("display", true).order("name"),
+      supabase.from("states").select("id,uf,name").order("name"),
+    ])
+      .then(([categoriesResult, statesResult]) => {
+        if (!active) return;
+        if (categoriesResult.error) throw categoriesResult.error;
+        if (statesResult.error) throw statesResult.error;
+        setCategories(categoriesResult.data ?? []);
+        setStates(statesResult.data ?? []);
+      })
+      .catch((err) => {
+        console.error("Erro ao carregar filtros públicos", err);
+        if (active) setError("Não foi possível carregar as categorias e os Estados.");
+      })
+      .finally(() => { if (active) setMetaLoading(false); });
+    return () => { active = false; };
+  }, [supabase]);
 
   useEffect(() => {
+    let active = true;
     setCityId("");
     if (!stateId) { setCities([]); return; }
     setCitiesLoading(true);
-    fetch(`/api/public/advertisers?mode=cities&state_id=${encodeURIComponent(stateId)}`, { cache: "no-store" })
-      .then(async (r) => { const data = await r.json(); if (!r.ok) throw new Error(data.error); return data; })
-      .then((data) => setCities(data.cities || []))
-      .catch(() => setCities([]))
-      .finally(() => setCitiesLoading(false));
-  }, [stateId]);
+    supabase.from("cities").select("id,name,state_id").eq("state_id", Number(stateId)).order("name").limit(1000)
+      .then(({ data, error: queryError }) => {
+        if (!active) return;
+        if (queryError) throw queryError;
+        setCities(data ?? []);
+      })
+      .catch((err) => {
+        console.error("Erro ao carregar cidades", err);
+        if (active) setCities([]);
+      })
+      .finally(() => { if (active) setCitiesLoading(false); });
+    return () => { active = false; };
+  }, [stateId, supabase]);
 
   useEffect(() => {
+    let active = true;
     setLoading(true); setError("");
-    const params = new URLSearchParams();
-    if (categoryId) params.set("category_id", categoryId);
-    if (stateId) params.set("state_id", stateId);
-    if (cityId) params.set("city_id", cityId);
-    if (query.trim()) params.set("q", query.trim());
-    fetch(`/api/public/advertisers?${params.toString()}`, { cache: "no-store" })
-      .then(async (r) => { const data = await r.json(); if (!r.ok) throw new Error(data.error); return data; })
-      .then((data) => setAdvertisers(data.advertisers || []))
-      .catch(() => { setAdvertisers([]); setError("Não foi possível carregar os anunciantes publicados."); })
-      .finally(() => setLoading(false));
-  }, [categoryId, stateId, cityId, query]);
+    let request = supabase
+      .from("advertiser_profiles")
+      .select("id,slug,title,display_name,summary,city_id,state_id,category_id,verification_status,created_at")
+      .eq("status", "published")
+      .order("created_at", { ascending: false })
+      .limit(48);
+    if (categoryId) request = request.eq("category_id", Number(categoryId));
+    if (stateId) request = request.eq("state_id", Number(stateId));
+    if (cityId) request = request.eq("city_id", Number(cityId));
+    if (query.trim()) {
+      const clean = query.trim().replace(/[%_,]/g, " ");
+      request = request.or(`title.ilike.%${clean}%,display_name.ilike.%${clean}%,summary.ilike.%${clean}%`);
+    }
+    request.then(({ data, error: queryError }) => {
+      if (!active) return;
+      if (queryError) throw queryError;
+      setAdvertisers(data ?? []);
+    })
+      .catch((err) => {
+        console.error("Erro ao carregar anunciantes", err);
+        if (active) { setAdvertisers([]); setError("Não foi possível carregar os anunciantes publicados."); }
+      })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [categoryId, stateId, cityId, query, supabase]);
 
   const categoryName = useMemo(() => new Map(categories.map((x) => [x.id, x.name])), [categories]);
   const cityName = useMemo(() => new Map(cities.map((x) => [x.id, x.name])), [cities]);
   const stateName = useMemo(() => new Map(states.map((x) => [x.id, x.uf])), [states]);
-
   const selectedCityName = cityId ? cityName.get(Number(cityId)) : null;
   const selectedStateName = stateId ? states.find((x) => x.id === Number(stateId))?.name : null;
 
@@ -72,8 +112,8 @@ export default function AnunciantesPage() {
         <p className="heroCopy">Pesquise por nome, categoria, Estado ou cidade e encontre perfis publicados no Pecatho.</p>
         <div style={{ display: "grid", gridTemplateColumns: "minmax(220px, 2fr) repeat(3, minmax(160px, 1fr))", gap: 12, marginTop: 24 }}>
           <input aria-label="Pesquisar anunciante" placeholder="Nome, título ou palavra-chave" value={query} onChange={(e) => setQuery(e.target.value)} />
-          <select aria-label="Filtrar por categoria" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}><option value="">Todas as categorias</option>{categories.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
-          <select aria-label="Filtrar por Estado" value={stateId} onChange={(e) => setStateId(e.target.value)}><option value="">Todos os Estados</option>{states.map((x) => <option key={x.id} value={x.id}>{x.name} ({x.uf})</option>)}</select>
+          <select aria-label="Filtrar por categoria" value={categoryId} onChange={(e) => setCategoryId(e.target.value)} disabled={metaLoading}><option value="">{metaLoading ? "Carregando categorias..." : "Todas as categorias"}</option>{categories.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
+          <select aria-label="Filtrar por Estado" value={stateId} onChange={(e) => setStateId(e.target.value)} disabled={metaLoading}><option value="">{metaLoading ? "Carregando Estados..." : "Todos os Estados"}</option>{states.map((x) => <option key={x.id} value={x.id}>{x.name} ({x.uf})</option>)}</select>
           <select aria-label="Filtrar por cidade" value={cityId} onChange={(e) => setCityId(e.target.value)} disabled={!stateId || citiesLoading}><option value="">{citiesLoading ? "Carregando cidades..." : stateId ? "Todas as cidades" : "Selecione o Estado"}</option>{cities.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
         </div>
         {categories.length > 0 && <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 18 }}><button type="button" className={!categoryId ? "previewBadge" : "secondaryButton"} onClick={() => setCategoryId("")}>Todas</button>{categories.map((x) => <button type="button" key={x.id} className={categoryId === String(x.id) ? "previewBadge" : "secondaryButton"} onClick={() => setCategoryId(String(x.id))}>{x.name}</button>)}</div>}
@@ -84,7 +124,7 @@ export default function AnunciantesPage() {
           {(categoryId || stateId || cityId || query) && <button type="button" className="secondaryButton" onClick={() => { setCategoryId(""); setStateId(""); setCityId(""); setQuery(""); }}>Limpar filtros</button>}
         </div>
         {error && <article className="card"><h2>Não foi possível carregar</h2><p>{error}</p><button type="button" className="primaryButton" onClick={() => window.location.reload()}>Tentar novamente</button></article>}
-        {!loading && !error && advertisers.length === 0 && <article className="card"><h2>Nenhum anúncio publicado ainda.</h2><p>Os filtros de categoria, Estado e cidade já estão disponíveis. Assim que houver anúncios publicados, eles aparecerão aqui.</p><Link href="/cadastro" className="primaryButton">Quero anunciar</Link></article>}
+        {!loading && !error && advertisers.length === 0 && <article className="card"><h2>Nenhum anúncio publicado ainda.</h2><p>Os filtros de categoria, Estado e cidade estão disponíveis. Assim que houver anúncios publicados, eles aparecerão aqui.</p><Link href="/cadastro" className="primaryButton">Quero anunciar</Link></article>}
         {!error && advertisers.length > 0 && <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
           {advertisers.map((item) => <article className="card" key={item.id}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}><span className="previewBadge">{item.verification_status === "verified" ? "VERIFICADO" : "PUBLICADO"}</span><span className="eyebrow" style={{ margin: 0 }}>{item.category_id != null ? categoryName.get(item.category_id) || "ANUNCIANTE" : "ANUNCIANTE"}</span></div>
