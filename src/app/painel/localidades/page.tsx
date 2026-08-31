@@ -1,6 +1,5 @@
 "use client";
 
-export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -11,9 +10,9 @@ export default function LocalidadesPage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const supabase = createClient();
 
   async function loadCount() {
+    const supabase = createClient();
     const { count, error: countError } = await supabase.from("cities").select("id", { count: "exact", head: true });
     if (countError) setError(countError.message);
     else setCityCount(count ?? 0);
@@ -23,6 +22,7 @@ export default function LocalidadesPage() {
 
   async function synchronize() {
     setBusy(true); setError(""); setMessage("");
+    const supabase = createClient();
     const { data, error: invokeError } = await supabase.functions.invoke("sync-ibge-localidades", { body: {} });
     if (invokeError) { setError(invokeError.message); setBusy(false); return; }
     if (data?.error) { setError(data.error); setBusy(false); return; }
