@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/browser";
 
@@ -26,59 +26,167 @@ export default function AnuncioPage() {
   const [attributeValues, setAttributeValues] = useState<Record<string, string | string[] | boolean | number | null>>({}); const [selectedServices, setSelectedServices] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true); const [busy, setBusy] = useState(false); const [message, setMessage] = useState(""); const [error, setError] = useState("");
 
-  const supabase = useMemo(() => createClient(), []);
+  useEffect(() => {
+    let activeEffect = true;
+    const load = async () => {
+      try {
+        const supabase = createClient();
+        const { data: s } = await supabase.from("states").select("id,uf,name").order("name");
+        const { data: c } = await supabase.from("categories").select("id,name").order("name");
+        const { data: profile } = await supabase.from("advertiser_profiles").select("id,title,display_name,summary,description,state_id,city_id,category_id,pricing,service_options").maybeSingle();
+        if (!activeEffect) return;
+        setStates((s || []) as StateRow[]);
+        setCategories((c || []) as CategoryRow[]);
+        if (profile) {
+          setTitle(profile.title || ""); setName(profile.display_name || ""); setSummary(profile.summary || ""); setDescription(profile.description || "");
+          setStateId(profile.state_id ? String(profile.state_id) : ""); setCityId(profile.city_id ? String(profile.city_id) : ""); setCategoryId(profile.category_id ? String(profile.category_id) : "");
+          setPrice(profile.pricing?.price ? String(profile.pricing.price) : ""); setServicesText(profile.service_options?.description || "");
+        }
+        const { data: address } = await supabase.from("user_addresses").select("zipcode,street,number,complement,city_id,state_id,latitude,longitude").eq("address_type","primary").maybeSingle();
+        if (address) {
+          setZipcode(address.zipcode || ""); setStreet(address.street || ""); setNumber(address.number || ""); setComplement(address.complement || "");
+          setLatitude(address.latitude == null ? null : Number(address.latitude)); setLongitude(address.longitude == null ? null : Number(address.longitude));
+          if (address.city_id) setCityId(String(address.city_id));
+          if (address.state_id) setStateId(String(address.state_id));
+        }
+      } catch (err) {
+        console.error("Erro ao carregar editor do anúncio", err);
+        if (activeEffect) setError(err instanceof Error ? err.message : "Não foi possível carregar o editor.");
+      } finally {
+        if (activeEffect) setLoading(false);
+      }
+    };
+    void load();
+    return () => { activeEffect = false; };
+  }, []);
 
-  useEffect(() => { (async () => {
-    const { data: s } = await supabase.from("states").select("id,uf,name").order("name"); setStates((s || []) as StateRow[]);
-    const { data: c } = await supabase.from("categories").select("id,name").order("name"); setCategories((c || []) as CategoryRow[]);
-    const { data: profile } = await supabase.from("advertiser_profiles").select("id,title,display_name,summary,description,state_id,city_id,category_id,pricing,service_options").maybeSingle();
-    if (profile) { setTitle(profile.title || ""); setName(profile.display_name || ""); setSummary(profile.summary || ""); setDescription(profile.description || ""); setStateId(profile.state_id ? String(profile.state_id) : ""); setCityId(profile.city_id ? String(profile.city_id) : ""); setCategoryId(profile.category_id ? String(profile.category_id) : ""); setPrice(profile.pricing?.price ? String(profile.pricing.price) : ""); setServicesText(profile.service_options?.description || ""); }
-    const { data: address } = await supabase.from("user_addresses").select("zipcode,street,number,complement,city_id,state_id,latitude,longitude").eq("address_type","primary").maybeSingle();
-    if (address) { setZipcode(address.zipcode || ""); setStreet(address.street || ""); setNumber(address.number || ""); setComplement(address.complement || ""); setLatitude(address.latitude == null ? null : Number(address.latitude)); setLongitude(address.longitude == null ? null : Number(address.longitude)); }
-    setLoading(false);
-  })(); }, [supabase]);
+  useEffect(() => {
+    if (!stateId) { setCities([]); return; }
+    let activeEffect = true;
+    const loadCities = async () => {
+      try {
+        const supabase = createClient();
+        const { data, error: queryError } = await supabase.from("cities").select("id,name,state_id").eq("state_id", Number(stateId)).order("name");
+        if (queryError) throw queryError;
+        if (activeEffect) setCities((data || []) as CityRow[]);
+      } catch (err) {
+        console.error("Erro ao carregar cidades", err);
+        if (activeEffect) setCities([]);
+      }
+    };
+    void loadCities();
+    return () => { activeEffect = false; };
+  }, [stateId]);
 
-  useEffect(() => { if (!stateId) { setCities([]); return; } (async () => { const { data } = await supabase.from("cities").select("id,name,state_id").eq("state_id", Number(stateId)).order("name"); setCities((data || []) as CityRow[]); })(); }, [stateId, supabase]);
+  useEffect(() => {
+    if (!categoryId) { setAttributes([]); setServices([]); setAttributeValues({}); setSelectedServices({}); return; }
+    let activeEffect = true;
+    const loadCategoryData = async () => {
+      try {
+        const supabase = createClient();
+        const [a, s] = await Promise.all([
+          supabase.from("category_attributes").select("id,name,slug,field_type,options,required,display_public,sort_order").eq("category_id", Number(categoryId)).order("sort_order"),
+          supabase.from("category_services").select("id,name,slug,description,required,display_public,sort_order").eq("category_id", Number(categoryId)).order("sort_order"),
+        ]);
+        if (a.error) throw a.error;
+        if (s.error) throw s.error;
+        if (!activeEffect) return;
+        setAttributes((a.data || []) as AttributeRow[]); setServices((s.data || []) as ServiceRow[]);
+        setAttributeValues({}); setSelectedServices({});
+      } catch (err) {
+        console.error("Erro ao carregar características e serviços", err);
+        if (activeEffect) { setAttributes([]); setServices([]); }
+      }
+    };
+    void loadCategoryData();
+    return () => { activeEffect = false; };
+  }, [categoryId]);
 
-  useEffect(() => { if (!categoryId) { setAttributes([]); setServices([]); setAttributeValues({}); setSelectedServices({}); return; } (async () => {
-    const [a, s] = await Promise.all([
-      supabase.from("category_attributes").select("id,name,slug,field_type,options,required,display_public,sort_order").eq("category_id", Number(categoryId)).order("sort_order"),
-      supabase.from("category_services").select("id,name,slug,description,required,display_public,sort_order").eq("category_id", Number(categoryId)).order("sort_order"),
-    ]);
-    setAttributes((a.data || []) as AttributeRow[]); setServices((s.data || []) as ServiceRow[]); setAttributeValues({}); setSelectedServices({});
-  })(); }, [categoryId, supabase]);
+  async function lookupCep() {
+    const cep = zipcode.replace(/\D/g, ""); setLocationMessage("");
+    if (cep.length !== 8) { setLocationMessage("Informe um CEP válido com 8 dígitos."); return; }
+    setCepBusy(true);
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      if (!response.ok) throw new Error("Não foi possível consultar o CEP.");
+      const data = await response.json();
+      if (data.erro) throw new Error("CEP não encontrado.");
+      setStreet(data.logradouro || ""); setNeighborhood(data.bairro || "");
+      const matchedState = states.find((s) => s.uf === data.uf);
+      if (matchedState) {
+        setStateId(String(matchedState.id));
+        const supabase = createClient();
+        const { data: cityRows } = await supabase.from("cities").select("id,name,state_id").eq("state_id", matchedState.id).eq("id", Number(data.ibge));
+        const city = cityRows?.[0];
+        if (city) setCityId(String(city.id));
+        else setLocationMessage("CEP encontrado, mas o município não foi localizado na base territorial do Pecatho.");
+      }
+      setLocationMessage(`CEP localizado: ${data.localidade} — ${data.uf}.`);
+    } catch (err) {
+      setLocationMessage(err instanceof Error ? err.message : "Não foi possível consultar o CEP.");
+    } finally { setCepBusy(false); }
+  }
 
-  async function lookupCep() { const cep = zipcode.replace(/\D/g, ""); setLocationMessage(""); if (cep.length !== 8) { setLocationMessage("Informe um CEP válido com 8 dígitos."); return; } setCepBusy(true); try { const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`); if (!response.ok) throw new Error("Não foi possível consultar o CEP."); const data = await response.json(); if (data.erro) throw new Error("CEP não encontrado."); setStreet(data.logradouro || ""); setNeighborhood(data.bairro || ""); const matchedState = states.find((s) => s.uf === data.uf); if (matchedState) { setStateId(String(matchedState.id)); const { data: cityRows } = await supabase.from("cities").select("id,name,state_id").eq("state_id", matchedState.id).eq("id", Number(data.ibge)); const city = cityRows?.[0]; if (city) setCityId(String(city.id)); else setLocationMessage("CEP encontrado, mas o município não foi localizado na base territorial do Pecatho."); } setLocationMessage(`CEP localizado: ${data.localidade} — ${data.uf}.`); } catch (err) { setLocationMessage(err instanceof Error ? err.message : "Não foi possível consultar o CEP."); } finally { setCepBusy(false); } }
-
-  async function geolocateAddress() { setLocationMessage(""); if (!street || !number || !cityId || !stateId) { setLocationMessage("Preencha CEP, endereço, número, Estado e Cidade antes de localizar no mapa."); return; } setCepBusy(true); try { const city = cities.find((item) => item.id === Number(cityId)); const state = states.find((item) => item.id === Number(stateId)); const query = encodeURIComponent(`${street}, ${number}, ${city?.name || ""}, ${state?.uf || ""}, Brasil`); const response = await fetch(`/api/geocode?address=${query}`); if (!response.ok) throw new Error("Não foi possível localizar este endereço."); const result = await response.json(); if (!result?.latitude || !result?.longitude) throw new Error("Endereço não localizado. Confira o número e tente novamente."); setLatitude(Number(result.latitude)); setLongitude(Number(result.longitude)); setLocationMessage("Localização encontrada. O mapa público utilizará estas coordenadas."); } catch (err) { setLocationMessage(err instanceof Error ? err.message : "Não foi possível localizar o endereço."); } finally { setCepBusy(false); } }
+  async function geolocateAddress() {
+    setLocationMessage("");
+    if (!street || !number || !cityId || !stateId) { setLocationMessage("Preencha CEP, endereço, número, Estado e Cidade antes de localizar no mapa."); return; }
+    setCepBusy(true);
+    try {
+      const city = cities.find((item) => item.id === Number(cityId)); const state = states.find((item) => item.id === Number(stateId));
+      const query = encodeURIComponent(`${street}, ${number}, ${city?.name || ""}, ${state?.uf || ""}, Brasil`);
+      const response = await fetch(`/api/geocode?address=${query}`);
+      if (!response.ok) throw new Error("Não foi possível localizar este endereço.");
+      const result = await response.json();
+      if (!result?.latitude || !result?.longitude) throw new Error("Endereço não localizado. Confira o número e tente novamente.");
+      setLatitude(Number(result.latitude)); setLongitude(Number(result.longitude)); setLocationMessage("Localização encontrada. O mapa público utilizará estas coordenadas.");
+    } catch (err) {
+      setLocationMessage(err instanceof Error ? err.message : "Não foi possível localizar o endereço.");
+    } finally { setCepBusy(false); }
+  }
 
   function setAttribute(id: string, value: string | string[] | boolean | number | null) { setAttributeValues((current) => ({ ...current, [id]: value })); }
   function toggleService(id: string, value: boolean) { setSelectedServices((current) => ({ ...current, [id]: value })); }
 
   async function submit(e: FormEvent) {
     e.preventDefault(); setBusy(true); setMessage(""); setError("");
-    const { data: { user } } = await supabase.auth.getUser(); if (!user) { window.location.href = "/login"; return; }
-    if (!categoryId) { setError("Selecione uma categoria antes de salvar."); setBusy(false); return; }
-    const missing = attributes.filter((a) => {
-      const value = attributeValues[a.id];
-      return a.required && (value === undefined || value === "" || (Array.isArray(value) && value.length === 0));
-    });
-    if (missing.length) { setError(`Preencha os campos obrigatórios: ${missing.map((a) => a.name).join(", ")}.`); setBusy(false); return; }
-    const requiredServices = services.filter((s) => s.required && selectedServices[s.id] !== true); if (requiredServices.length) { setError(`Selecione os serviços obrigatórios: ${requiredServices.map((s) => s.name).join(", ")}.`); setBusy(false); return; }
-    const { data: old } = await supabase.from("advertiser_profiles").select("id").eq("user_id", user.id).maybeSingle();
-    const normalizedPrice = price ? Number(price.replace(/\./g, "").replace(",", ".")) : null;
-    const payload = { title, display_name: name, summary, description, state_id: stateId ? Number(stateId) : null, city_id: cityId ? Number(cityId) : null, category_id: Number(categoryId), pricing: { price: normalizedPrice }, service_options: { description: servicesText }, social_links: {}, payment_options: {} };
-    const result = old ? await supabase.from("advertiser_profiles").update(payload).eq("id", old.id) : await supabase.from("advertiser_profiles").insert({ ...payload, user_id: user.id, status: "draft", verification_status: "unverified" }).select("id").single();
-    if (result.error) { setError("Não foi possível salvar o anúncio. " + result.error.message); setBusy(false); return; }
-    const profileId = old?.id || (result.data as { id: string } | null)?.id; if (!profileId) { setError("O perfil foi salvo, mas não foi possível identificar o anúncio."); setBusy(false); return; }
-    const { error: clearAttrError } = await supabase.from("profile_attribute_values").delete().eq("profile_id", profileId); if (clearAttrError) { setError("Não foi possível atualizar as características do anúncio. " + clearAttrError.message); setBusy(false); return; }
-    const attrs = attributes.filter((a) => attributeValues[a.id] !== undefined && attributeValues[a.id] !== "").map((a) => ({ profile_id: profileId, attribute_id: a.id, value: attributeValues[a.id] }));
-    if (attrs.length) { const { error: attrError } = await supabase.from("profile_attribute_values").insert(attrs); if (attrError) { setError("Não foi possível salvar as características. " + attrError.message); setBusy(false); return; } }
-    const { error: clearServiceError } = await supabase.from("profile_services").delete().eq("profile_id", profileId); if (clearServiceError) { setError("Não foi possível atualizar os serviços. " + clearServiceError.message); setBusy(false); return; }
-    const selected = services.filter((s) => selectedServices[s.id] === true).map((s) => ({ profile_id: profileId, service_id: s.id, selected: true }));
-    if (selected.length) { const { error: serviceError } = await supabase.from("profile_services").insert(selected); if (serviceError) { setError("Não foi possível salvar os serviços. " + serviceError.message); setBusy(false); return; } }
-    if (zipcode || street || number) { const publicLatitude = latitude == null ? null : latitude + 0.002; const publicLongitude = longitude == null ? null : longitude + 0.002; const addressData = { zipcode: zipcode.replace(/\D/g, "").slice(0,8) || null, street: street || null, number: number || null, complement: complement || null, city_id: cityId ? Number(cityId) : null, state_id: stateId ? Number(stateId) : null, latitude, longitude, is_primary: true, location_visibility: "approximate", public_latitude: publicLatitude, public_longitude: publicLongitude }; const { data: existingAddress } = await supabase.from("user_addresses").select("id").eq("user_id", user.id).eq("is_primary", true).maybeSingle(); const addressResult = existingAddress ? await supabase.from("user_addresses").update(addressData).eq("id", existingAddress.id) : await supabase.from("user_addresses").insert({ ...addressData, user_id: user.id, address_type: "primary" }); if (addressResult.error) { setError("O anúncio foi salvo, mas não foi possível salvar a localização. " + addressResult.error.message); setBusy(false); return; } }
-    setMessage("Rascunho salvo com sucesso."); setBusy(false);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { window.location.href = "/login"; return; }
+      if (!categoryId) { setError("Selecione uma categoria antes de salvar."); setBusy(false); return; }
+      const missing = attributes.filter((a) => {
+        const value = attributeValues[a.id];
+        return a.required && (value === undefined || value === "" || (Array.isArray(value) && value.length === 0));
+      });
+      if (missing.length) { setError(`Preencha os campos obrigatórios: ${missing.map((a) => a.name).join(", ")}.`); setBusy(false); return; }
+      const requiredServices = services.filter((s) => s.required && selectedServices[s.id] !== true);
+      if (requiredServices.length) { setError(`Selecione os serviços obrigatórios: ${requiredServices.map((s) => s.name).join(", ")}.`); setBusy(false); return; }
+      const { data: old } = await supabase.from("advertiser_profiles").select("id").eq("user_id", user.id).maybeSingle();
+      const normalizedPrice = price ? Number(price.replace(/\./g, "").replace(",", ".")) : null;
+      const payload = { title, display_name: name, summary, description, state_id: stateId ? Number(stateId) : null, city_id: cityId ? Number(cityId) : null, category_id: Number(categoryId), pricing: { price: normalizedPrice }, service_options: { description: servicesText }, social_links: {}, payment_options: {} };
+      const result = old ? await supabase.from("advertiser_profiles").update(payload).eq("id", old.id) : await supabase.from("advertiser_profiles").insert({ ...payload, user_id: user.id, status: "draft", verification_status: "unverified" }).select("id").single();
+      if (result.error) throw new Error("Não foi possível salvar o anúncio. " + result.error.message);
+      const profileId = old?.id || (result.data as { id: string } | null)?.id;
+      if (!profileId) throw new Error("O perfil foi salvo, mas não foi possível identificar o anúncio.");
+      const { error: clearAttrError } = await supabase.from("profile_attribute_values").delete().eq("profile_id", profileId);
+      if (clearAttrError) throw new Error("Não foi possível atualizar as características do anúncio. " + clearAttrError.message);
+      const attrs = attributes.filter((a) => attributeValues[a.id] !== undefined && attributeValues[a.id] !== "").map((a) => ({ profile_id: profileId, attribute_id: a.id, value: attributeValues[a.id] }));
+      if (attrs.length) { const { error: attrError } = await supabase.from("profile_attribute_values").insert(attrs); if (attrError) throw new Error("Não foi possível salvar as características. " + attrError.message); }
+      const { error: clearServiceError } = await supabase.from("profile_services").delete().eq("profile_id", profileId);
+      if (clearServiceError) throw new Error("Não foi possível atualizar os serviços. " + clearServiceError.message);
+      const selected = services.filter((s) => selectedServices[s.id] === true).map((s) => ({ profile_id: profileId, service_id: s.id, selected: true }));
+      if (selected.length) { const { error: serviceError } = await supabase.from("profile_services").insert(selected); if (serviceError) throw new Error("Não foi possível salvar os serviços. " + serviceError.message); }
+      if (zipcode || street || number) {
+        const publicLatitude = latitude == null ? null : latitude + 0.002; const publicLongitude = longitude == null ? null : longitude + 0.002;
+        const addressData = { zipcode: zipcode.replace(/\D/g, "").slice(0,8) || null, street: street || null, number: number || null, complement: complement || null, city_id: cityId ? Number(cityId) : null, state_id: stateId ? Number(stateId) : null, latitude, longitude, is_primary: true, location_visibility: "approximate", public_latitude: publicLatitude, public_longitude: publicLongitude };
+        const { data: existingAddress } = await supabase.from("user_addresses").select("id").eq("user_id", user.id).eq("is_primary", true).maybeSingle();
+        const addressResult = existingAddress ? await supabase.from("user_addresses").update(addressData).eq("id", existingAddress.id) : await supabase.from("user_addresses").insert({ ...addressData, user_id: user.id, address_type: "primary" });
+        if (addressResult.error) throw new Error("O anúncio foi salvo, mas não foi possível salvar a localização. " + addressResult.error.message);
+      }
+      setMessage("Rascunho salvo com sucesso.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível salvar o anúncio.");
+    } finally { setBusy(false); }
   }
 
   if (loading) return <main className="shell"><section className="hero"><p>Carregando editor...</p></section></main>;
