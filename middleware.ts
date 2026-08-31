@@ -5,31 +5,33 @@ const FANS_HOSTS = new Set(["fans.pecatho.com.br", "www.fans.pecatho.com.br"]);
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-    {
-      cookies: {
-        getAll: () => request.cookies.getAll(),
-        setAll: (cookiesToSet) => {
-          cookiesToSet.forEach(({ name, value }) => {
-            request.cookies.set(name, value);
-            response.cookies.set(name, value);
-          });
-        },
-      },
-    },
-  );
-
-  const { data: { user } } = await supabase.auth.getUser();
   const hostname = request.headers.get("host")?.split(":")[0].toLowerCase();
   const isFansHost = hostname ? FANS_HOSTS.has(hostname) : false;
   const pathname = request.nextUrl.pathname;
+  const isProtectedPanel = pathname.startsWith("/painel");
 
-  if (pathname.startsWith("/painel") && !user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    return NextResponse.redirect(url);
+  if (isProtectedPanel) {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+      {
+        cookies: {
+          getAll: () => request.cookies.getAll(),
+          setAll: (cookiesToSet) => {
+            cookiesToSet.forEach(({ name, value }) => {
+              request.cookies.set(name, value);
+              response.cookies.set(name, value);
+            });
+          },
+        },
+      },
+    );
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      return NextResponse.redirect(url);
+    }
   }
 
   if (isFansHost && !pathname.startsWith("/fans") && !pathname.startsWith("/_next") && pathname !== "/favicon.ico") {
