@@ -41,23 +41,23 @@ export default async function FansPage() {
         <div className="eyebrow">SERVIÇO ADICIONAL DO PECATHO</div>
         <h1>Seu conteúdo. <em>Sua audiência.</em></h1>
         <p className="heroCopy">
-          O Pecatho Fans é um serviço complementar para anunciantes que desejam vender conteúdos diretamente aos seus fãs.
-          Ele compartilha a identidade do ecossistema Pecatho, mas possui operação, conteúdo e relacionamento próprios.
+          O Pecatho Fans é um serviço independente dentro do ecossistema Pecatho para quem deseja criar uma audiência e monetizar conteúdos.
+          Você pode utilizar o Fans com ou sem um perfil de anunciante no Pecatho principal.
         </p>
 
         {!creator ? (
           <section className="fansOnboarding card">
             <div className="cardIcon">F</div>
-            <h2>Ative seu espaço no Fans</h2>
-            <p>Seu cadastro de anunciante permanece intacto. A ativação do Fans cria o seu espaço específico para conteúdos, planos e audiência.</p>
-            <button className="primaryButton" disabled>Ativar Fans</button>
-            <small>A ativação comercial será disponibilizada na próxima etapa.</small>
+            <h2>Crie seu espaço no Fans</h2>
+            <p>Você não precisa anunciar serviços no Pecatho para utilizar o Fans. Crie seu perfil de criador, configure sua página e depois cadastre planos e conteúdos.</p>
+            <Link className="primaryButton" href="/fans/ativar">Criar meu espaço Fans</Link>
+            <small>Seu perfil de anunciante, se existir, continuará separado e poderá ser associado ao Fans posteriormente.</small>
           </section>
         ) : (
           <>
             <section className="fansCreator card">
               <div>
-                <span className="serviceLabel">CRIADOR</span>
+                <span className="serviceLabel">CRIADOR FANS</span>
                 <h2>{creator.display_name}</h2>
                 <p>{creator.bio || "Seu espaço de conteúdo está pronto para ser configurado."}</p>
               </div>
@@ -69,6 +69,12 @@ export default async function FansPage() {
               <article className="card"><span className="metricLabel">PUBLICAÇÕES</span><strong>{postsCount}</strong><p>Conteúdos cadastrados</p></article>
               <article className="card"><span className="metricLabel">CONTEÚDO</span><strong>Fans</strong><p>Área exclusiva para sua audiência</p></article>
             </section>
+
+            <section className="fansOnboarding card">
+              <h2>Próxima etapa</h2>
+              <p>Seu espaço está criado. A seguir vamos estruturar o painel do criador para administrar perfil, planos, publicações, mídia, assinantes, vendas e recebimentos.</p>
+              <Link className="primaryButton" href="/fans/gerenciar">Gerenciar meu Fans</Link>
+            </section>
           </>
         )}
 
@@ -77,8 +83,8 @@ export default async function FansPage() {
             <div className="eyebrow">SEPARAÇÃO FUNCIONAL</div>
             <h2>O Fans não substitui o Pecatho.</h2>
             <p>
-              O anúncio continua sendo administrado no Pecatho principal. O Fans é uma extensão opcional para quem deseja monetizar conteúdos.
-              A arquitetura mantém os dois produtos claramente separados, evitando misturar descoberta de anunciantes com consumo de conteúdo.
+              O Pecatho principal continua responsável pelos anúncios de serviços. O Fans possui sua própria operação de conteúdo e relacionamento com fãs.
+              Um mesmo usuário pode ter apenas Fans ou utilizar simultaneamente o Pecatho como anunciante e o Fans como criador.
             </p>
           </div>
           <div className="architecture"><span>Pecatho</span><b>→</b><span>Anunciante</span><b>→</b><span>Fans</span></div>
