@@ -1,0 +1,3151 @@
+{
+  "source": "fans_vipcomdump.sql",
+  "bytes": 491429,
+  "tables_count": 66,
+  "tables": [
+    {
+      "name": "i_advertisements",
+      "columns": [
+        {
+          "name": "ads_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "ads_image",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "ads_title",
+          "definition": "varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL"
+        },
+        {
+          "name": "ads_desc",
+          "definition": "varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL"
+        },
+        {
+          "name": "ads_url",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "ads_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "ads_type",
+          "definition": "varchar(85) DEFAULT NULL"
+        },
+        {
+          "name": "ads_location",
+          "definition": "varchar(25) DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_announcement",
+      "columns": [
+        {
+          "name": "a_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "a_text",
+          "definition": "text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL"
+        },
+        {
+          "name": "a_who_see",
+          "definition": "varchar(25) DEFAULT 'creators'"
+        },
+        {
+          "name": "a_status",
+          "definition": "varchar(10) NOT NULL DEFAULT 'yes'"
+        },
+        {
+          "name": "a_created_time",
+          "definition": "int(15) DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_announcement_seen",
+      "columns": [
+        {
+          "name": "aid",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "a_id_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "iuid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "a_seen_time",
+          "definition": "int(15) DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_approve_post_notification",
+      "columns": [
+        {
+          "name": "approve_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "approved_post_id",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "approved_post_owner_id",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "approve_status",
+          "definition": "enum('1','2','3') NOT NULL DEFAULT '1'"
+        },
+        {
+          "name": "approve_not",
+          "definition": "text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL"
+        },
+        {
+          "name": "appprove_time",
+          "definition": "int(13) DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_bank_payments",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "iuid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "screen_photo",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "request_time",
+          "definition": "int(15) DEFAULT NULL"
+        },
+        {
+          "name": "request_status",
+          "definition": "enum('no','yes','waiting') NOT NULL DEFAULT 'waiting'"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_boost_post_plans",
+      "columns": [
+        {
+          "name": "plan_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "plan_name_key",
+          "definition": "varchar(35) DEFAULT NULL"
+        },
+        {
+          "name": "plan_amount",
+          "definition": "varchar(55) DEFAULT NULL"
+        },
+        {
+          "name": "plan_icon",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "plan_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "plan_discount",
+          "definition": "varchar(55) DEFAULT NULL"
+        },
+        {
+          "name": "amount",
+          "definition": "varchar(55) DEFAULT NULL"
+        },
+        {
+          "name": "view_time",
+          "definition": "varchar(55) DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_boosted_post_seen_counter",
+      "columns": [
+        {
+          "name": "bp_seen_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "iuid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "ip",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "bp_id_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "bp_seen_time",
+          "definition": "int(25) DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_boosted_posts",
+      "columns": [
+        {
+          "name": "boost_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "iuid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "post_id_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "boost_type",
+          "definition": "varchar(5) DEFAULT NULL"
+        },
+        {
+          "name": "started_at",
+          "definition": "int(15) DEFAULT NULL"
+        },
+        {
+          "name": "end_at",
+          "definition": "int(15) DEFAULT NULL"
+        },
+        {
+          "name": "status",
+          "definition": "enum('no','yes') NOT NULL DEFAULT 'no'"
+        },
+        {
+          "name": "view_count",
+          "definition": "int(11) DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_chat_conversations",
+      "columns": [
+        {
+          "name": "con_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "chat_id_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "user_one",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "user_two",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "message",
+          "definition": "text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL"
+        },
+        {
+          "name": "sticker_url",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "gifurl",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "file",
+          "definition": "varchar(255) DEFAULT NULL"
+        },
+        {
+          "name": "time",
+          "definition": "int(13) DEFAULT NULL"
+        },
+        {
+          "name": "seen_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "private_price",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "private_status",
+          "definition": "enum('opened','closed') NOT NULL DEFAULT 'opened'"
+        },
+        {
+          "name": "gifMoney",
+          "definition": "text DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_chat_users",
+      "columns": [
+        {
+          "name": "chat_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "user_one",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "user_two",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "typing_user_one",
+          "definition": "varchar(55) DEFAULT NULL"
+        },
+        {
+          "name": "typing_user_two",
+          "definition": "varchar(55) DEFAULT NULL"
+        },
+        {
+          "name": "last_message_time",
+          "definition": "varchar(255) DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_comment_reports",
+      "columns": [
+        {
+          "name": "p_report_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "reported_comment",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "iuid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "report_time",
+          "definition": "int(13) NOT NULL DEFAULT 1608301750"
+        },
+        {
+          "name": "report_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "comment_post_id_fk",
+          "definition": "int(11) DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_configuration_affilate",
+      "columns": [
+        {
+          "name": "i_af_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "i_af_type",
+          "definition": "varchar(25) DEFAULT NULL"
+        },
+        {
+          "name": "i_af_amount",
+          "definition": "varchar(25) DEFAULT NULL"
+        },
+        {
+          "name": "i_af_status",
+          "definition": "varchar(10) NOT NULL DEFAULT 'yes'"
+        },
+        {
+          "name": "ica_type",
+          "definition": "text DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_configurations",
+      "columns": [
+        {
+          "name": "configuration_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "site",
+          "definition": "varchar(125) DEFAULT NULL"
+        },
+        {
+          "name": "site_title",
+          "definition": "varchar(255) DEFAULT NULL"
+        },
+        {
+          "name": "site_keywords",
+          "definition": "longtext NOT NULL"
+        },
+        {
+          "name": "site_description",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "campany",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "country",
+          "definition": "varchar(255) DEFAULT NULL"
+        },
+        {
+          "name": "city",
+          "definition": "varchar(255) DEFAULT NULL"
+        },
+        {
+          "name": "post_code",
+          "definition": "varchar(100) DEFAULT NULL"
+        },
+        {
+          "name": "vat",
+          "definition": "varchar(255) DEFAULT NULL"
+        },
+        {
+          "name": "business_address",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "site_logo",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "site_favicon",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "site_watermark_logo",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "active_theme",
+          "definition": "varchar(255) DEFAULT 'default'"
+        },
+        {
+          "name": "admin_active_theme",
+          "definition": "varchar(255) DEFAULT 'default'"
+        },
+        {
+          "name": "version",
+          "definition": "varchar(15) DEFAULT NULL"
+        },
+        {
+          "name": "s3_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "s3_bucket",
+          "definition": "varchar(255) DEFAULT NULL"
+        },
+        {
+          "name": "s3_region",
+          "definition": "varchar(255) DEFAULT NULL"
+        },
+        {
+          "name": "s3_secret_key",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "s3_key",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "ocean_key",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "ocean_secret",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "ocean_space_name",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "ocean_region",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "ocean_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "default_language",
+          "definition": "varchar(35) DEFAULT 'eng'"
+        },
+        {
+          "name": "load_more_limit",
+          "definition": "varchar(5) NOT NULL DEFAULT '10'"
+        },
+        {
+          "name": "default_currency",
+          "definition": "varchar(15) NOT NULL DEFAULT 'USD'"
+        },
+        {
+          "name": "available_file_extensions",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "available_verification_file_extensions",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "available_file_size",
+          "definition": "varchar(8) DEFAULT NULL"
+        },
+        {
+          "name": "available_length",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "ffmpeg_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '1'"
+        },
+        {
+          "name": "ffmpeg_path",
+          "definition": "varchar(55) DEFAULT NULL"
+        },
+        {
+          "name": "pixelSize",
+          "definition": "int(11) DEFAULT 35"
+        },
+        {
+          "name": "showingNumberOfPost",
+          "definition": "int(8) DEFAULT 8"
+        },
+        {
+          "name": "giphy_api_key",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "giphy_first_trend_key",
+          "definition": "varchar(255) DEFAULT NULL"
+        },
+        {
+          "name": "mycd",
+          "definition": "varchar(255) DEFAULT NULL"
+        },
+        {
+          "name": "mycd_status",
+          "definition": "int(2) DEFAULT NULL"
+        },
+        {
+          "name": "stripe_status",
+          "definition": "enum('1','2') NOT NULL DEFAULT '2'"
+        },
+        {
+          "name": "stripe_secret_key",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "stripe_public_key",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "stripe_currency",
+          "definition": "varchar(5) DEFAULT 'USD'"
+        },
+        {
+          "name": "sub_weekly_minimum_amount",
+          "definition": "varchar(5) DEFAULT NULL"
+        },
+        {
+          "name": "sub_monthly_minimum_amount",
+          "definition": "varchar(5) DEFAULT NULL"
+        },
+        {
+          "name": "sub_yearly_minimum_amount",
+          "definition": "varchar(5) DEFAULT NULL"
+        },
+        {
+          "name": "pagination_limit",
+          "definition": "int(11) NOT NULL DEFAULT 30"
+        },
+        {
+          "name": "minimum_withdrawal_amount",
+          "definition": "varchar(50) NOT NULL DEFAULT '50'"
+        },
+        {
+          "name": "one_point",
+          "definition": "varchar(10) NOT NULL DEFAULT '0.1'"
+        },
+        {
+          "name": "fee",
+          "definition": "varchar(55) NOT NULL DEFAULT '20'"
+        },
+        {
+          "name": "smtp_or_mail",
+          "definition": "enum('smtp','mail') NOT NULL DEFAULT 'smtp'"
+        },
+        {
+          "name": "smtp_host",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "default_mail",
+          "definition": "varchar(255) DEFAULT NULL"
+        },
+        {
+          "name": "smtp_username",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "smtp_password",
+          "definition": "varchar(250) DEFAULT NULL"
+        },
+        {
+          "name": "smtp_encryption",
+          "definition": "enum('tls','ssl') NOT NULL DEFAULT 'tls'"
+        },
+        {
+          "name": "smtp_port",
+          "definition": "varchar(25) DEFAULT '587'"
+        },
+        {
+          "name": "siteEmail",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "emailSendStatus",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "default_style",
+          "definition": "enum('light','dark') NOT NULL DEFAULT 'light'"
+        },
+        {
+          "name": "geolocationapikey",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "maintenance_mode",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "register",
+          "definition": "enum('0','1') NOT NULL DEFAULT '1'"
+        },
+        {
+          "name": "ip_limit",
+          "definition": "enum('0','1') NOT NULL DEFAULT '1'"
+        },
+        {
+          "name": "max_point_limit",
+          "definition": "varchar(8) DEFAULT NULL"
+        },
+        {
+          "name": "min_point_limit",
+          "definition": "varchar(8) DEFAULT NULL"
+        },
+        {
+          "name": "max_point_amount_limit",
+          "definition": "varchar(8) DEFAULT NULL"
+        },
+        {
+          "name": "min_point_amount_limit",
+          "definition": "varchar(8) DEFAULT NULL"
+        },
+        {
+          "name": "minimum_subscription_amount",
+          "definition": "varchar(10) DEFAULT NULL"
+        },
+        {
+          "name": "maximum_subscription_amount",
+          "definition": "varchar(10) DEFAULT NULL"
+        },
+        {
+          "name": "social_login_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '1'"
+        },
+        {
+          "name": "meta_image",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "free_live_time",
+          "definition": "varchar(30) NOT NULL"
+        },
+        {
+          "name": "agora_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "agora_app_id",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "agora_certificate",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "agora_customer_id",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "minimum_live_streaming_fee",
+          "definition": "varchar(25) DEFAULT NULL"
+        },
+        {
+          "name": "landing_page_type",
+          "definition": "enum('1','2','3','4','5') NOT NULL DEFAULT '1'"
+        },
+        {
+          "name": "landing_first_image",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "landing_first_image_arrow",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "landing_feature_image_one",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "landing_feature_image_two",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "landing_feature_image_three",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "landing_feature_image_four",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "landing_feature_image_five",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "landing_section_two_bg",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "landing_section_feature_image",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "disallowed_usernames",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "normal_user_can_post",
+          "definition": "enum('yes','no') NOT NULL DEFAULT 'no'"
+        },
+        {
+          "name": "user_can_block_country",
+          "definition": "enum('no','yes') NOT NULL DEFAULT 'yes'"
+        },
+        {
+          "name": "subscription_type",
+          "definition": "tinyint(1) NOT NULL DEFAULT 1"
+        },
+        {
+          "name": "min_point_fee_weekly",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "min_point_fee_monthly",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "min_point_fee_yearly",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "min_tip_amount",
+          "definition": "varchar(10) DEFAULT NULL"
+        },
+        {
+          "name": "free_live_streaming_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '1'"
+        },
+        {
+          "name": "paid_live_streaming_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '1'"
+        },
+        {
+          "name": "g_recaptcha_status",
+          "definition": "varchar(5) DEFAULT 'no'"
+        },
+        {
+          "name": "g_recaptcha_site_key",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "g_recaptcha_secret_key",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "one_signal_status",
+          "definition": "varchar(10) DEFAULT 'close'"
+        },
+        {
+          "name": "one_signal_api",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "one_signal_rest_api",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "affilate_status",
+          "definition": "varchar(5) DEFAULT 'no'"
+        },
+        {
+          "name": "minimum_point_transfer_request",
+          "definition": "varchar(11) NOT NULL"
+        },
+        {
+          "name": "affilate_amount",
+          "definition": "varchar(11) NOT NULL DEFAULT '0.10'"
+        },
+        {
+          "name": "sub_weekly_status",
+          "definition": "varchar(5) NOT NULL DEFAULT 'yes'"
+        },
+        {
+          "name": "sub_mountly_status",
+          "definition": "varchar(5) NOT NULL DEFAULT 'yes'"
+        },
+        {
+          "name": "sub_yearly_status",
+          "definition": "varchar(5) NOT NULL DEFAULT 'yes'"
+        },
+        {
+          "name": "watermark_status",
+          "definition": "varchar(5) NOT NULL DEFAULT 'yes'"
+        },
+        {
+          "name": "watermark_text_status",
+          "definition": "text NOT NULL"
+        },
+        {
+          "name": "use_fullname_or_username",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "auto_approve_post",
+          "definition": "varchar(5) NOT NULL DEFAULT 'no'"
+        },
+        {
+          "name": "earn_point_status",
+          "definition": "varchar(5) NOT NULL DEFAULT 'no'"
+        },
+        {
+          "name": "be_a_creator_status",
+          "definition": "varchar(15) NOT NULL DEFAULT 'request'"
+        },
+        {
+          "name": "video_call_feature_status",
+          "definition": "varchar(5) DEFAULT 'no'"
+        },
+        {
+          "name": "who_can_careate_video_call",
+          "definition": "varchar(5) NOT NULL DEFAULT 'yes'"
+        },
+        {
+          "name": "is_video_call_free",
+          "definition": "varchar(5) NOT NULL DEFAULT 'no'"
+        },
+        {
+          "name": "max_point_in_a_day",
+          "definition": "varchar(5) NOT NULL DEFAULT '1'"
+        },
+        {
+          "name": "show_search_result_type",
+          "definition": "enum('no','yes') NOT NULL DEFAULT 'no'"
+        },
+        {
+          "name": "load_more_message_limit",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "was_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "was_bucket",
+          "definition": "text NOT NULL"
+        },
+        {
+          "name": "was_region",
+          "definition": "text NOT NULL"
+        },
+        {
+          "name": "was_secret_key",
+          "definition": "longtext NOT NULL"
+        },
+        {
+          "name": "was_key",
+          "definition": "text NOT NULL"
+        },
+        {
+          "name": "enable_disable_drawtext",
+          "definition": "varchar(2) NOT NULL DEFAULT '1'"
+        },
+        {
+          "name": "boosted_post_status",
+          "definition": "enum('yes','no') NOT NULL DEFAULT 'no'"
+        },
+        {
+          "name": "auto_detect_language_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '1'"
+        },
+        {
+          "name": "send__email",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "criadores",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "textopesquisa",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "rodape1",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "osmelhores",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "passo5",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "passo4",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "passo3",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "passo2",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "passo1",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "frasecomo",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "titulocomo",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "texto_coluna2",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "texto_coluna1",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "frase_quemsomos",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "frase_home",
+          "definition": "text DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_contacts",
+      "columns": [
+        {
+          "name": "contact_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "contact_full_name",
+          "definition": "varchar(75) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL"
+        },
+        {
+          "name": "contact_email",
+          "definition": "varchar(125) DEFAULT NULL"
+        },
+        {
+          "name": "contact_message",
+          "definition": "longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL"
+        },
+        {
+          "name": "contact_time",
+          "definition": "int(13) DEFAULT NULL"
+        },
+        {
+          "name": "contact_ip",
+          "definition": "varchar(45) DEFAULT NULL"
+        },
+        {
+          "name": "contact_read_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_creators",
+      "columns": [
+        {
+          "name": "cr_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "creator_value",
+          "definition": "varchar(80) DEFAULT NULL"
+        },
+        {
+          "name": "creator_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_custom_codes",
+      "columns": [
+        {
+          "name": "custom_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "custom_code",
+          "definition": "longtext DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_friends",
+      "columns": [
+        {
+          "name": "fr_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "fr_one",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "fr_two",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "fr_time",
+          "definition": "int(13) DEFAULT NULL"
+        },
+        {
+          "name": "fr_status",
+          "definition": "enum('me','flwr','subscriber') NOT NULL DEFAULT 'me'"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_landing_qa",
+      "columns": [
+        {
+          "name": "qa_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "qa_title",
+          "definition": "text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL"
+        },
+        {
+          "name": "qa_description",
+          "definition": "text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL"
+        },
+        {
+          "name": "qa_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_langs",
+      "columns": [
+        {
+          "name": "lang_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "lang_name",
+          "definition": "varchar(25) DEFAULT NULL"
+        },
+        {
+          "name": "lang_status",
+          "definition": "enum('0','1') DEFAULT '0'"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_live",
+      "columns": [
+        {
+          "name": "live_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "live_uid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "live_channel",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "live_time",
+          "definition": "int(15) DEFAULT NULL"
+        },
+        {
+          "name": "live_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "started_at",
+          "definition": "int(15) DEFAULT NULL"
+        },
+        {
+          "name": "finish_time",
+          "definition": "int(15) DEFAULT NULL"
+        },
+        {
+          "name": "a_resource_id",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "a_sid",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "live_credit",
+          "definition": "varchar(10) DEFAULT NULL"
+        },
+        {
+          "name": "live_type",
+          "definition": "enum('free','paid') NOT NULL DEFAULT 'free'"
+        },
+        {
+          "name": "live_name",
+          "definition": "varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_live_chat",
+      "columns": [
+        {
+          "name": "cm_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "cm_live_id",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "cm_iuid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "cm_message",
+          "definition": "text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL"
+        },
+        {
+          "name": "cm_gift_type",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "cm_time",
+          "definition": "int(15) DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_live_gift_point",
+      "columns": [
+        {
+          "name": "gift_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "gift_name",
+          "definition": "varchar(55) DEFAULT NULL"
+        },
+        {
+          "name": "gift_image",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "gift_point",
+          "definition": "varchar(55) NOT NULL"
+        },
+        {
+          "name": "gift_money_equal",
+          "definition": "varchar(55) NOT NULL"
+        },
+        {
+          "name": "gift_money_animation_image",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "gift_status",
+          "definition": "varchar(1) NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "gift_created_time",
+          "definition": "int(13) DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_live_likes",
+      "columns": [
+        {
+          "name": "like_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "live_id_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "iuid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "like_time",
+          "definition": "int(13) DEFAULT NULL"
+        },
+        {
+          "name": "user_ip",
+          "definition": "varchar(35) DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_live_video_users",
+      "columns": [
+        {
+          "name": "live_user_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "live_user_uid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "live_time",
+          "definition": "int(15) DEFAULT NULL"
+        },
+        {
+          "name": "live_video_id",
+          "definition": "int(11) DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_mentions",
+      "columns": [
+        {
+          "name": "m_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "m_uid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "m_user_owner",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "m_post_id_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "m_type",
+          "definition": "varchar(25) DEFAULT NULL"
+        },
+        {
+          "name": "mention_type",
+          "definition": "enum('comment','post','chat') NOT NULL"
+        },
+        {
+          "name": "m_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "m_time",
+          "definition": "int(11) DEFAULT 1524910573"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_pages",
+      "columns": [
+        {
+          "name": "page_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "page_title",
+          "definition": "text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL"
+        },
+        {
+          "name": "page_name",
+          "definition": "varchar(255) DEFAULT NULL"
+        },
+        {
+          "name": "page_created_time",
+          "definition": "int(13) DEFAULT NULL"
+        },
+        {
+          "name": "page_inside",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "page_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_payment_methods",
+      "columns": [
+        {
+          "name": "payment_method_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "paypal_payment_mode",
+          "definition": "enum('1','0') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "paypal_active_pasive",
+          "definition": "enum('1','0') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "paypal_sendbox_business_email",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "paypal_product_business_email",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "paypal_crncy",
+          "definition": "varchar(5) NOT NULL DEFAULT 'USD'"
+        },
+        {
+          "name": "bitpay_payment_mode",
+          "definition": "enum('1','0') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "bitpay_active_pasive",
+          "definition": "enum('1','0') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "bitpay_notification_email",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "bitpay_password",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "bitpay_pairing_code",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "bitpay_label",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "bitpay_crncy",
+          "definition": "varchar(5) NOT NULL DEFAULT 'USD'"
+        },
+        {
+          "name": "stripe_payment_mode",
+          "definition": "enum('1','0') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "stripe_active_pasive",
+          "definition": "enum('1','0') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "stripe_test_secret_key",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "stripe_test_public_key",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "stripe_live_secret_key",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "stripe_live_public_key",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "stripe_crncy",
+          "definition": "varchar(5) NOT NULL DEFAULT 'USD'"
+        },
+        {
+          "name": "authorize_payment_mode",
+          "definition": "enum('1','0') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "authorizenet_active_pasive",
+          "definition": "enum('1','0') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "authorizenet_test_ap_id",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "authorizenet_test_transaction_key",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "authorizenet_live_api_id",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "authorizenet_live_transaction_key",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "authorize_crncy",
+          "definition": "varchar(5) NOT NULL DEFAULT 'USD'"
+        },
+        {
+          "name": "iyzico_payment_mode",
+          "definition": "enum('1','0') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "iyzico_active_pasive",
+          "definition": "enum('1','0') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "iyzico_testing_secret_key",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "iyzico_testing_api_key",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "iyzico_live_api_key",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "iyzico_live_secret_key",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "iyzico_crncy",
+          "definition": "varchar(5) DEFAULT 'USD'"
+        },
+        {
+          "name": "razorpay_payment_mode",
+          "definition": "enum('1','0') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "razorpay_active_pasive",
+          "definition": "enum('1','0') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "razorpay_testing_key_id",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "razorpay_testing_secret_key",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "razorpay_live_key_id",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "razorpay_live_secret_key",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "razorpay_crncy",
+          "definition": "varchar(5) NOT NULL DEFAULT 'USD'"
+        },
+        {
+          "name": "paystack_payment_mode",
+          "definition": "enum('1','0') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "paystack_active_pasive",
+          "definition": "enum('1','0') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "paystack_testing_secret_key",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "paystack_testing_public_key",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "paystack_live_secret_key",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "pay_stack_liive_public_key",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "paystack_crncy",
+          "definition": "varchar(5) NOT NULL DEFAULT 'NGN'"
+        },
+        {
+          "name": "ccbill_account_number",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "ccbill_subaccount_number",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "ccbill_flex_form_id",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "ccbill_salt_key",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "ccbill_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "ccbill_currency",
+          "definition": "varchar(25) DEFAULT NULL"
+        },
+        {
+          "name": "coinpayments_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "coinpayments_private_key",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "coinpayments_public_key",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "coinpayments_merchand_id",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "coinpayments_ipn_secret",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "coinpayments_debug_email",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "cp_cryptocurrencies",
+          "definition": "varchar(10) NOT NULL DEFAULT 'LTCT'"
+        },
+        {
+          "name": "mercadopago_payment_mode",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "mercadopago_active_pasive",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "mercadopago_test_access_id",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "mercadopago_live_access_id",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "mercadopago_currency",
+          "definition": "varchar(5) NOT NULL DEFAULT 'USD'"
+        },
+        {
+          "name": "bank_payment_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "bank_payment_percentage_fee",
+          "definition": "varchar(15) NOT NULL DEFAULT '2.0'"
+        },
+        {
+          "name": "bank_payment_fixed_charge",
+          "definition": "varchar(15) NOT NULL DEFAULT '0.00'"
+        },
+        {
+          "name": "bank_payment_details",
+          "definition": "text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_post_comment_likes",
+      "columns": [
+        {
+          "name": "c_like_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "c_like_iuid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "c_like_comment_id",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "c_like_post_id",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "c_like_time",
+          "definition": "int(13) DEFAULT 1608467477"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_post_comments",
+      "columns": [
+        {
+          "name": "com_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "comment_post_id_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "comment_uid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "comment_time",
+          "definition": "int(13) DEFAULT NULL"
+        },
+        {
+          "name": "comment",
+          "definition": "varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL"
+        },
+        {
+          "name": "comment_file",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "sticker_url",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "gif_url",
+          "definition": "longtext DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_post_likes",
+      "columns": [
+        {
+          "name": "like_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "post_id_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "iuid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "like_time",
+          "definition": "int(13) DEFAULT NULL"
+        },
+        {
+          "name": "user_ip",
+          "definition": "varchar(35) DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_post_reports",
+      "columns": [
+        {
+          "name": "p_report_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "reported_post",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "iuid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "report_time",
+          "definition": "int(13) NOT NULL DEFAULT 1608301750"
+        },
+        {
+          "name": "report_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_posts",
+      "columns": [
+        {
+          "name": "post_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "post_owner_id",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "post_text",
+          "definition": "longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL"
+        },
+        {
+          "name": "url_slug",
+          "definition": "text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL"
+        },
+        {
+          "name": "post_file",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "post_created_time",
+          "definition": "int(13) DEFAULT NULL"
+        },
+        {
+          "name": "post_creator_ip",
+          "definition": "varchar(23) DEFAULT NULL"
+        },
+        {
+          "name": "who_can_see",
+          "definition": "enum('1','2','3','4') NOT NULL DEFAULT '1'"
+        },
+        {
+          "name": "post_want_status",
+          "definition": "enum('normal','secret','credit') NOT NULL DEFAULT 'normal'"
+        },
+        {
+          "name": "post_wanted_credit",
+          "definition": "varchar(15) DEFAULT NULL"
+        },
+        {
+          "name": "post_status",
+          "definition": "enum('0','1','2') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "comment_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '1'"
+        },
+        {
+          "name": "shared_post_id",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "post_pined",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "hashtags",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "boost_id_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "boosted_status",
+          "definition": "enum('0','1','2') NOT NULL DEFAULT '0'"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_premium_plans",
+      "columns": [
+        {
+          "name": "plan_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "plan_name_key",
+          "definition": "varchar(35) DEFAULT NULL"
+        },
+        {
+          "name": "plan_amount",
+          "definition": "varchar(55) DEFAULT NULL"
+        },
+        {
+          "name": "plan_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "plan_discount",
+          "definition": "varchar(55) DEFAULT NULL"
+        },
+        {
+          "name": "amount",
+          "definition": "varchar(55) DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_product_seen_time",
+      "columns": [
+        {
+          "name": "p_s_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "p_uid_ip",
+          "definition": "varchar(255) DEFAULT NULL"
+        },
+        {
+          "name": "p_id",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "p_seen_time",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "p_s_iuid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_profile_categories",
+      "columns": [
+        {
+          "name": "c_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "c_key",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "c_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_profile_sub_categories",
+      "columns": [
+        {
+          "name": "sc_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "sc_key",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "c_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "sc_status",
+          "definition": "enum('0','1') DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_refUsers",
+      "columns": [
+        {
+          "name": "i_ref_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "ref_owner_user_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "ref_user_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "ref_type",
+          "definition": "varchar(15) NOT NULL DEFAULT 'reg'"
+        },
+        {
+          "name": "time",
+          "definition": "varchar(15) DEFAULT NULL"
+        },
+        {
+          "name": "ip",
+          "definition": "text DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_saved_posts",
+      "columns": [
+        {
+          "name": "save_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "saved_post_id",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "iuid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "saved_time",
+          "definition": "int(13) NOT NULL DEFAULT 1608363432"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_sessions",
+      "columns": [
+        {
+          "name": "session_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "session_uid",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "session_key",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "session_time",
+          "definition": "int(13) NOT NULL DEFAULT 1605484800"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_shop_configuration",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "shop_key",
+          "definition": "varchar(25) DEFAULT NULL"
+        },
+        {
+          "name": "status",
+          "definition": "enum('no','yes') NOT NULL DEFAULT 'no'"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_social_logins",
+      "columns": [
+        {
+          "name": "s_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "s_key",
+          "definition": "varchar(55) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL"
+        },
+        {
+          "name": "s_key_one",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "s_key_two",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "s_first_active",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "s_icon",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "s_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_social_networks",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "social_icon",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "skey",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "place_holder",
+          "definition": "varchar(255) DEFAULT NULL"
+        },
+        {
+          "name": "status",
+          "definition": "varchar(5) NOT NULL DEFAULT 'no'"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_social_user_profiles",
+      "columns": [
+        {
+          "name": "ius_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "isw_id_fk",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "s_link",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "uid_fk",
+          "definition": "int(11) NOT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_stickers",
+      "columns": [
+        {
+          "name": "sticker_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "sticker_url",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "sticker_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_stories_seen",
+      "columns": [
+        {
+          "name": "i_seen_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "i_seen_uid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "i_seen_storie_id",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "seen_time",
+          "definition": "int(15) DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_story_configuration",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "story_fk_key",
+          "definition": "varchar(25) DEFAULT NULL"
+        },
+        {
+          "name": "sstatus",
+          "definition": "varchar(25) NOT NULL DEFAULT 'yes'"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_story_text_bg",
+      "columns": [
+        {
+          "name": "st_bg_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "st_bg_img_url",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "st_bg_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "choosed_status",
+          "definition": "varchar(5) DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_svg_icons",
+      "columns": [
+        {
+          "name": "icon_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "icon_code",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "icon_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '1'"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_user_avatars",
+      "columns": [
+        {
+          "name": "avatar_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "iuid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "avatar_path",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "avatar_upload_time",
+          "definition": "int(13) NOT NULL DEFAULT 1609459200"
+        },
+        {
+          "name": "ip",
+          "definition": "varchar(54) DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_user_blocked_countries",
+      "columns": [
+        {
+          "name": "b_c_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "b_iuid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "b_country",
+          "definition": "varchar(25) DEFAULT NULL"
+        },
+        {
+          "name": "b_time",
+          "definition": "int(15) DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_user_blocks",
+      "columns": [
+        {
+          "name": "block_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "blocker_iuid",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "blocked_iuid",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "block_type",
+          "definition": "enum('1','2') DEFAULT NULL"
+        },
+        {
+          "name": "blocked_time",
+          "definition": "int(13) DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_user_conversation_uploads",
+      "columns": [
+        {
+          "name": "upload_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "iuid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "con_id_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "uploaded_file_path",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "uploaded_x_file_path",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "uploaded_file_ext",
+          "definition": "varchar(5) DEFAULT NULL"
+        },
+        {
+          "name": "upload_time",
+          "definition": "int(13) DEFAULT NULL"
+        },
+        {
+          "name": "ip",
+          "definition": "longtext DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_user_covers",
+      "columns": [
+        {
+          "name": "cover_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "iuid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "cover_path",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "cover_upload_time",
+          "definition": "int(13) NOT NULL DEFAULT 1609459200"
+        },
+        {
+          "name": "ip",
+          "definition": "varchar(54) DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_user_notifications",
+      "columns": [
+        {
+          "name": "not_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "not_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "not_post_id",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "not_comment_id",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "not_type",
+          "definition": "varchar(35) DEFAULT NULL"
+        },
+        {
+          "name": "not_not_type",
+          "definition": "varchar(45) DEFAULT NULL"
+        },
+        {
+          "name": "not_time",
+          "definition": "int(13) NOT NULL DEFAULT 1605830400"
+        },
+        {
+          "name": "not_iuid",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "not_own_iuid",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "not_show_hide",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_user_payments",
+      "columns": [
+        {
+          "name": "payment_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "payer_iuid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "payed_iuid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "payed_live_stream_id_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "payed_post_id_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "paymet_product_id",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "payed_profile_id_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "order_key",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "payment_type",
+          "definition": "enum('post','profile','point','live_stream','tips','live_gift','product','videoCall','unlockmessage','boostPost') NOT NULL DEFAULT 'post'"
+        },
+        {
+          "name": "payment_option",
+          "definition": "enum('stripe','paypal','razorpay','iyzico','authorize-net','paystack','bitpay','coinpayment','mercadopago','bank') NOT NULL DEFAULT 'stripe'"
+        },
+        {
+          "name": "payment_time",
+          "definition": "int(13) NOT NULL DEFAULT 1609459200"
+        },
+        {
+          "name": "payment_status",
+          "definition": "enum('ok','declined','pending') NOT NULL DEFAULT 'ok'"
+        },
+        {
+          "name": "amount",
+          "definition": "varchar(255) DEFAULT NULL"
+        },
+        {
+          "name": "fee",
+          "definition": "varchar(255) DEFAULT NULL"
+        },
+        {
+          "name": "admin_earning",
+          "definition": "varchar(255) DEFAULT NULL"
+        },
+        {
+          "name": "user_earning",
+          "definition": "varchar(255) DEFAULT NULL"
+        },
+        {
+          "name": "credit_plan_id",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "unlocked_message_id",
+          "definition": "int(1) DEFAULT NULL"
+        },
+        {
+          "name": "bank_payment_image",
+          "definition": "int(11) DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_user_payouts",
+      "columns": [
+        {
+          "name": "payout_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "iuid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "amount",
+          "definition": "varchar(10) DEFAULT NULL"
+        },
+        {
+          "name": "method",
+          "definition": "enum('paypal','bank') DEFAULT 'paypal'"
+        },
+        {
+          "name": "payment_type",
+          "definition": "enum('withdrawal','subscription') DEFAULT NULL"
+        },
+        {
+          "name": "payout_time",
+          "definition": "int(13) NOT NULL DEFAULT 1609459200"
+        },
+        {
+          "name": "paid_time",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "status",
+          "definition": "enum('pending','payed','declined') NOT NULL DEFAULT 'pending'"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_user_point_earnings",
+      "columns": [
+        {
+          "name": "point_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "poninted_post_id",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "poninted_user_id",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "pointed_time",
+          "definition": "int(11) NOT NULL DEFAULT 1524910573"
+        },
+        {
+          "name": "pointed_type",
+          "definition": "varchar(35) DEFAULT NULL"
+        },
+        {
+          "name": "calculated_point",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "point",
+          "definition": "varchar(10) DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_user_product_posts",
+      "columns": [
+        {
+          "name": "pr_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "pr_name",
+          "definition": "text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL"
+        },
+        {
+          "name": "pr_price",
+          "definition": "varchar(25) DEFAULT NULL"
+        },
+        {
+          "name": "pr_files",
+          "definition": "varchar(155) DEFAULT NULL"
+        },
+        {
+          "name": "pr_downlodable_files",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "pr_desc",
+          "definition": "text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL"
+        },
+        {
+          "name": "pr_desc_info",
+          "definition": "text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL"
+        },
+        {
+          "name": "pr_created_time",
+          "definition": "int(15) DEFAULT NULL"
+        },
+        {
+          "name": "iuid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "pr_status",
+          "definition": "varchar(5) NOT NULL DEFAULT 'no'"
+        },
+        {
+          "name": "pr_seen_time",
+          "definition": "varchar(11) DEFAULT '0'"
+        },
+        {
+          "name": "pr_number_of_sales",
+          "definition": "varchar(11) NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "pr_name_slug",
+          "definition": "text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL"
+        },
+        {
+          "name": "product_type",
+          "definition": "varchar(55) DEFAULT NULL"
+        },
+        {
+          "name": "pr_slots_number",
+          "definition": "varchar(11) DEFAULT NULL"
+        },
+        {
+          "name": "pr_question_answer",
+          "definition": "text DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_user_stories",
+      "columns": [
+        {
+          "name": "s_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "uid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "uploaded_file_path",
+          "definition": "varchar(250) DEFAULT NULL"
+        },
+        {
+          "name": "upload_tumbnail_file_path",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "uploaded_x_file_path",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "uploaded_file_ext",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "text",
+          "definition": "text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL"
+        },
+        {
+          "name": "text_style",
+          "definition": "varchar(35) DEFAULT NULL"
+        },
+        {
+          "name": "created",
+          "definition": "int(11) NOT NULL DEFAULT 1524910573"
+        },
+        {
+          "name": "status",
+          "definition": "enum('1','2') NOT NULL DEFAULT '1'"
+        },
+        {
+          "name": "story_type",
+          "definition": "varchar(25) DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_user_subscribe_plans",
+      "columns": [
+        {
+          "name": "plan_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "iuid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "amount",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "plan_type",
+          "definition": "enum('weekly','monthly','yearly') NOT NULL DEFAULT 'monthly'"
+        },
+        {
+          "name": "plan_created_time",
+          "definition": "int(13) DEFAULT NULL"
+        },
+        {
+          "name": "plan_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_user_subscriptions",
+      "columns": [
+        {
+          "name": "subscription_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "iuid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "subscribed_iuid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "subscriber_name",
+          "definition": "varchar(255) DEFAULT NULL"
+        },
+        {
+          "name": "payment_method",
+          "definition": "enum('stripe','point') NOT NULL DEFAULT 'stripe'"
+        },
+        {
+          "name": "payment_subscription_id",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "customer_id",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "plan_id",
+          "definition": "varchar(120) DEFAULT NULL"
+        },
+        {
+          "name": "plan_amount",
+          "definition": "float(10,2) DEFAULT NULL"
+        },
+        {
+          "name": "admin_earning",
+          "definition": "varchar(55) DEFAULT NULL"
+        },
+        {
+          "name": "user_net_earning",
+          "definition": "varchar(15) DEFAULT NULL"
+        },
+        {
+          "name": "plan_amount_currency",
+          "definition": "varchar(10) DEFAULT NULL"
+        },
+        {
+          "name": "plan_interval",
+          "definition": "varchar(10) DEFAULT NULL"
+        },
+        {
+          "name": "plan_interval_count",
+          "definition": "tinyint(2) DEFAULT NULL"
+        },
+        {
+          "name": "payer_email",
+          "definition": "varchar(255) DEFAULT NULL"
+        },
+        {
+          "name": "created",
+          "definition": "datetime DEFAULT NULL"
+        },
+        {
+          "name": "plan_period_start",
+          "definition": "datetime DEFAULT NULL"
+        },
+        {
+          "name": "plan_period_end",
+          "definition": "datetime DEFAULT NULL"
+        },
+        {
+          "name": "status",
+          "definition": "varchar(50) DEFAULT NULL"
+        },
+        {
+          "name": "in_status",
+          "definition": "int(1) DEFAULT 0"
+        },
+        {
+          "name": "finished",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_user_uploads",
+      "columns": [
+        {
+          "name": "upload_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "iuid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "uploaded_file_path",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "upload_tumbnail_file_path",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "uploaded_x_file_path",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "uploaded_file_ext",
+          "definition": "varchar(5) DEFAULT NULL"
+        },
+        {
+          "name": "upload_time",
+          "definition": "int(13) DEFAULT NULL"
+        },
+        {
+          "name": "ip",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "upload_type",
+          "definition": "enum('wall','profile','product','verification','bankPayment') NOT NULL DEFAULT 'wall'"
+        },
+        {
+          "name": "upload_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_users",
+      "columns": [
+        {
+          "name": "iuid",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "userType",
+          "definition": "enum('1','2','3') NOT NULL DEFAULT '1'"
+        },
+        {
+          "name": "i_username",
+          "definition": "varchar(255) DEFAULT NULL"
+        },
+        {
+          "name": "i_user_fullname",
+          "definition": "varchar(125) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL"
+        },
+        {
+          "name": "i_user_email",
+          "definition": "varchar(255) DEFAULT NULL"
+        },
+        {
+          "name": "birthday",
+          "definition": "date DEFAULT NULL"
+        },
+        {
+          "name": "i_password",
+          "definition": "varchar(255) DEFAULT NULL"
+        },
+        {
+          "name": "user_avatar",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "user_cover",
+          "definition": "varchar(255) DEFAULT NULL"
+        },
+        {
+          "name": "user_gender",
+          "definition": "varchar(85) DEFAULT NULL"
+        },
+        {
+          "name": "registered",
+          "definition": "int(13) DEFAULT NULL"
+        },
+        {
+          "name": "last_login_time",
+          "definition": "int(15) DEFAULT NULL"
+        },
+        {
+          "name": "online_offline_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '1'"
+        },
+        {
+          "name": "uStatus",
+          "definition": "enum('1','2','3') NOT NULL DEFAULT '3'"
+        },
+        {
+          "name": "lang",
+          "definition": "varchar(35) NOT NULL DEFAULT 'eng'"
+        },
+        {
+          "name": "notification_read_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "message_notification_read_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "post_who_can_see",
+          "definition": "enum('1','2','3','4') NOT NULL DEFAULT '1'"
+        },
+        {
+          "name": "user_verified_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "profile_status",
+          "definition": "enum('1','2') NOT NULL DEFAULT '1'"
+        },
+        {
+          "name": "profile_category",
+          "definition": "varchar(255) DEFAULT NULL"
+        },
+        {
+          "name": "u_bio",
+          "definition": "longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL"
+        },
+        {
+          "name": "certification_status",
+          "definition": "enum('0','1','2') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "validation_status",
+          "definition": "enum('0','1','2') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "condition_status",
+          "definition": "enum('0','1','2') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "fees_status",
+          "definition": "enum('0','1','2') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "payout_status",
+          "definition": "enum('0','1','2') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "payout_method",
+          "definition": "enum('paypal','bank') DEFAULT NULL"
+        },
+        {
+          "name": "paypal_email",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "bank_account",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "wallet_points",
+          "definition": "varchar(55) DEFAULT '0'"
+        },
+        {
+          "name": "wallet_money",
+          "definition": "decimal(10,2) DEFAULT 0.00"
+        },
+        {
+          "name": "email_notification_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '1'"
+        },
+        {
+          "name": "light_dark",
+          "definition": "enum('light','dark') NOT NULL DEFAULT 'light'"
+        },
+        {
+          "name": "show_hide_posts",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "message_status",
+          "definition": "enum('0','1') DEFAULT '1'"
+        },
+        {
+          "name": "countryCode",
+          "definition": "varchar(55) DEFAULT NULL"
+        },
+        {
+          "name": "u_timezone",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "lat",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "lon",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "forgot_pass_code",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "login_with",
+          "definition": "varchar(255) DEFAULT NULL"
+        },
+        {
+          "name": "email_verify_status",
+          "definition": "enum('no','yes') NOT NULL DEFAULT 'no'"
+        },
+        {
+          "name": "verify_key",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "thanks_for_tip",
+          "definition": "varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL"
+        },
+        {
+          "name": "device_key",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "qr_image",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "affilate_earnings",
+          "definition": "varchar(25) DEFAULT '0'"
+        },
+        {
+          "name": "fake_user_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "video_call_price",
+          "definition": "varchar(10) DEFAULT '50'"
+        },
+        {
+          "name": "who_can_call",
+          "definition": "varchar(2) DEFAULT '0'"
+        },
+        {
+          "name": "who_can_message",
+          "definition": "varchar(2) DEFAULT '1'"
+        },
+        {
+          "name": "who_can_send_message",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_verification_requests",
+      "columns": [
+        {
+          "name": "request_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "iuid_fk",
+          "definition": "int(11) DEFAULT NULL"
+        },
+        {
+          "name": "id_card",
+          "definition": "varchar(255) DEFAULT NULL"
+        },
+        {
+          "name": "photo_of_card",
+          "definition": "varchar(255) DEFAULT NULL"
+        },
+        {
+          "name": "request_status",
+          "definition": "enum('0','1','2') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "request_time",
+          "definition": "int(13) NOT NULL DEFAULT 1609891200"
+        },
+        {
+          "name": "user_read_status",
+          "definition": "enum('0','1') NOT NULL DEFAULT '0'"
+        },
+        {
+          "name": "request_not",
+          "definition": "varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_video_call",
+      "columns": [
+        {
+          "name": "vc_id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "voice_call_name",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "chat_id_fk",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "called_uid_fk",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "caller_uid_fk",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "accept_status",
+          "definition": "varchar(5) NOT NULL DEFAULT '1'"
+        },
+        {
+          "name": "called_time",
+          "definition": "int(15) NOT NULL"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "i_website_social_networks",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "int(11) NOT NULL"
+        },
+        {
+          "name": "social_icon",
+          "definition": "longtext DEFAULT NULL"
+        },
+        {
+          "name": "skey",
+          "definition": "text DEFAULT NULL"
+        },
+        {
+          "name": "place_holder",
+          "definition": "varchar(255) DEFAULT NULL"
+        },
+        {
+          "name": "status",
+          "definition": "varchar(5) NOT NULL DEFAULT 'no'"
+        }
+      ],
+      "indexes": []
+    }
+  ]
+}
