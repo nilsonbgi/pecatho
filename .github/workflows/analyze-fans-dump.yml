@@ -1,0 +1,39 @@
+name: Analisar dump legado do Fans
+
+on:
+  push:
+    paths:
+      - 'fans_vipcomdump.sql'
+      - 'scripts/analyze-fans-dump.mjs'
+      - '.github/workflows/analyze-fans-dump.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Analisar dump
+        run: node scripts/analyze-fans-dump.mjs fans_vipcomdump.sql docs
+
+      - name: Publicar análise no repositório
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/fans-legacy-schema.json docs/fans-legacy-schema.md
+          if git diff --cached --quiet; then
+            echo 'Nenhuma alteração na análise.'
+            exit 0
+          fi
+          git commit -m 'docs(fans): atualizar análise do dump legado [skip ci]'
+          git push
