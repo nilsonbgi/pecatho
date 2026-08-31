@@ -10,7 +10,10 @@ export default async function AdminPage() {
   if (!user) redirect("/login");
 
   const { data: role } = await supabase.from("user_roles").select("role").eq("user_id", user.id).in("role", ["super_admin", "admin", "moderator", "support", "finance"]).limit(1).maybeSingle();
-  if (!role) redirect("/painel");
+  if (role) return <AdminConsole role={String(role.role)} />;
 
-  return <AdminConsole role={String(role.role)} />;
+  const { count } = await supabase.from("user_roles").select("user_id", { count: "exact", head: true });
+  if (count === 0) return <AdminConsole role="bootstrap" />;
+
+  redirect("/painel");
 }
