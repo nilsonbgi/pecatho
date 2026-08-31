@@ -1,3 +1,42 @@
 "use client";
-import { FormEvent, useState } from "react"; import Link from "next/link"; import { createClient } from "@/lib/supabase/browser";
-export default function LoginPage(){const[email,setEmail]=useState("");const[password,setPassword]=useState("");const[error,setError]=useState("");const[busy,setBusy]=useState(false);async function submit(e:FormEvent){e.preventDefault();setBusy(true);setError("");const{error}=await createClient().auth.signInWithPassword({email,password});if(error)setError(error.message);else window.location.href="/painel";setBusy(false)}return <main className="shell"><nav className="topbar"><div className="brand"><span className="brandMark">P</span><span>Pecatho</span></div><Link href="/" className="navCta">Início</Link></nav><section className="hero authHero"><div className="eyebrow">ACESSO SEGURO</div><h1>Entrar no <em>Pecatho.</em></h1><form className="authCard" onSubmit={submit}><label>E-mail<input type="email" value={email} onChange={e=>setEmail(e.target.value)} required /></label><label>Senha<input type="password" value={password} onChange={e=>setPassword(e.target.value)} required /></label>{error&&<p className="formError">{error}</p>}<button className="primaryButton" disabled={busy}>{busy?"Entrando...":"Entrar"}</button><p className="authHint">Ainda não possui conta? <Link href="/cadastro">Cadastre-se</Link></p></form></section></main>
+
+import { FormEvent, useState } from "react";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/browser";
+
+export default function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    const { error } = await createClient().auth.signInWithPassword({ email, password });
+    if (error) setError(error.message);
+    else window.location.href = "/painel";
+    setBusy(false);
+  }
+
+  return (
+    <main className="shell">
+      <nav className="topbar">
+        <div className="brand"><span className="brandMark">P</span><span>Pecatho</span></div>
+        <Link href="/" className="navCta">Início</Link>
+      </nav>
+      <section className="hero authHero">
+        <div className="eyebrow">ACESSO SEGURO</div>
+        <h1>Entrar no <em>Pecatho.</em></h1>
+        <form className="authCard" onSubmit={submit}>
+          <label>E-mail<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></label>
+          <label>Senha<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required /></label>
+          {error && <p className="formError">{error}</p>}
+          <button className="primaryButton" disabled={busy}>{busy ? "Entrando..." : "Entrar"}</button>
+          <p className="authHint">Ainda não possui conta? <Link href="/cadastro">Cadastre-se</Link></p>
+        </form>
+      </section>
+    </main>
+  );
+}
