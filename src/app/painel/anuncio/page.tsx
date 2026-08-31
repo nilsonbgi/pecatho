@@ -11,7 +11,6 @@ type CategoryRow = { id: number; name: string };
 const sections = ["Apresentação", "Localização", "Características", "Serviços", "Preços", "Publicação"];
 
 export default function AnuncioPage() {
-  const supabase = createClient();
   const [active, setActive] = useState("Apresentação");
   const [title, setTitle] = useState("");
   const [name, setName] = useState("");
@@ -32,6 +31,7 @@ export default function AnuncioPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    const supabase = createClient();
     (async () => {
       const a = await supabase.from("states").select("id,uf,name").order("name");
       const b = await supabase.from("cities").select("id,name,state_id").order("name").limit(5000);
@@ -40,7 +40,7 @@ export default function AnuncioPage() {
       setCities((b.data as CityRow[] | null) || []);
       setCategories((c.data as CategoryRow[] | null) || []);
     })();
-  }, [supabase]);
+  }, []);
 
   const visibleCities = useMemo(
     () => cities.filter((c) => !stateId || String(c.state_id) === stateId),
@@ -53,6 +53,7 @@ export default function AnuncioPage() {
     setMessage("");
     setError("");
 
+    const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       window.location.href = "/login";
@@ -69,6 +70,11 @@ export default function AnuncioPage() {
       ? Number(price.replace(/\./g, "").replace(",", "."))
       : null;
 
+    const numericAge = age ? Number(age) : null;
+    const birthDate = numericAge && numericAge >= 18
+      ? `${new Date().getFullYear() - numericAge}-01-01`
+      : null;
+
     const payload = {
       title,
       display_name: name,
@@ -77,6 +83,8 @@ export default function AnuncioPage() {
       state_id: stateId ? Number(stateId) : null,
       city_id: cityId ? Number(cityId) : null,
       category_id: categoryId ? Number(categoryId) : null,
+      birth_date: birthDate,
+      height_cm: height ? Number(height) : null,
       pricing: { price: normalizedPrice },
       service_options: { description: services },
       social_links: {},
