@@ -17,12 +17,6 @@ function optionsOf(value: unknown): string[] {
   return value.filter((item): item is string => typeof item === "string");
 }
 
-function parseAttributeValue(value: unknown): string | string[] | boolean | number | null {
-  if (typeof value === "string" || typeof value === "boolean" || typeof value === "number" || value === null) return value;
-  if (Array.isArray(value)) return value.filter((item): item is string => typeof item === "string");
-  return null;
-}
-
 export default function AnuncioPage() {
   const [active, setActive] = useState("Apresentação");
   const [title, setTitle] = useState(""); const [name, setName] = useState(""); const [summary, setSummary] = useState(""); const [description, setDescription] = useState("");
@@ -58,7 +52,10 @@ export default function AnuncioPage() {
     e.preventDefault(); setBusy(true); setMessage(""); setError("");
     const { data: { user } } = await supabase.auth.getUser(); if (!user) { window.location.href = "/login"; return; }
     if (!categoryId) { setError("Selecione uma categoria antes de salvar."); setBusy(false); return; }
-    const missing = attributes.filter((a) => a.required && (attributeValues[a.id] === undefined || attributeValues[a.id] === "" || (Array.isArray(attributeValues[a.id]) && attributeValues[a.id].length === 0)));
+    const missing = attributes.filter((a) => {
+      const value = attributeValues[a.id];
+      return a.required && (value === undefined || value === "" || (Array.isArray(value) && value.length === 0));
+    });
     if (missing.length) { setError(`Preencha os campos obrigatórios: ${missing.map((a) => a.name).join(", ")}.`); setBusy(false); return; }
     const requiredServices = services.filter((s) => s.required && selectedServices[s.id] !== true); if (requiredServices.length) { setError(`Selecione os serviços obrigatórios: ${requiredServices.map((s) => s.name).join(", ")}.`); setBusy(false); return; }
     const { data: old } = await supabase.from("advertiser_profiles").select("id").eq("user_id", user.id).maybeSingle();
