@@ -22,13 +22,13 @@ export default function AnunciantesPage() {
   const [metaLoading, setMetaLoading] = useState(true);
   const [citiesLoading, setCitiesLoading] = useState(false);
   const [error, setError] = useState("");
-  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
     let active = true;
     const loadMetadata = async () => {
       setMetaLoading(true);
       try {
+        const supabase = createClient();
         const [categoriesResult, statesResult] = await Promise.all([
           supabase.from("categories").select("id,name").eq("display", true).order("name"),
           supabase.from("states").select("id,uf,name").order("name"),
@@ -47,7 +47,7 @@ export default function AnunciantesPage() {
     };
     void loadMetadata();
     return () => { active = false; };
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -56,6 +56,7 @@ export default function AnunciantesPage() {
       if (!stateId) { setCities([]); setCitiesLoading(false); return; }
       setCitiesLoading(true);
       try {
+        const supabase = createClient();
         const { data, error: queryError } = await supabase
           .from("cities")
           .select("id,name,state_id")
@@ -73,26 +74,27 @@ export default function AnunciantesPage() {
     };
     void loadCities();
     return () => { active = false; };
-  }, [stateId, supabase]);
+  }, [stateId]);
 
   useEffect(() => {
     let active = true;
     const loadAdvertisers = async () => {
       setLoading(true); setError("");
-      let request = supabase
-        .from("advertiser_profiles")
-        .select("id,slug,title,display_name,summary,city_id,state_id,category_id,verification_status,created_at")
-        .eq("status", "published")
-        .order("created_at", { ascending: false })
-        .limit(48);
-      if (categoryId) request = request.eq("category_id", Number(categoryId));
-      if (stateId) request = request.eq("state_id", Number(stateId));
-      if (cityId) request = request.eq("city_id", Number(cityId));
-      if (query.trim()) {
-        const clean = query.trim().replace(/[%_,]/g, " ");
-        request = request.or(`title.ilike.%${clean}%,display_name.ilike.%${clean}%,summary.ilike.%${clean}%`);
-      }
       try {
+        const supabase = createClient();
+        let request = supabase
+          .from("advertiser_profiles")
+          .select("id,slug,title,display_name,summary,city_id,state_id,category_id,verification_status,created_at")
+          .eq("status", "published")
+          .order("created_at", { ascending: false })
+          .limit(48);
+        if (categoryId) request = request.eq("category_id", Number(categoryId));
+        if (stateId) request = request.eq("state_id", Number(stateId));
+        if (cityId) request = request.eq("city_id", Number(cityId));
+        if (query.trim()) {
+          const clean = query.trim().replace(/[%_,]/g, " ");
+          request = request.or(`title.ilike.%${clean}%,display_name.ilike.%${clean}%,summary.ilike.%${clean}%`);
+        }
         const { data, error: queryError } = await request;
         if (queryError) throw queryError;
         if (active) setAdvertisers(data ?? []);
@@ -105,7 +107,7 @@ export default function AnunciantesPage() {
     };
     void loadAdvertisers();
     return () => { active = false; };
-  }, [categoryId, stateId, cityId, query, supabase]);
+  }, [categoryId, stateId, cityId, query]);
 
   const categoryName = useMemo(() => new Map(categories.map((x) => [x.id, x.name])), [categories]);
   const cityName = useMemo(() => new Map(cities.map((x) => [x.id, x.name])), [cities]);
