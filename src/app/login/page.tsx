@@ -2,7 +2,6 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/browser";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -16,6 +15,7 @@ export default function LoginPage() {
     setError("");
 
     try {
+      const { createClient } = await import("@/lib/supabase/browser");
       const supabase = createClient();
       const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
       if (authError) {
