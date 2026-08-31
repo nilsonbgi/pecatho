@@ -57,6 +57,9 @@ export default function AnunciantesPage() {
   const cityName = useMemo(() => new Map(cities.map((x) => [x.id, x.name])), [cities]);
   const stateName = useMemo(() => new Map(states.map((x) => [x.id, x.uf])), [states]);
 
+  const selectedCityName = cityId ? cityName.get(Number(cityId)) : null;
+  const selectedStateName = stateId ? states.find((x) => x.id === Number(stateId))?.name : null;
+
   return (
     <main className="shell">
       <nav className="topbar">
@@ -77,17 +80,17 @@ export default function AnunciantesPage() {
       </section>
       <section style={{ padding: "0 0 64px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, marginBottom: 18 }}>
-          <div><div className="eyebrow">RESULTADOS</div><h2 style={{ margin: "6px 0 0" }}>{loading ? "Buscando..." : `${advertisers.length} ${advertisers.length === 1 ? "perfil encontrado" : "perfis encontrados"}`}</h2></div>
+          <div><div className="eyebrow">RESULTADOS</div><h2 style={{ margin: "6px 0 0" }}>{loading ? "Buscando..." : `${advertisers.length} ${advertisers.length === 1 ? "perfil encontrado" : "perfis encontrados"}`}</h2>{(selectedStateName || selectedCityName) && <p style={{ margin: "6px 0 0", opacity: 0.7 }}>{selectedCityName ? `${selectedCityName}, ` : ""}{selectedStateName || ""}</p>}</div>
           {(categoryId || stateId || cityId || query) && <button type="button" className="secondaryButton" onClick={() => { setCategoryId(""); setStateId(""); setCityId(""); setQuery(""); }}>Limpar filtros</button>}
         </div>
         {error && <article className="card"><h2>Não foi possível carregar</h2><p>{error}</p><button type="button" className="primaryButton" onClick={() => window.location.reload()}>Tentar novamente</button></article>}
         {!loading && !error && advertisers.length === 0 && <article className="card"><h2>Nenhum anúncio publicado ainda.</h2><p>Os filtros de categoria, Estado e cidade já estão disponíveis. Assim que houver anúncios publicados, eles aparecerão aqui.</p><Link href="/cadastro" className="primaryButton">Quero anunciar</Link></article>}
         {!error && advertisers.length > 0 && <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
           {advertisers.map((item) => <article className="card" key={item.id}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}><span className="previewBadge">{item.verification_status === "verified" ? "VERIFICADO" : "PUBLICADO"}</span><span className="eyebrow" style={{ margin: 0 }}>{categoryName.get(item.category_id) || "ANUNCIANTE"}</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}><span className="previewBadge">{item.verification_status === "verified" ? "VERIFICADO" : "PUBLICADO"}</span><span className="eyebrow" style={{ margin: 0 }}>{item.category_id != null ? categoryName.get(item.category_id) || "ANUNCIANTE" : "ANUNCIANTE"}</span></div>
             <h2 style={{ marginTop: 14 }}>{item.title || item.display_name || "Perfil Pecatho"}</h2>
             <p><strong>{item.display_name || "Anunciante"}</strong></p>
-            <p>📍 {cityName.get(item.city_id) || "Cidade não informada"}{stateName.get(item.state_id) ? ` — ${stateName.get(item.state_id)}` : ""}</p>
+            <p>📍 {item.city_id != null ? cityName.get(item.city_id) || "Cidade não informada" : "Cidade não informada"}{item.state_id != null && stateName.get(item.state_id) ? ` — ${stateName.get(item.state_id)}` : ""}</p>
             <p>{item.summary || "Perfil publicado no Pecatho."}</p>
             {item.slug && <Link className="primaryButton" href={`/anunciantes/${item.slug}`}>Ver anúncio</Link>}
           </article>)}
