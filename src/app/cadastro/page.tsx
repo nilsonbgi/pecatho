@@ -1,3 +1,51 @@
 "use client";
-import { FormEvent, useState } from "react"; import Link from "next/link"; import { createClient } from "@/lib/supabase/browser";
-export default function CadastroPage(){const[name,setName]=useState("");const[email,setEmail]=useState("");const[password,setPassword]=useState("");const[msg,setMsg]=useState("");const[error,setError]=useState("");const[busy,setBusy]=useState(false);async function submit(e:FormEvent){e.preventDefault();setBusy(true);setError("");setMsg("");const{error}=await createClient().auth.signUp({email,password,options:{data:{display_name:name}}});if(error)setError(error.message);else setMsg("Cadastro realizado. Verifique seu e-mail para confirmar a conta.");setBusy(false)}return <main className="shell"><nav className="topbar"><div className="brand"><span className="brandMark">P</span><span>Pecatho</span></div><Link href="/" className="navCta">Início</Link></nav><section className="hero authHero"><div className="eyebrow">NOVO CADASTRO</div><h1>Faça parte do <em>Pecatho.</em></h1><form className="authCard" onSubmit={submit}><label>Nome de exibição<input value={name} onChange={e=>setName(e.target.value)} required /></label><label>E-mail<input type="email" value={email} onChange={e=>setEmail(e.target.value)} required /></label><label>Senha<input type="password" value={password} onChange={e=>setPassword(e.target.value)} required minLength={8} /></label>{error&&<p className="formError">{error}</p>}{msg&&<p className="formSuccess">{msg}</p>}<button className="primaryButton" disabled={busy}>{busy?"Criando...":"Criar conta"}</button><p className="authHint">Já possui conta? <Link href="/login">Entrar</Link></p></form></section></main>
+
+import { FormEvent, useState } from "react";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/browser";
+
+export default function CadastroPage() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [msg, setMsg] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    setMsg("");
+    const { error } = await createClient().auth.signUp({
+      email,
+      password,
+      options: { data: { display_name: name } },
+    });
+    if (error) setError(error.message);
+    else setMsg("Cadastro realizado. Verifique seu e-mail para confirmar a conta.");
+    setBusy(false);
+  }
+
+  return (
+    <main className="shell">
+      <nav className="topbar">
+        <div className="brand"><span className="brandMark">P</span><span>Pecatho</span></div>
+        <Link href="/" className="navCta">Início</Link>
+      </nav>
+      <section className="hero authHero">
+        <div className="eyebrow">NOVO CADASTRO</div>
+        <h1>Faça parte do <em>Pecatho.</em></h1>
+        <form className="authCard" onSubmit={submit}>
+          <label>Nome de exibição<input value={name} onChange={(e) => setName(e.target.value)} required /></label>
+          <label>E-mail<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></label>
+          <label>Senha<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} /></label>
+          {error && <p className="formError">{error}</p>}
+          {msg && <p className="formSuccess">{msg}</p>}
+          <button className="primaryButton" disabled={busy}>{busy ? "Criando..." : "Criar conta"}</button>
+          <p className="authHint">Já possui conta? <Link href="/login">Entrar</Link></p>
+        </form>
+      </section>
+    </main>
+  );
+}
