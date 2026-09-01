@@ -58,7 +58,8 @@ export default async function Painel() {
           <article className="card">
             <div className="cardIcon">P</div><h2>Perfil da conta</h2>
             <p>{profile?.status === "active" ? "Conta ativa" : "Conta em configuração"}</p>
-            <span className="fieldNote">O mesmo usuário pode possuir Pecatho, Fans ou ambos.</span>
+            <p className="fieldNote">Edite seus dados pessoais, endereço e preferências cadastrais.</p>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:16}}><Link className="secondaryButton" href="/painel/perfil">Editar meus dados</Link><Link className="secondaryButton" href="/admin">Administração</Link></div>
           </article>
         </section>
       </section>
