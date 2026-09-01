@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/browser";
+import { useRouter } from "next/navigation";
 
 type Tab = "visao" | "anunciantes" | "categorias" | "localidades" | "planos" | "verificacoes";
 type Category = { id: number; name: string; zone: string | null; display: boolean; featured: boolean; sort_order: number };
@@ -16,6 +17,7 @@ const statusLabel: Record<string, string> = { draft: "Rascunho", pending_review:
 
 export default function AdminConsole({ role }: { role: string }) {
   const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>("visao");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -54,6 +56,12 @@ export default function AdminConsole({ role }: { role: string }) {
   useEffect(() => { loadAll(); }, []);
 
   function clearFeedback() { setMessage(""); setError(""); }
+
+  async function signOut() {
+    await supabase.auth.signOut();
+    router.replace("/login");
+    router.refresh();
+  }
   function nextId(rows: { id: number }[]) { return rows.length ? Math.max(...rows.map((r) => Number(r.id))) + 1 : 1; }
 
   async function saveCategory(e: FormEvent) {
@@ -113,7 +121,7 @@ export default function AdminConsole({ role }: { role: string }) {
   const nav: [Tab, string][] = [["visao", "Visão geral"], ["anunciantes", "Anunciantes"], ["categorias", "Categorias"], ["localidades", "Localidades"], ["planos", "Planos de publicação"], ["verificacoes", "Verificações"]];
 
   return <main className="shell">
-    <nav className="topbar"><div className="brand"><span className="brandMark">P</span><span>Pecatho</span></div><div className="navLinks"><Link href="/anunciantes">Anunciantes</Link><Link href="/painel" className="navCta">Painel</Link></div></nav>
+    <nav className="topbar"><div className="brand"><span className="brandMark">P</span><span>Pecatho</span></div><div className="navLinks"><Link href="/anunciantes">Anunciantes</Link><Link href="/painel">Painel</Link><button type="button" className="navCta" onClick={signOut}>Sair</button></div></nav>
     <section className="hero" style={{ maxWidth: 1400 }}>
       <div className="eyebrow">ADMINISTRAÇÃO PECATHO</div>
       <h1>Centro de <em>gestão.</em></h1>
