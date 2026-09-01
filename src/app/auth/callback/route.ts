@@ -24,6 +24,7 @@ function isAdult(value: string) {
   if (m < 0 || (m === 0 && now.getUTCDate() < d.getUTCDate())) age--;
   return age >= 18;
 }
+
 async function geocode(address: string, cep: string) {
   try {
     const url = new URL("https://nominatim.openstreetmap.org/search");
@@ -67,23 +68,78 @@ export async function GET(request: Request) {
   const uf = String(meta.uf || "").trim().toUpperCase();
   const ibgeCode = String(meta.ibge_code || "").trim();
 
-  if (name && user.email && validCpf(cpf) && isAdult(birthDate) && cep.length === 8 && street && number && neighborhood && city && /^[A-Z]{2}$/.test(uf) && /^\d{7}$/.test(ibgeCode)) {
-    const { data: cityRow, error: cityError } = await supabase.from("cities").select("id,state_id,name,ibge_code").eq("ibge_code", ibgeCode).maybeSingle();
+  // O perfil-base não depende da existência prévia de município/endereço.
+  // Isso impede que uma falha secundária de localização deixe o usuário
+  // criado no Auth sem seu perfil principal.
+  if (name && user.email && validCpf(cpf) && isAdult(birthDate)) {
+    const { data: existingCpf, error: cpfError } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("cpf", cpf)
+      .neq("id", user.id)
+      .maybeSingle();
+
+    if (!cpfError && !existingCpf) {
+      await supabase.from("profiles").upsert({
+        id: user.id,
+        display_name: name,
+        legal_name: name,
+        email: user.email,
+        phone,
+        cpf,
+        birth_date: birthDate,
+      }, { onConflict: "id" });
+    }
+  }
+
+  // O endereço é persistido somente quando o município informado pelo CEP
+  // pode ser relacionado ao cadastro territorial. A ausência dessa relação
+  // não desfaz o perfil-base já criado.
+  if (cep.length === 8 && street && number && neighborhood && city && /^[A-Z]{2}$/.test(uf) && /^\d{7}$/.test(ibgeCode)) {
+    const { data: cityRow, error: cityError } = await supabase
+      .from("cities")
+      .select("id,state_id,name,ibge_code")
+      .eq("ibge_code", ibgeCode)
+      .maybeSingle();
+
     if (!cityError && cityRow) {
-      const { data: stateRow, error: stateError } = await supabase.from("states").select("id,uf,name").eq("id", cityRow.state_id).maybeSingle();
+      const { data: stateRow, error: stateError } = await supabase
+        .from("states")
+        .select("id,uf,name")
+        .eq("id", cityRow.state_id)
+        .maybeSingle();
+
       if (!stateError && stateRow && stateRow.uf === uf && cityRow.name.toLocaleLowerCase("pt-BR") === city.toLocaleLowerCase("pt-BR")) {
-        const { data: existing } = await supabase.from("profiles").select("id").eq("cpf", cpf).neq("id", user.id).maybeSingle();
-        if (!existing) {
-          await supabase.from("profiles").upsert({ id: user.id, display_name: name, legal_name: name, email: user.email, phone, cpf, birth_date: birthDate }, { onConflict: "id" });
-          await supabase.from("user_addresses").update({ is_primary: false }).eq("user_id", user.id);
-          const coordinates = await geocode(`${street}, ${number}, ${neighborhood}, ${city}, ${uf}`, cep);
-          const publicLatitude = coordinates ? Number(coordinates.latitude.toFixed(2)) : null;
-          const publicLongitude = coordinates ? Number(coordinates.longitude.toFixed(2)) : null;
-          const { data: existingAddress } = await supabase.from("user_addresses").select("id").eq("user_id", user.id).eq("is_primary", true).maybeSingle();
-          const address = { user_id: user.id, address_type: "primary", zipcode: cep, street, number, complement: complement || null, city_id: cityRow.id, state_id: cityRow.state_id, latitude: coordinates?.latitude ?? null, longitude: coordinates?.longitude ?? null, public_latitude: publicLatitude, public_longitude: publicLongitude, location_visibility: coordinates ? "approximate" : "private", is_primary: true };
-          if (existingAddress?.id) await supabase.from("user_addresses").update(address).eq("id", existingAddress.id);
-          else await supabase.from("user_addresses").insert(address);
-        }
+        await supabase.from("user_addresses").update({ is_primary: false }).eq("user_id", user.id);
+        const coordinates = await geocode(`${street}, ${number}, ${neighborhood}, ${city}, ${uf}`, cep);
+        const publicLatitude = coordinates ? Number(coordinates.latitude.toFixed(2)) : null;
+        const publicLongitude = coordinates ? Number(coordinates.longitude.toFixed(2)) : null;
+        const { data: existingAddress } = await supabase
+          .from("user_addresses")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("is_primary", true)
+          .maybeSingle();
+
+        const address = {
+          user_id: user.id,
+          address_type: "primary",
+          zipcode: cep,
+          street,
+          number,
+          complement: complement || null,
+          city_id: cityRow.id,
+          state_id: cityRow.state_id,
+          latitude: coordinates?.latitude ?? null,
+          longitude: coordinates?.longitude ?? null,
+          public_latitude: publicLatitude,
+          public_longitude: publicLongitude,
+          location_visibility: coordinates ? "approximate" : "private",
+          is_primary: true,
+        };
+
+        if (existingAddress?.id) await supabase.from("user_addresses").update(address).eq("id", existingAddress.id);
+        else await supabase.from("user_addresses").insert(address);
       }
     }
   }
