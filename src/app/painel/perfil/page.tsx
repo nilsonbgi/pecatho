@@ -1,0 +1,177 @@
+"use client";
+
+import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/browser";
+
+type StateRow = { id: number; uf: string; name: string };
+type CityRow = { id: number; name: string; state_id: number };
+
+afunction onlyDigits(value: string) { return value.replace(/\D/g, ""); }
+function maskCpf(value: string) {
+  const v = onlyDigits(value).slice(0, 11);
+  return v.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+}
+function maskPhone(value: string) {
+  const v = onlyDigits(value).slice(0, 11);
+  if (v.length <= 10) return v.replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{4})(\d)/, "$1-$2");
+  return v.replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d)/, "$1-$2");
+}
+function maskCep(value: string) {
+  const v = onlyDigits(value).slice(0, 8);
+  return v.replace(/(\d{5})(\d)/, "$1-$2");
+}
+
+export default function PerfilPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [legalName, setLegalName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [cpf, setCpf] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [cpfLocked, setCpfLocked] = useState(false);
+  const [zipcode, setZipcode] = useState("");
+  const [street, setStreet] = useState("");
+  const [number, setNumber] = useState("");
+  const [complement, setComplement] = useState("");
+  const [stateId, setStateId] = useState("");
+  const [cityId, setCityId] = useState("");
+  const [states, setStates] = useState<StateRow[]>([]);
+  const [cities, setCities] = useState<CityRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+    async function load() {
+      const supabase = createClient();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (!mounted) return;
+      if (authError || !user) { router.replace("/login"); return; }
+      setEmail(user.email || "");
+
+      const [{ data: profile, error: profileError }, { data: address }, { data: stateRows }] = await Promise.all([
+        supabase.from("profiles").select("display_name,legal_name,phone,cpf,birth_date").eq("id", user.id).maybeSingle(),
+        supabase.from("user_addresses").select("zipcode,street,number,complement,state_id,city_id").eq("user_id", user.id).eq("is_primary", true).maybeSingle(),
+        supabase.from("states").select("id,uf,name").order("name")
+      ]);
+      if (!mounted) return;
+      if (profileError) { setError("Não foi possível carregar os dados do perfil. " + profileError.message); }
+      if (profile) {
+        setDisplayName(profile.display_name || ""); setLegalName(profile.legal_name || ""); setPhone(profile.phone || "");
+        setCpf(profile.cpf || ""); setCpfLocked(Boolean(profile.cpf)); setBirthDate(profile.birth_date || "");
+      }
+      if (address) {
+        setZipcode(address.zipcode || ""); setStreet(address.street || ""); setNumber(address.number || ""); setComplement(address.complement || "");
+        setStateId(address.state_id ? String(address.state_id) : ""); setCityId(address.city_id ? String(address.city_id) : "");
+      }
+      setStates((stateRows || []) as StateRow[]);
+      setLoading(false);
+    }
+    void load();
+    return () => { mounted = false; };
+  }, [router]);
+
+  useEffect(() => {
+    if (!stateId) { setCities([]); return; }
+    let mounted = true;
+    async function loadCities() {
+      const { data } = await createClient().from("cities").select("id,name,state_id").eq("state_id", Number(stateId)).order("name");
+      if (mounted) setCities((data || []) as CityRow[]);
+    }
+    void loadCities();
+    return () => { mounted = false; };
+  }, [stateId]);
+
+  async function lookupCep() {
+    setError("");
+    const cep = onlyDigits(zipcode);
+    if (cep.length !== 8) { setError("Informe um CEP válido com 8 dígitos."); return; }
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await response.json();
+      if (!response.ok || data.erro) throw new Error("CEP não encontrado.");
+      setStreet(data.logradouro || "");
+      const state = states.find((item) => item.uf === data.uf);
+      if (state) {
+        setStateId(String(state.id));
+        const { data: cityRows } = await createClient().from("cities").select("id,name,state_id").eq("state_id", state.id).eq("name", data.localidade).limit(1);
+        if (cityRows?.[0]) setCityId(String(cityRows[0].id));
+      }
+      setMessage(`CEP localizado: ${data.localidade} — ${data.uf}.`);
+    } catch (err) { setError(err instanceof Error ? err.message : "Não foi possível consultar o CEP."); }
+  }
+
+  async function save(e: FormEvent) {
+    e.preventDefault(); setBusy(true); setError(""); setMessage("");
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { router.replace("/login"); return; }
+      const { error: profileError } = await supabase.rpc("update_my_profile", {
+        p_display_name: displayName.trim() || null,
+        p_legal_name: legalName.trim() || null,
+        p_phone: phone.trim() || null,
+        p_birth_date: birthDate || null,
+        p_cpf: onlyDigits(cpf) || null
+      });
+      if (profileError) throw profileError;
+      const { error: addressError } = await supabase.rpc("update_my_address", {
+        p_zipcode: onlyDigits(zipcode) || null,
+        p_street: street.trim() || null,
+        p_number: number.trim() || null,
+        p_complement: complement.trim() || null,
+        p_neighborhood_id: null,
+        p_city_id: cityId ? Number(cityId) : null,
+        p_state_id: stateId ? Number(stateId) : null
+      });
+      if (addressError) throw addressError;
+      setCpfLocked(Boolean(onlyDigits(cpf)));
+      setMessage("Dados atualizados com sucesso.");
+    } catch (err) { setError(err instanceof Error ? err.message : "Não foi possível atualizar seu cadastro."); }
+    finally { setBusy(false); }
+  }
+
+  async function logout() {
+    await createClient().auth.signOut();
+    router.replace("/login");
+    router.refresh();
+  }
+
+  if (loading) return <main className="shell"><section className="hero"><div className="eyebrow">MEUS DADOS</div><h1>Carregando <em>cadastro.</em></h1></section></main>;
+
+  return <main className="shell">
+    <nav className="topbar"><div className="brand"><span className="brandMark">P</span><span>Pecatho</span></div><div className="navLinks"><Link href="/painel">Painel</Link><Link href="/admin" className="navCta">Administração</Link></div></nav>
+    <section className="hero">
+      <div className="eyebrow">MEUS DADOS</div>
+      <h1>Seu cadastro, <em>sob seu controle.</em></h1>
+      <p className="heroCopy">Atualize seus dados pessoais e sua localização sempre que necessário. O CPF, depois de registrado, fica bloqueado para alteração nesta área.</p>
+      <form className="authCard" onSubmit={save}>
+        <h2>Dados pessoais</h2>
+        <div className="formGrid">
+          <label>E-mail<input value={email} readOnly disabled /></label>
+          <label>Nome de exibição<input value={displayName} onChange={(e) => setDisplayName(e.target.value)} /></label>
+          <label>Nome completo<input value={legalName} onChange={(e) => setLegalName(e.target.value)} /></label>
+          <label>Telefone<input value={phone} onChange={(e) => setPhone(maskPhone(e.target.value))} placeholder="(00) 00000-0000" /></label>
+          <label>CPF<input value={maskCpf(cpf)} onChange={(e) => !cpfLocked && setCpf(onlyDigits(e.target.value))} readOnly={cpfLocked} disabled={cpfLocked} placeholder="000.000.000-00" />{cpfLocked && <small>CPF já registrado. Para preservar a identidade da conta, a alteração é bloqueada.</small>}</label>
+          <label>Data de nascimento<input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} /></label>
+        </div>
+        <h2>Endereço</h2>
+        <div className="formGrid">
+          <label>CEP<div style={{display:"flex",gap:8}}><input value={maskCep(zipcode)} onChange={(e) => setZipcode(onlyDigits(e.target.value))} placeholder="00000-000" /><button type="button" className="secondaryButton" onClick={lookupCep}>Consultar CEP</button></div></label>
+          <label>Logradouro<input value={street} onChange={(e) => setStreet(e.target.value)} /></label>
+          <label>Número<input value={number} onChange={(e) => setNumber(e.target.value)} /></label>
+          <label>Complemento<input value={complement} onChange={(e) => setComplement(e.target.value)} /></label>
+          <label>Estado<select value={stateId} onChange={(e) => { setStateId(e.target.value); setCityId(""); }}><option value="">Selecione o Estado</option>{states.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.uf})</option>)}</select></label>
+          <label>Cidade<select value={cityId} onChange={(e) => setCityId(e.target.value)} disabled={!stateId}><option value="">Selecione a Cidade</option>{cities.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+        </div>
+        {error && <p className="formError">{error}</p>}{message && <p>{message}</p>}
+        <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:20}}><button className="primaryButton" type="submit" disabled={busy}>{busy ? "Salvando..." : "Salvar alterações"}</button><Link className="secondaryButton" href="/painel">Voltar ao painel</Link><button className="secondaryButton" type="button" onClick={logout}>Encerrar sessão</button></div>
+      </form>
+    </section>
+  </main>;
+}
