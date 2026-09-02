@@ -17,7 +17,8 @@ type Plan = { id: string; name: string; description: string | null; duration_day
 
 function formatCpf(value: string | null) { if (!value) return "Não informado"; const d=value.replace(/\D/g,""); return d.length===11 ? d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,"$1.$2.$3-$4") : value; }
 function formatPhone(value: string | null) { return value || "Não informado"; }
-\nconst statusLabel: Record<string, string> = { draft: "Rascunho", pending_review: "Em análise", published: "Publicado", paused: "Pausado", suspended: "Suspenso", archived: "Arquivado", unverified: "Não verificada", pending: "Pendente", verified: "Verificada", rejected: "Rejeitada", expired: "Expirada" };
+
+const statusLabel: Record<string, string> = { draft: "Rascunho", pending_review: "Em análise", published: "Publicado", paused: "Pausado", suspended: "Suspenso", archived: "Arquivado", unverified: "Não verificada", pending: "Pendente", verified: "Verificada", rejected: "Rejeitada", expired: "Expirada" };
 
 export default function AdminConsole({ role }: { role: string }) {
   const supabase = useMemo(() => createClient(), []);
@@ -34,7 +35,13 @@ export default function AdminConsole({ role }: { role: string }) {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [categorySearch, setCategorySearch] = useState("");
   const [advertiserSearch, setAdvertiserSearch] = useState("");
-  const [stateFilter, setStateFilter] = useState("");\n  const [selectedAdvertiser, setSelectedAdvertiser] = useState<Advertiser | null>(null);\n  const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);\n  const [selectedAddress, setSelectedAddress] = useState<any>(null);\n  const [selectedMedia, setSelectedMedia] = useState<any[]>([]);\n  const [selectedVerification, setSelectedVerification] = useState<any>(null);\n  const [detailBusy, setDetailBusy] = useState(false);
+  const [stateFilter, setStateFilter] = useState("");
+  const [selectedAdvertiser, setSelectedAdvertiser] = useState<Advertiser | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
+  const [selectedAddress, setSelectedAddress] = useState<any>(null);
+  const [selectedMedia, setSelectedMedia] = useState<any[]>([]);
+  const [selectedVerification, setSelectedVerification] = useState<any>(null);
+  const [detailBusy, setDetailBusy] = useState(false);
 
   const [categoryForm, setCategoryForm] = useState({ id: "", name: "", zone: "group", sort_order: "0", display: true, featured: false });
   const [stateForm, setStateForm] = useState({ id: "", uf: "", name: "" });
