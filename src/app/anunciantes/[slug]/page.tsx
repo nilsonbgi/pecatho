@@ -6,13 +6,17 @@ import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
 import ApproximateLocationMap from "@/components/ApproximateLocationMap";
 
-type Profile = { id: string; user_id: string; title: string | null; display_name: string | null; summary: string | null; description: string | null; status: string; verification_status: string | null; city_id: number | null; state_id: number | null; category_id: number | null; social_links: Record<string, string> | null };
+type Profile = { id: string; user_id: string; title: string | null; display_name: string | null; summary: string | null; description: string | null; status: string; verification_status: string | null; city_id: number | null; state_id: number | null; category_id: number | null; birth_date: string | null; height_cm: number | null; weight_kg: number | null; availability: string | null; pricing: Record<string, unknown> | null; social_links: Record<string, string> | null };
 type Address = { public_latitude: number | null; public_longitude: number | null };
 type Media = { id: string; profile_id: string; storage_bucket: string; storage_path: string; preview_storage_bucket: string | null; preview_storage_path: string | null; kind: string; access_type: "public" | "paid"; price: number; currency: string; is_primary: boolean; sort_order: number; moderation_status: string };
 type Review = { id: string; rating: number | null; comment: string | null; created_at: string; experience_verified: boolean };
 type City = { name: string };
 type State = { uf: string; name: string };
 type Category = { name: string };
+type Attribute = { id: string; name: string; slug: string; field_type: string; options: unknown; sort_order: number };
+type AttributeValue = { attribute_id: string; value: unknown };
+type Service = { id: string; name: string; slug: string; description: string | null; sort_order: number };
+type ProfileService = { service_id: string; selected: boolean; notes: string | null };
 type FansCreator = { slug: string; display_name: string; bio: string | null; status: string };
 
 type GalleryItem = Media & { url: string | null; previewUrl: string | null; unlockedUrl?: string };
@@ -27,6 +31,24 @@ function publicUrl(supabase: ReturnType<typeof createClient>, bucket: string | n
   return data.publicUrl || null;
 }
 
+function labelValue(value: unknown) {
+  if (Array.isArray(value)) return value.map((item) => String(item)).filter(Boolean).join(", ");
+  if (typeof value === "boolean") return value ? "Sim" : "Não";
+  if (value === null || value === undefined || value === "") return "";
+  return String(value);
+}
+
+function calculateAge(birthDate: string | null) {
+  if (!birthDate) return null;
+  const birth = new Date(`${birthDate}T00:00:00`);
+  if (Number.isNaN(birth.getTime())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const month = today.getMonth() - birth.getMonth();
+  if (month < 0 || (month === 0 && today.getDate() < birth.getDate())) age--;
+  return age >= 18 ? age : null;
+}
+
 export default function PublicAdvertiserPage() {
   const params = useParams<{ slug: string }>();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -34,6 +56,10 @@ export default function PublicAdvertiserPage() {
   const [city, setCity] = useState<City | null>(null);
   const [state, setState] = useState<State | null>(null);
   const [category, setCategory] = useState<Category | null>(null);
+  const [attributes, setAttributes] = useState<Attribute[]>([]);
+  const [attributeValues, setAttributeValues] = useState<AttributeValue[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [profileServices, setProfileServices] = useState<ProfileService[]>([]);
   const [fans, setFans] = useState<FansCreator | null>(null);
   const [media, setMedia] = useState<GalleryItem[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -49,7 +75,7 @@ export default function PublicAdvertiserPage() {
     (async () => {
       const { data: p, error: profileError } = await supabase
         .from("advertiser_profiles")
-        .select("id,user_id,title,display_name,summary,description,status,verification_status,city_id,state_id,category_id,social_links")
+        .select("id,user_id,title,display_name,summary,description,status,verification_status,city_id,state_id,category_id,birth_date,height_cm,weight_kg,availability,pricing,social_links")
         .eq("slug", params.slug)
         .eq("status", "published")
         .maybeSingle();
@@ -58,11 +84,15 @@ export default function PublicAdvertiserPage() {
         return;
       }
       const typed = p as Profile;
-      const [a, c, s, cat, mediaResult, reviewResult, fansResult] = await Promise.all([
+      const [a, c, s, cat, attrs, attrValues, svc, svcValues, mediaResult, reviewResult, fansResult] = await Promise.all([
         supabase.from("user_addresses").select("public_latitude,public_longitude").eq("user_id", typed.user_id).eq("is_primary", true).maybeSingle(),
         typed.city_id ? supabase.from("cities").select("name").eq("id", typed.city_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
         typed.state_id ? supabase.from("states").select("uf,name").eq("id", typed.state_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
         typed.category_id ? supabase.from("categories").select("name").eq("id", typed.category_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+        typed.category_id ? supabase.from("category_attributes").select("id,name,slug,field_type,options,sort_order").eq("category_id", typed.category_id).eq("display_public", true).order("sort_order") : Promise.resolve({ data: [], error: null }),
+        supabase.from("profile_attribute_values").select("attribute_id,value").eq("profile_id", typed.id),
+        typed.category_id ? supabase.from("category_services").select("id,name,slug,description,sort_order").eq("category_id", typed.category_id).eq("display_public", true).order("sort_order") : Promise.resolve({ data: [], error: null }),
+        supabase.from("profile_services").select("service_id,selected,notes").eq("profile_id", typed.id).eq("selected", true),
         supabase.from("profile_media").select("id,profile_id,storage_bucket,storage_path,preview_storage_bucket,preview_storage_path,kind,access_type,price,currency,is_primary,sort_order,moderation_status").eq("profile_id", typed.id).eq("moderation_status", "approved").order("sort_order"),
         supabase.from("profile_feedback").select("id,rating,comment,created_at,experience_verified").eq("profile_id", typed.id).eq("status", "approved").eq("experience_verified", true).order("created_at", { ascending: false }).limit(12),
         supabase.from("fans_creators").select("slug,display_name,bio,status").eq("advertiser_profile_id", typed.id).eq("status", "active").maybeSingle(),
@@ -73,7 +103,9 @@ export default function PublicAdvertiserPage() {
         previewUrl: item.access_type === "paid" ? publicUrl(supabase, item.preview_storage_bucket, item.preview_storage_path) : null,
       }));
       if (!active) return;
-      setProfile(typed); setAddress((a.data as Address | null) || null); setCity((c.data as City | null) || null); setState((s.data as State | null) || null); setCategory((cat.data as Category | null) || null); setFans((fansResult.data as FansCreator | null) || null); setMedia(gallery); setReviews((reviewResult.data ?? []) as Review[]); setLoading(false);
+      setProfile(typed); setAddress((a.data as Address | null) || null); setCity((c.data as City | null) || null); setState((s.data as State | null) || null); setCategory((cat.data as Category | null) || null);
+      setAttributes((attrs.data ?? []) as Attribute[]); setAttributeValues((attrValues.data ?? []) as AttributeValue[]); setServices((svc.data ?? []) as Service[]); setProfileServices((svcValues.data ?? []) as ProfileService[]);
+      setFans((fansResult.data as FansCreator | null) || null); setMedia(gallery); setReviews((reviewResult.data ?? []) as Review[]); setLoading(false);
     })().catch((err) => { console.error(err); if (active) { setError("Não foi possível carregar este perfil."); setLoading(false); } });
     return () => { active = false; };
   }, [params.slug]);
@@ -83,6 +115,11 @@ export default function PublicAdvertiserPage() {
   const publicImages = media.filter((item) => item.kind === "image").length;
   const publicVideos = media.filter((item) => item.kind === "video").length;
   const socialLinks = Object.entries(profile?.social_links || {}).filter(([, value]) => Boolean(value));
+  const age = calculateAge(profile?.birth_date || null);
+  const visibleAttributeRows = attributes.map((attribute) => ({ attribute, value: attributeValues.find((entry) => entry.attribute_id === attribute.id)?.value })).filter(({ value }) => labelValue(value));
+  const selectedServices = services.filter((service) => profileServices.some((entry) => entry.service_id === service.id && entry.selected));
+  const prices = Array.isArray(profile?.pricing?.periods) ? (profile?.pricing?.periods as Array<Record<string, unknown>>) : [];
+  const validPrices = prices.filter((row) => Number.isFinite(Number(row.price)) && Number(row.price) >= 0);
 
   async function unlock(item: GalleryItem) {
     setUnlocking(item.id); setNotice("");
@@ -108,8 +145,16 @@ export default function PublicAdvertiserPage() {
       <section className="publicProfileHero">
         <div className="eyebrow">{category?.name || "ANUNCIANTE"}</div>
         <div className="profileTitleRow"><div><h1>{profile.title || profile.display_name || "Perfil Pecatho"}</h1><p className="heroCopy">{profile.summary || "Conheça este perfil no Pecatho."}</p></div><div className="profileTrust">{profile.verification_status === "verified" ? <span>✓ PERFIL VERIFICADO</span> : <span>PERFIL PUBLICADO</span>}{reviews.length > 0 && <strong>★ {averageRating.toFixed(1)} <small>({reviews.length} avaliações)</small></strong>}</div></div>
-        <div className="profileStats"><span>📷 {publicImages} fotos</span><span>▶ {publicVideos} vídeos</span><span>★ {reviews.length} avaliações verificadas</span>{city?.name && <span>⌖ {city.name}{state?.uf ? ` · ${state.uf}` : ""}</span>}</div>
+        <div className="profileStats"><span>📷 {publicImages} fotos</span><span>▶ {publicVideos} vídeos</span><span>★ {reviews.length} avaliações verificadas</span>{age && <span>◷ {age} anos</span>}{city?.name && <span>⌖ {city.name}{state?.uf ? ` · ${state.uf}` : ""}</span>}</div>
       </section>
+
+      {(visibleAttributeRows.length > 0 || profile.height_cm || profile.weight_kg || age) && <section className="profileDetails card"><div className="sectionHeading"><div><div className="eyebrow">CARACTERÍSTICAS</div><h2>Perfil e características</h2><p>Informações públicas configuradas pela anunciante e liberadas pela política do catálogo.</p></div></div><div className="detailGrid">{age && <div><span>Idade</span><strong>{age} anos</strong></div>}{profile.height_cm && <div><span>Altura</span><strong>{Number(profile.height_cm)} cm</strong></div>}{profile.weight_kg && <div><span>Peso</span><strong>{Number(profile.weight_kg)} kg</strong></div>}{visibleAttributeRows.map(({ attribute, value }) => <div key={attribute.id}><span>{attribute.name}</span><strong>{labelValue(value)}</strong></div>)}</div></section>}
+
+      {selectedServices.length > 0 && <section className="profileServices card"><div className="eyebrow">SERVIÇOS</div><h2>Serviços e modalidades</h2><div className="serviceChips">{selectedServices.map((service) => <span key={service.id}>{service.name}</span>)}</div></section>}
+
+      {validPrices.length > 0 && <section className="profilePricing card"><div className="eyebrow">VALORES</div><h2>Preços por período</h2><div className="priceGrid">{validPrices.map((row, index) => <div key={`${String(row.minutes ?? row.period ?? index)}-${index}`}><span>{row.minutes ? `${String(row.minutes)} min` : String(row.period || "Período")}</span><strong>{brl(Number(row.price))}</strong></div>)}</div></section>}
+
+      {profile.availability && <section className="profileAvailability card"><div className="eyebrow">DISPONIBILIDADE</div><h2>Horários de atendimento</h2><p>{profile.availability}</p></section>}
 
       <section className="profileMediaSection">
         <div className="sectionHeading"><div><div className="eyebrow">GALERIA</div><h2>Fotos e vídeos</h2><p>Conteúdo público e conteúdo exclusivo com acesso pago definido pela própria anunciante.</p></div><div className="mediaTabs"><button className={mediaTab === "all" ? "active" : ""} onClick={() => setMediaTab("all")}>Tudo</button><button className={mediaTab === "image" ? "active" : ""} onClick={() => setMediaTab("image")}>Fotos</button><button className={mediaTab === "video" ? "active" : ""} onClick={() => setMediaTab("video")}>Vídeos</button></div></div>
