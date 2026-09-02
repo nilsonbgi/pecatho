@@ -73,11 +73,18 @@ export default function AnuncioPage() {
           supabase.from("states").select("id,uf,name").order("name"),
           supabase.from("categories").select("id,name,display").eq("display", true).order("sort_order,name"),
           supabase.from("advertiser_profiles").select("id,user_id,title,display_name,summary,description,state_id,city_id,category_id,neighborhood_id,birth_date,height_cm,weight_kg,availability,phone,whatsapp,phone_secondary,pricing,service_options,payment_options,social_links,positioning,primary_media_id,status,verification_status").maybeSingle(),
-          supabase.from("user_addresses").select("id,zipcode,street,number,complement,neighborhood_id,city_id,state_id,latitude,longitude,location_visibility,public_latitude,public_longitude").eq("address_type","primary").maybeSingle(),\n          supabase.from("profiles").select("id,display_name,legal_name,email,phone,cpf,birth_date").eq("id", (await supabase.auth.getUser()).data.user?.id || "").maybeSingle(),
+          supabase.from("user_addresses").select("id,zipcode,street,number,complement,neighborhood_id,city_id,state_id,latitude,longitude,location_visibility,public_latitude,public_longitude").eq("address_type","primary").maybeSingle(),
+          supabase.from("profiles").select("id,display_name,legal_name,email,phone,cpf,birth_date").eq("id", (await supabase.auth.getUser()).data.user?.id || "").maybeSingle(),
         ]);
         if (!alive) return;
         if (stateError || categoryError || profileError || addressError || accountProfileError) setError("Não foi possível carregar todos os dados do anúncio.");
-        setStates((stateData || []) as StateRow[]); setCategories((categoryData || []) as CategoryRow[]);\n        if (accountProfile) {\n          setCpf(accountProfile.cpf ? String(accountProfile.cpf) : "");\n          if (!birthDate && accountProfile.birth_date) { setBirthDate(String(accountProfile.birth_date)); setAge(calculateAge(String(accountProfile.birth_date))); }\n          if (!name && (accountProfile.display_name || accountProfile.legal_name)) setName(String(accountProfile.display_name || accountProfile.legal_name || ""));\n          if (!phone && accountProfile.phone) setPhone(String(accountProfile.phone));\n        }
+        setStates((stateData || []) as StateRow[]); setCategories((categoryData || []) as CategoryRow[]);
+        if (accountProfile) {
+          setCpf(accountProfile.cpf ? String(accountProfile.cpf) : "");
+          if (!birthDate && accountProfile.birth_date) { setBirthDate(String(accountProfile.birth_date)); setAge(calculateAge(String(accountProfile.birth_date))); }
+          if (!name && (accountProfile.display_name || accountProfile.legal_name)) setName(String(accountProfile.display_name || accountProfile.legal_name || ""));
+          if (!phone && accountProfile.phone) setPhone(String(accountProfile.phone));
+        }
         if (profile) {
           const pricing = asObject(profile.pricing); const serviceOptions = asObject(profile.service_options); const paymentOptions = asObject(profile.payment_options); const socialLinks = asObject(profile.social_links);
           setTitle(profile.title || ""); setName(profile.display_name || ""); setSummary(profile.summary || ""); setDescription(profile.description || ""); setStateId(profile.state_id ? String(profile.state_id) : ""); setCityId(profile.city_id ? String(profile.city_id) : ""); setCategoryId(profile.category_id ? String(profile.category_id) : "");
