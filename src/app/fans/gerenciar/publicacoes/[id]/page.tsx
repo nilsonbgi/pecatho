@@ -14,13 +14,7 @@ type Post = {
   status: string;
 };
 
-const statusLabel: Record<string, string> = {
-  draft: "Rascunho",
-  pending_review: "Em análise",
-  published: "Publicado",
-  rejected: "Rejeitado",
-  archived: "Arquivado",
-};
+const statusLabel: Record<string, string> = { draft: "Rascunho", pending_review: "Em análise", published: "Publicado", rejected: "Rejeitado", archived: "Arquivado" };
 
 export default function FansPublicationEditorPage() {
   const params = useParams<{ id: string }>();
@@ -49,7 +43,7 @@ export default function FansPublicationEditorPage() {
     }
     load();
     return () => { active = false; };
-  }, [params.id]);
+  }, [params.id, router]);
 
   async function save() {
     if (!post) return;
@@ -62,8 +56,20 @@ export default function FansPublicationEditorPage() {
     const { error } = await supabase.from("fans_posts").update({ title: title.trim(), body: body.trim() || null, access_type: accessType, price: accessType === "free" ? 0 : numericPrice }).eq("id", post.id).eq("creator_id", post.creator_id);
     setSaving(false);
     if (error) { setMessage(error.message); return; }
-    setMessage("Rascunho salvo com sucesso.");
+    setMessage("Alterações salvas com sucesso.");
     router.refresh();
+  }
+
+  async function submitForReview() {
+    if (!post) return;
+    setMessage("");
+    setSaving(true);
+    const response = await fetch("/api/fans/publicacoes/enviar-analise", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ post_id: post.id }) });
+    const result = await response.json().catch(() => ({}));
+    setSaving(false);
+    if (!response.ok) { setMessage(result.error || "Não foi possível enviar a publicação para análise."); return; }
+    setPost({ ...post, status: "pending_review" });
+    setMessage("Publicação enviada para análise. A publicação definitiva depende da moderação.");
   }
 
   async function archive() {
@@ -77,15 +83,22 @@ export default function FansPublicationEditorPage() {
 
   if (loading) return <main className="mx-auto max-w-3xl p-6"><p className="text-sm text-slate-500">Carregando publicação…</p></main>;
 
+  const editable = post ? ["draft", "rejected"].includes(post.status) : false;
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-6">
       <header><p className="text-sm text-slate-500">Pecatho Fans · Criador</p><div className="flex flex-wrap items-center gap-3"><h1 className="text-3xl font-semibold tracking-tight">Gerenciar publicação</h1>{post && <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium">{statusLabel[post.status] ?? post.status}</span>}</div><p className="mt-1 text-sm text-slate-600">Edite o conteúdo permitido pelo estado atual. A publicação definitiva continua sob moderação.</p></header>
       {message && <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{message}</div>}
       {post && <section className="space-y-5 rounded-xl border bg-white p-6">
-        <label className="block"><span className="text-sm font-medium">Título</span><input value={title} onChange={e=>setTitle(e.target.value)} disabled={post.status === "pending_review" || post.status === "published"} maxLength={180} className="mt-2 w-full rounded-lg border px-3 py-2 disabled:bg-slate-100" /></label>
-        <label className="block"><span className="text-sm font-medium">Descrição</span><textarea value={body} onChange={e=>setBody(e.target.value)} disabled={post.status === "pending_review" || post.status === "published"} rows={8} className="mt-2 w-full rounded-lg border px-3 py-2 disabled:bg-slate-100" /></label>
-        <div className="grid gap-4 sm:grid-cols-2"><label className="block"><span className="text-sm font-medium">Acesso</span><select value={accessType} onChange={e=>setAccessType(e.target.value as Post["access_type"])} disabled={post.status === "pending_review" || post.status === "published"} className="mt-2 w-full rounded-lg border px-3 py-2 disabled:bg-slate-100"><option value="free">Gratuito</option><option value="paid">Venda avulsa</option><option value="subscriber">Assinantes</option></select></label><label className="block"><span className="text-sm font-medium">Preço (R$)</span><input value={price} onChange={e=>setPrice(e.target.value)} disabled={post.status === "pending_review" || post.status === "published" || accessType === "free"} inputMode="decimal" className="mt-2 w-full rounded-lg border px-3 py-2 disabled:bg-slate-100" /></label></div>
-        <div className="flex flex-wrap gap-3"><button onClick={save} disabled={saving || ["pending_review", "published", "archived"].includes(post.status)} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">{saving ? "Salvando…" : "Salvar"}</button>{["draft", "rejected"].includes(post.status) && <button onClick={archive} disabled={saving} className="rounded-lg border px-4 py-2 text-sm font-medium">Arquivar</button>}<button onClick={()=>router.push("/fans/gerenciar/publicacoes")} className="rounded-lg border px-4 py-2 text-sm font-medium">Voltar</button></div>
+        <label className="block"><span className="text-sm font-medium">Título</span><input value={title} onChange={e=>setTitle(e.target.value)} disabled={!editable} maxLength={180} className="mt-2 w-full rounded-lg border px-3 py-2 disabled:bg-slate-100" /></label>
+        <label className="block"><span className="text-sm font-medium">Descrição</span><textarea value={body} onChange={e=>setBody(e.target.value)} disabled={!editable} rows={8} className="mt-2 w-full rounded-lg border px-3 py-2 disabled:bg-slate-100" /></label>
+        <div className="grid gap-4 sm:grid-cols-2"><label className="block"><span className="text-sm font-medium">Acesso</span><select value={accessType} onChange={e=>setAccessType(e.target.value as Post["access_type"])} disabled={!editable} className="mt-2 w-full rounded-lg border px-3 py-2 disabled:bg-slate-100"><option value="free">Gratuito</option><option value="paid">Venda avulsa</option><option value="subscriber">Assinantes</option></select></label><label className="block"><span className="text-sm font-medium">Preço (R$)</span><input value={price} onChange={e=>setPrice(e.target.value)} disabled={!editable || accessType === "free"} inputMode="decimal" className="mt-2 w-full rounded-lg border px-3 py-2 disabled:bg-slate-100" /></label></div>
+        <div className="flex flex-wrap gap-3">
+          <button onClick={save} disabled={saving || !editable} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">{saving ? "Salvando…" : "Salvar"}</button>
+          {editable && <button onClick={submitForReview} disabled={saving} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">Enviar para análise</button>}
+          {editable && <button onClick={archive} disabled={saving} className="rounded-lg border px-4 py-2 text-sm font-medium">Arquivar</button>}
+          <button onClick={()=>router.push("/fans/gerenciar/publicacoes")} className="rounded-lg border px-4 py-2 text-sm font-medium">Voltar</button>
+        </div>
+        {editable && <p className="text-xs text-slate-500">O envio para análise só será aceito pelo servidor se a publicação cumprir as regras de conteúdo e possuir mídia válida.</p>}
       </section>}
     </main>
   );
