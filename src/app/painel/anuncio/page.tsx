@@ -69,28 +69,30 @@ export default function AnuncioPage() {
     (async () => {
       try {
         const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { window.location.href = "/login"; return; }
         const [{ data: stateData, error: stateError }, { data: categoryData, error: categoryError }, { data: profile, error: profileError }, { data: address, error: addressError }, { data: accountProfile, error: accountProfileError }] = await Promise.all([
           supabase.from("states").select("id,uf,name").order("name"),
           supabase.from("categories").select("id,name,display").eq("display", true).order("sort_order,name"),
           supabase.from("advertiser_profiles").select("id,user_id,title,display_name,summary,description,state_id,city_id,category_id,neighborhood_id,birth_date,height_cm,weight_kg,availability,phone,whatsapp,phone_secondary,pricing,service_options,payment_options,social_links,positioning,primary_media_id,status,verification_status").maybeSingle(),
-          supabase.from("user_addresses").select("id,zipcode,street,number,complement,neighborhood_id,city_id,state_id,latitude,longitude,location_visibility,public_latitude,public_longitude").eq("address_type","primary").maybeSingle(),
-          supabase.from("profiles").select("id,display_name,legal_name,email,phone,cpf,birth_date").eq("id", (await supabase.auth.getUser()).data.user?.id || "").maybeSingle(),
+          supabase.from("user_addresses").select("id,zipcode,street,number,complement,neighborhood_id,city_id,state_id,latitude,longitude,location_visibility,public_latitude,public_longitude").eq("user_id", user.id).eq("address_type","primary").maybeSingle(),
+          supabase.from("profiles").select("id,display_name,legal_name,email,phone,cpf,birth_date").eq("id", user.id).maybeSingle(),
         ]);
         if (!alive) return;
         if (stateError || categoryError || profileError || addressError || accountProfileError) setError("Não foi possível carregar todos os dados do anúncio.");
         setStates((stateData || []) as StateRow[]); setCategories((categoryData || []) as CategoryRow[]);
         if (accountProfile) {
           setCpf(accountProfile.cpf ? String(accountProfile.cpf) : "");
-          if (!birthDate && accountProfile.birth_date) { setBirthDate(String(accountProfile.birth_date)); setAge(calculateAge(String(accountProfile.birth_date))); }
-          if (!name && (accountProfile.display_name || accountProfile.legal_name)) setName(String(accountProfile.display_name || accountProfile.legal_name || ""));
-          if (!phone && accountProfile.phone) setPhone(String(accountProfile.phone));
+          if (accountProfile.birth_date) { setBirthDate(String(accountProfile.birth_date)); setAge(calculateAge(String(accountProfile.birth_date))); }
+          if (accountProfile.display_name || accountProfile.legal_name) setName(String(accountProfile.display_name || accountProfile.legal_name || ""));
+          if (accountProfile.phone) setPhone(String(accountProfile.phone));
         }
         if (profile) {
           const pricing = asObject(profile.pricing); const serviceOptions = asObject(profile.service_options); const paymentOptions = asObject(profile.payment_options); const socialLinks = asObject(profile.social_links);
           setTitle(profile.title || ""); setName(profile.display_name || ""); setSummary(profile.summary || ""); setDescription(profile.description || ""); setStateId(profile.state_id ? String(profile.state_id) : ""); setCityId(profile.city_id ? String(profile.city_id) : ""); setCategoryId(profile.category_id ? String(profile.category_id) : "");
-          setBirthDate(profile.birth_date || ""); setAge(calculateAge(profile.birth_date)); setHeight(profile.height_cm == null ? "" : String(profile.height_cm)); setWeight(profile.weight_kg == null ? "" : String(profile.weight_kg)); setAvailability(profile.availability || "");
+          setBirthDate(profile.birth_date || accountProfile?.birth_date || ""); setAge(calculateAge(profile.birth_date || accountProfile?.birth_date || null)); setHeight(profile.height_cm == null ? "" : String(profile.height_cm)); setWeight(profile.weight_kg == null ? "" : String(profile.weight_kg)); setAvailability(profile.availability || "");
           setPrice(pricing.price == null ? "" : String(pricing.price)); setServicesText(typeof serviceOptions.description === "string" ? serviceOptions.description : ""); setPaymentOptionsText(JSON.stringify(paymentOptions, null, 2)); setSocialLinksText(JSON.stringify(socialLinks, null, 2)); setPositioning(profile.positioning || "");
-          setPhone(profile.phone || ""); setWhatsapp(profile.whatsapp || ""); setPhoneSecondary(profile.phone_secondary || "");
+          setPhone(profile.phone || accountProfile?.phone || ""); setWhatsapp(profile.whatsapp || ""); setPhoneSecondary(profile.phone_secondary || "");
           void loadMedia(profile.id);
         }
         if (address) { setZipcode(address.zipcode || ""); setStreet(address.street || ""); setNumber(address.number || ""); setComplement(address.complement || ""); setNeighborhoodId(address.neighborhood_id ? String(address.neighborhood_id) : ""); setLatitude(address.latitude == null ? null : Number(address.latitude)); setLongitude(address.longitude == null ? null : Number(address.longitude)); setPublicLatitude(address.public_latitude == null ? null : Number(address.public_latitude)); setPublicLongitude(address.public_longitude == null ? null : Number(address.public_longitude)); setLocationVisibility(address.location_visibility || "private"); if (address.city_id) setCityId(String(address.city_id)); if (address.state_id) setStateId(String(address.state_id)); }
@@ -180,7 +182,7 @@ export default function AnuncioPage() {
     try {
       const supabase = createClient(); const { data: { user } } = await supabase.auth.getUser(); if (!user) { window.location.href = "/login"; return; }
       if (!categoryId) throw new Error("Selecione uma categoria antes de salvar.");
-      const missing = attributes.filter((a) => a.slug !== "idade" && a.required && (value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0)); }); if (missing.length) throw new Error(`Preencha os campos obrigatórios: ${missing.map((a) => a.name).join(", ")}.`);
+      const missing = attributes.filter((a) => { const value = attributeValues[a.id]; return a.slug !== "idade" && a.required && (value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0)); }); if (missing.length) throw new Error(`Preencha os campos obrigatórios: ${missing.map((a) => a.name).join(", ")}.`);
       const requiredServices = services.filter((s) => s.required && selectedServices[s.id] !== true); if (requiredServices.length) throw new Error(`Selecione os serviços obrigatórios: ${requiredServices.map((s) => s.name).join(", ")}.`);
       const parsedHeight = height.trim() ? Number(height.replace(",", ".")) : null; const parsedWeight = weight.trim() ? Number(weight.replace(",", ".")) : null; const parsedAge = birthDate ? Number(calculateAge(birthDate)) : null;
       if (parsedAge != null && (!Number.isInteger(parsedAge) || parsedAge < 18 || parsedAge > 99)) throw new Error("A data de nascimento não produz uma idade válida."); if (parsedHeight != null && (!Number.isFinite(parsedHeight) || parsedHeight < 100 || parsedHeight > 250)) throw new Error("Informe uma altura válida entre 100 e 250 cm."); if (parsedWeight != null && (!Number.isFinite(parsedWeight) || parsedWeight < 30 || parsedWeight > 300)) throw new Error("Informe um peso válido entre 30 e 300 kg.");
