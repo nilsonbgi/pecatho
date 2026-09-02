@@ -85,7 +85,7 @@ export async function POST(request: Request) {
 
   const { data: creator } = await admin
     .from("fans_creators")
-    .select("id,user_id,status")
+    .select("id,user_id,advertiser_profile_id,status")
     .eq("id", creatorId)
     .maybeSingle();
 
