@@ -2,31 +2,9 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 function digits(value: string) { return String(value || "").replace(/\D/g, ""); }
-function validCpf(value: string) {
-  const cpf = digits(value);
-  if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
-  let sum = 0;
-  for (let i = 0; i < 9; i++) sum += Number(cpf[i]) * (10 - i);
-  let d = 11 - (sum % 11);
-  const d1 = d >= 10 ? 0 : d;
-  sum = 0;
-  for (let i = 0; i < 10; i++) sum += Number(cpf[i]) * (11 - i);
-  d = 11 - (sum % 11);
-  const d2 = d >= 10 ? 0 : d;
-  return Number(cpf[9]) === d1 && Number(cpf[10]) === d2;
-}
-function isAdult(value: string) {
-  const d = new Date(`${value}T00:00:00Z`);
-  if (Number.isNaN(d.getTime())) return false;
-  const now = new Date();
-  let age = now.getUTCFullYear() - d.getUTCFullYear();
-  const m = now.getUTCMonth() - d.getUTCMonth();
-  if (m < 0 || (m === 0 && now.getUTCDate() < d.getUTCDate())) age--;
-  return age >= 18;
-}
-function slugify(value: string) {
-  return value.toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48) || "perfil";
-}
+function validCpf(value: string) { const cpf = digits(value); if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false; let sum = 0; for (let i = 0; i < 9; i++) sum += Number(cpf[i]) * (10 - i); let d = 11 - (sum % 11); const d1 = d >= 10 ? 0 : d; sum = 0; for (let i = 0; i < 10; i++) sum += Number(cpf[i]) * (11 - i); d = 11 - (sum % 11); const d2 = d >= 10 ? 0 : d; return Number(cpf[9]) === d1 && Number(cpf[10]) === d2; }
+function isAdult(value: string) { const d = new Date(`${value}T00:00:00Z`); if (Number.isNaN(d.getTime())) return false; const now = new Date(); let age = now.getUTCFullYear() - d.getUTCFullYear(); const m = now.getUTCMonth() - d.getUTCMonth(); if (m < 0 || (m === 0 && now.getUTCDate() < d.getUTCDate())) age--; return age >= 18; }
+function slugify(value: string) { return value.toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48) || "perfil"; }
 
 async function geocode(address: string, cep: string) {
   try {
@@ -49,11 +27,24 @@ export async function GET(request: Request) {
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError || !userData.user) return NextResponse.redirect(new URL("/login?error=missing_user", url.origin));
 
-  const user = userData.user; const meta = user.user_metadata || {};
-  const name = String(meta.display_name || "").trim(); const cpf = digits(meta.cpf); const birthDate = String(meta.birth_date || ""); const phone = String(meta.phone || "").trim();
-  const cep = digits(meta.cep); const street = String(meta.street || "").trim(); const number = String(meta.number || "").trim(); const complement = String(meta.complement || "").trim();
-  const neighborhood = String(meta.neighborhood || "").trim(); const city = String(meta.city || "").trim(); const uf = String(meta.uf || "").trim().toUpperCase(); const ibgeCode = String(meta.ibge_code || "").trim();
-  const entryMode = ["advertiser", "fans", "both"].includes(String(meta.entry_mode)) ? String(meta.entry_mode) : "advertiser";
+  const user = userData.user;
+  const { data: intent, error: intentError } = await supabase.rpc("consume_registration_intent", { p_user_id: user.id });
+  if (intentError) return NextResponse.redirect(new URL("/login?error=registration_data", url.origin));
+
+  const registration = intent as Record<string, unknown> | null;
+  const name = String(registration?.display_name || "").trim();
+  const cpf = digits(String(registration?.cpf || ""));
+  const birthDate = String(registration?.birth_date || "");
+  const phone = String(registration?.phone || "").trim();
+  const cep = digits(String(registration?.zipcode || ""));
+  const street = String(registration?.street || "").trim();
+  const number = String(registration?.number || "").trim();
+  const complement = String(registration?.complement || "").trim();
+  const neighborhood = String(registration?.neighborhood || "").trim();
+  const city = String(registration?.city || "").trim();
+  const uf = String(registration?.uf || "").trim().toUpperCase();
+  const ibgeCode = String(registration?.ibge_code || "").trim();
+  const entryMode = ["advertiser", "fans", "both"].includes(String(registration?.entry_mode)) ? String(registration?.entry_mode) : "advertiser";
 
   if (name && user.email && validCpf(cpf) && isAdult(birthDate)) {
     const { data: existingCpf, error: cpfError } = await supabase.from("profiles").select("id").eq("cpf", cpf).neq("id", user.id).maybeSingle();
@@ -77,8 +68,6 @@ export async function GET(request: Request) {
     }
   }
 
-  // A escolha feita no cadastro já cria o espaço de trabalho correspondente.
-  // Os dois módulos continuam independentes: ter um não obriga o outro.
   if ((entryMode === "advertiser" || entryMode === "both") && name) {
     const { data: advertiser } = await supabase.from("advertiser_profiles").select("id").eq("user_id", user.id).maybeSingle();
     if (!advertiser) {
@@ -90,7 +79,8 @@ export async function GET(request: Request) {
     const { data: creator } = await supabase.from("fans_creators").select("id").eq("user_id", user.id).maybeSingle();
     if (!creator) {
       const base = slugify(name); const suffix = user.id.replace(/-/g, "").slice(0, 8);
-      await supabase.from("fans_creators").insert({ user_id: user.id, slug: `${base}-${suffix}`, display_name: name, bio: "Complete sua apresentação para começar a criar no Pecatho Fans.", status: "active" });
+      const { data: advertiser } = await supabase.from("advertiser_profiles").select("id").eq("user_id", user.id).maybeSingle();
+      await supabase.from("fans_creators").insert({ user_id: user.id, advertiser_profile_id: advertiser?.id ?? null, slug: `${base}-${suffix}`, display_name: name, bio: "Complete sua apresentação para começar a criar no Pecatho Fans.", status: "active" });
     }
   }
 
