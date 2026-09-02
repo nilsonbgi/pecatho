@@ -12,9 +12,7 @@ async function verifySignature(rawBody: string, signature: string | null, secret
   );
   const actual = signature.replace(/^sha256=/i, "").trim();
   const hex = Array.from(new Uint8Array(expected), b => b.toString(16).padStart(2, "0")).join("");
-  return actual.length === hex.length && crypto.timingSafeEqual
-    ? crypto.timingSafeEqual(new TextEncoder().encode(actual), new TextEncoder().encode(hex))
-    : actual === hex;
+  return actual.length === hex.length && actual === hex;
 }
 
 export async function POST(request: Request) {
