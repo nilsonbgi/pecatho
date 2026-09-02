@@ -33,11 +33,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
       const { data } = await admin.storage.from("pecatho-private").createSignedUrl(preview.storage_path, 180);
       previewUrl = data?.signedUrl ?? null;
     }
+    const canSeeBody = isOwner || post.access_type === "free";
     return {
-      id: post.id, title: post.title, body: post.body, price: post.price, currency: post.currency,
+      id: post.id, title: post.title, body: canSeeBody ? post.body : null, price: post.price, currency: post.currency,
       access_type: post.access_type, published_at: post.published_at,
       preview: previewUrl ? { id: preview?.id, media_type: preview?.media_type, mime_type: preview?.mime_type, width: preview?.width, height: preview?.height, url: previewUrl } : null,
-      is_owner: isOwner,
     };
   }));
 
