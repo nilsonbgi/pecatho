@@ -8,9 +8,12 @@ type Advertiser = { id: string; slug: string | null; title: string | null; displ
 type Category = { id: number; name: string };
 type City = { id: number; name: string; state_id: number };
 type State = { id: number; uf: string; name: string };
+type Media = { profile_id: string; storage_bucket: string; storage_path: string; kind: string; is_primary: boolean; is_public: boolean };
+
+type CardData = Advertiser & { imageUrl: string | null };
 
 export default function AnunciantesPage() {
-  const [advertisers, setAdvertisers] = useState<Advertiser[]>([]);
+  const [advertisers, setAdvertisers] = useState<CardData[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [states, setStates] = useState<State[]>([]);
   const [cities, setCities] = useState<City[]>([]);
@@ -25,7 +28,7 @@ export default function AnunciantesPage() {
 
   useEffect(() => {
     let active = true;
-    const loadMetadata = async () => {
+    async function loadMetadata() {
       setMetaLoading(true);
       try {
         const supabase = createClient();
@@ -36,58 +39,41 @@ export default function AnunciantesPage() {
         if (categoriesResult.error) throw categoriesResult.error;
         if (statesResult.error) throw statesResult.error;
         if (!active) return;
-        setCategories(categoriesResult.data ?? []);
-        setStates(statesResult.data ?? []);
-      } catch (err: unknown) {
+        setCategories(categoriesResult.data ?? []); setStates(statesResult.data ?? []);
+      } catch (err) {
         console.error("Erro ao carregar filtros públicos", err);
-        if (active) setError("Não foi possível carregar as categorias e os Estados.");
-      } finally {
-        if (active) setMetaLoading(false);
-      }
-    };
+        if (active) setError("Não foi possível carregar as opções de pesquisa.");
+      } finally { if (active) setMetaLoading(false); }
+    }
     void loadMetadata();
     return () => { active = false; };
   }, []);
 
   useEffect(() => {
     let active = true;
-    const loadCities = async () => {
+    async function loadCities() {
       setCityId("");
       if (!stateId) { setCities([]); setCitiesLoading(false); return; }
       setCitiesLoading(true);
       try {
         const supabase = createClient();
-        const { data, error: queryError } = await supabase
-          .from("cities")
-          .select("id,name,state_id")
-          .eq("state_id", Number(stateId))
-          .order("name")
-          .limit(1000);
+        const { data, error: queryError } = await supabase.from("cities").select("id,name,state_id").eq("state_id", Number(stateId)).order("name").limit(1000);
         if (queryError) throw queryError;
         if (active) setCities(data ?? []);
-      } catch (err: unknown) {
-        console.error("Erro ao carregar cidades", err);
-        if (active) setCities([]);
-      } finally {
-        if (active) setCitiesLoading(false);
-      }
-    };
+      } catch (err) { console.error("Erro ao carregar cidades", err); if (active) setCities([]); }
+      finally { if (active) setCitiesLoading(false); }
+    }
     void loadCities();
     return () => { active = false; };
   }, [stateId]);
 
   useEffect(() => {
     let active = true;
-    const loadAdvertisers = async () => {
+    async function loadAdvertisers() {
       setLoading(true); setError("");
       try {
         const supabase = createClient();
-        let request = supabase
-          .from("advertiser_profiles")
-          .select("id,slug,title,display_name,summary,city_id,state_id,category_id,verification_status,created_at")
-          .eq("status", "published")
-          .order("created_at", { ascending: false })
-          .limit(48);
+        let request = supabase.from("advertiser_profiles").select("id,slug,title,display_name,summary,city_id,state_id,category_id,verification_status,created_at").eq("status", "published").order("created_at", { ascending: false }).limit(48);
         if (categoryId) request = request.eq("category_id", Number(categoryId));
         if (stateId) request = request.eq("state_id", Number(stateId));
         if (cityId) request = request.eq("city_id", Number(cityId));
@@ -97,14 +83,21 @@ export default function AnunciantesPage() {
         }
         const { data, error: queryError } = await request;
         if (queryError) throw queryError;
-        if (active) setAdvertisers(data ?? []);
-      } catch (err: unknown) {
+        const rows = (data ?? []) as Advertiser[];
+        let cards: CardData[] = rows.map((item) => ({ ...item, imageUrl: null }));
+        if (rows.length) {
+          const ids = rows.map((item) => item.id);
+          const { data: mediaRows } = await supabase.from("profile_media").select("profile_id,storage_bucket,storage_path,kind,is_primary,is_public").in("profile_id", ids).eq("is_public", true).eq("moderation_status", "approved").order("is_primary", { ascending: false }).order("sort_order");
+          const mediaByProfile = new Map<string, Media>();
+          for (const media of (mediaRows ?? []) as Media[]) if (!mediaByProfile.has(media.profile_id) && media.kind === "image") mediaByProfile.set(media.profile_id, media);
+          cards = rows.map((item) => { const media = mediaByProfile.get(item.id); if (!media) return { ...item, imageUrl: null }; const { data: publicData } = supabase.storage.from(media.storage_bucket).getPublicUrl(media.storage_path); return { ...item, imageUrl: publicData.publicUrl || null }; });
+        }
+        if (active) setAdvertisers(cards);
+      } catch (err) {
         console.error("Erro ao carregar anunciantes", err);
         if (active) { setAdvertisers([]); setError("Não foi possível carregar os anunciantes publicados."); }
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
+      } finally { if (active) setLoading(false); }
+    }
     void loadAdvertisers();
     return () => { active = false; };
   }, [categoryId, stateId, cityId, query]);
@@ -116,40 +109,31 @@ export default function AnunciantesPage() {
   const selectedStateName = stateId ? states.find((x) => x.id === Number(stateId))?.name : null;
 
   return (
-    <main className="shell">
-      <nav className="topbar">
+    <main className="discoveryShell">
+      <nav className="onboardingNav">
         <Link href="/" className="brand"><span className="brandMark">P</span><span>Pecatho</span></Link>
-        <div style={{ display: "flex", gap: 10 }}><Link href="/login" className="secondaryButton">Entrar</Link><Link href="/cadastro" className="navCta">Anunciar</Link></div>
+        <div className="onboardingNavRight"><Link href="/login" className="secondaryButton">Entrar</Link><Link href="/cadastro" className="navCta">Criar conta</Link></div>
       </nav>
-      <section className="hero" style={{ paddingBottom: 28 }}>
-        <div className="eyebrow">PECATHO • ANUNCIANTES</div>
-        <h1>Encontre quem <em>você procura.</em></h1>
-        <p className="heroCopy">Pesquise por nome, categoria, Estado ou cidade e encontre perfis publicados no Pecatho.</p>
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(220px, 2fr) repeat(3, minmax(160px, 1fr))", gap: 12, marginTop: 24 }}>
-          <input aria-label="Pesquisar anunciante" placeholder="Nome, título ou palavra-chave" value={query} onChange={(e) => setQuery(e.target.value)} />
-          <select aria-label="Filtrar por categoria" value={categoryId} onChange={(e) => setCategoryId(e.target.value)} disabled={metaLoading}><option value="">{metaLoading ? "Carregando categorias..." : "Todas as categorias"}</option>{categories.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
-          <select aria-label="Filtrar por Estado" value={stateId} onChange={(e) => setStateId(e.target.value)} disabled={metaLoading}><option value="">{metaLoading ? "Carregando Estados..." : "Todos os Estados"}</option>{states.map((x) => <option key={x.id} value={x.id}>{x.name} ({x.uf})</option>)}</select>
-          <select aria-label="Filtrar por cidade" value={cityId} onChange={(e) => setCityId(e.target.value)} disabled={!stateId || citiesLoading}><option value="">{citiesLoading ? "Carregando cidades..." : stateId ? "Todas as cidades" : "Selecione o Estado"}</option>{cities.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
+      <section className="discoveryHero">
+        <div className="eyebrow">PECATHO · ANUNCIANTES</div>
+        <h1>Descubra perfis que combinam <em>com você.</em></h1>
+        <p className="heroCopy discoveryHeroCopy">Encontre anunciantes por nome, categoria, Estado ou cidade. A experiência pública foi pensada para facilitar a descoberta sem transformar a busca em um formulário complicado.</p>
+        <div className="discoverySearch">
+          <input aria-label="Pesquisar anunciante" placeholder="Pesquisar por nome, título ou palavra-chave" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <select aria-label="Filtrar por categoria" value={categoryId} onChange={(e) => setCategoryId(e.target.value)} disabled={metaLoading}><option value="">Todas as categorias</option>{categories.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
+          <select aria-label="Filtrar por Estado" value={stateId} onChange={(e) => setStateId(e.target.value)} disabled={metaLoading}><option value="">Todos os Estados</option>{states.map((x) => <option key={x.id} value={x.id}>{x.name} ({x.uf})</option>)}</select>
+          <select aria-label="Filtrar por cidade" value={cityId} onChange={(e) => setCityId(e.target.value)} disabled={!stateId || citiesLoading}><option value="">{citiesLoading ? "Carregando cidades..." : stateId ? "Todas as cidades" : "Escolha um Estado"}</option>{cities.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
         </div>
-        {categories.length > 0 && <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 18 }}><button type="button" className={!categoryId ? "previewBadge" : "secondaryButton"} onClick={() => setCategoryId("")}>Todas</button>{categories.map((x) => <button type="button" key={x.id} className={categoryId === String(x.id) ? "previewBadge" : "secondaryButton"} onClick={() => setCategoryId(String(x.id))}>{x.name}</button>)}</div>}
+        {categories.length > 0 && <div className="categoryChips"><button type="button" className={`categoryChip ${!categoryId ? "active" : ""}`} onClick={() => setCategoryId("")}>Todas</button>{categories.map((x) => <button type="button" className={`categoryChip ${categoryId === String(x.id) ? "active" : ""}`} key={x.id} onClick={() => setCategoryId(String(x.id))}>{x.name}</button>)}</div>}
       </section>
-      <section style={{ padding: "0 0 64px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, marginBottom: 18 }}>
-          <div><div className="eyebrow">RESULTADOS</div><h2 style={{ margin: "6px 0 0" }}>{loading ? "Buscando..." : `${advertisers.length} ${advertisers.length === 1 ? "perfil encontrado" : "perfis encontrados"}`}</h2>{(selectedStateName || selectedCityName) && <p style={{ margin: "6px 0 0", opacity: 0.7 }}>{selectedCityName ? `${selectedCityName}, ` : ""}{selectedStateName || ""}</p>}</div>
-          {(categoryId || stateId || cityId || query) && <button type="button" className="secondaryButton" onClick={() => { setCategoryId(""); setStateId(""); setCityId(""); setQuery(""); }}>Limpar filtros</button>}
-        </div>
-        {error && <article className="card"><h2>Não foi possível carregar</h2><p>{error}</p><button type="button" className="primaryButton" onClick={() => window.location.reload()}>Tentar novamente</button></article>}
-        {!loading && !error && advertisers.length === 0 && <article className="card"><h2>Nenhum anúncio publicado ainda.</h2><p>Os filtros de categoria, Estado e cidade estão disponíveis. Assim que houver anúncios publicados, eles aparecerão aqui.</p><Link href="/cadastro" className="primaryButton">Quero anunciar</Link></article>}
-        {!error && advertisers.length > 0 && <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
-          {advertisers.map((item) => <article className="card" key={item.id}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}><span className="previewBadge">{item.verification_status === "verified" ? "VERIFICADO" : "PUBLICADO"}</span><span className="eyebrow" style={{ margin: 0 }}>{item.category_id != null ? categoryName.get(item.category_id) || "ANUNCIANTE" : "ANUNCIANTE"}</span></div>
-            <h2 style={{ marginTop: 14 }}>{item.title || item.display_name || "Perfil Pecatho"}</h2>
-            <p><strong>{item.display_name || "Anunciante"}</strong></p>
-            <p>📍 {item.city_id != null ? cityName.get(item.city_id) || "Cidade não informada" : "Cidade não informada"}{item.state_id != null && stateName.get(item.state_id) ? ` — ${stateName.get(item.state_id)}` : ""}</p>
-            <p>{item.summary || "Perfil publicado no Pecatho."}</p>
-            {item.slug && <Link className="primaryButton" href={`/anunciantes/${item.slug}`}>Ver anúncio</Link>}
-          </article>)}
-        </div>}
+      <section className="discoveryResults">
+        <div className="resultsHeader"><div><div className="eyebrow">PERFIS PUBLICADOS</div><h2>{loading ? "Encontrando perfis..." : `${advertisers.length} ${advertisers.length === 1 ? "perfil encontrado" : "perfis encontrados"}`}</h2>{(selectedStateName || selectedCityName) && <div className="resultsMeta">{selectedCityName ? `${selectedCityName}, ` : ""}{selectedStateName || ""}</div>}</div>{(categoryId || stateId || cityId || query) && <button type="button" className="secondaryButton" onClick={() => { setCategoryId(""); setStateId(""); setCityId(""); setQuery(""); }}>Limpar filtros</button>}</div>
+        {error && <div className="emptyDiscovery"><h2>Não foi possível carregar</h2><p>{error}</p><button type="button" className="primaryButton" onClick={() => window.location.reload()}>Tentar novamente</button></div>}
+        {!loading && !error && advertisers.length === 0 && <div className="emptyDiscovery"><h2>Ainda não há perfis publicados.</h2><p>A estrutura de descoberta já está pronta. Quando os primeiros anúncios forem aprovados, eles aparecerão aqui com mídia, localização e informações do perfil.</p><Link href="/cadastro" className="primaryButton">Quero anunciar</Link></div>}
+        {!error && advertisers.length > 0 && <div className="advertiserGrid">{advertisers.map((item) => <article className="advertiserCard" key={item.id}>
+          <div className="advertiserVisual">{item.imageUrl ? <img src={item.imageUrl} alt={item.display_name || item.title || "Perfil Pecatho"} /> : <div className="visualPlaceholder"><span>✦</span><div>Pecatho</div><small>Mídia de apresentação</small></div>}{item.verification_status === "verified" && <span className="verifiedMark">✓ VERIFICADO</span>}</div>
+          <div className="advertiserBody"><div className="advertiserCategory">{item.category_id != null ? categoryName.get(item.category_id) || "ANUNCIANTE" : "ANUNCIANTE"}</div><h3>{item.title || item.display_name || "Perfil Pecatho"}</h3><p className="advertiserName">{item.display_name || "Anunciante"}</p><p className="advertiserLocation">⌖ {item.city_id != null ? cityName.get(item.city_id) || "Cidade não informada" : "Cidade não informada"}{item.state_id != null && stateName.get(item.state_id) ? ` · ${stateName.get(item.state_id)}` : ""}</p><p className="advertiserSummary">{item.summary || "Perfil publicado no Pecatho."}</p>{item.slug && <Link className="primaryButton" href={`/anunciantes/${item.slug}`}>Ver perfil</Link>}</div>
+        </article>)}</div>}
       </section>
     </main>
   );
