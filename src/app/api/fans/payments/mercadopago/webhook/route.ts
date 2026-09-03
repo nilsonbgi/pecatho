@@ -32,6 +32,10 @@ export async function POST(request: Request) {
   const ts = parts.ts;
   const v1 = parts.v1;
   if (!ts || !v1 || !xRequestId) return NextResponse.json({ error: "Assinatura ausente." }, { status: 401 });
+  const timestamp = Number(ts);
+  if (!Number.isFinite(timestamp) || Math.abs(Date.now() - timestamp * 1000) > 5 * 60 * 1000) {
+    return NextResponse.json({ error: "Assinatura expirada." }, { status: 401 });
+  }
 
   const manifest = "id:" + paymentId + ";request-id:" + xRequestId + ";ts:" + ts + ";";
   const expected = await hmacHex(secret, manifest);
@@ -47,6 +51,20 @@ export async function POST(request: Request) {
   const payment = await response.json();
   const orderId = payment?.external_reference;
   if (typeof orderId !== "string") return NextResponse.json({ error: "Pagamento sem referência Pecatho." }, { status: 422 });
+
+  const admin = createAdminClient();
+  const { data: order, error: orderError } = await admin
+    .from("orders")
+    .select("id,user_id,total,currency,status,metadata")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (orderError || !order) return NextResponse.json({ error: "Pedido Pecatho não encontrado." }, { status: 404 });
+  if (order.currency !== "BRL" || Math.abs(Number(order.total) - Number(payment?.transaction_amount)) > 0.01) {
+    return NextResponse.json({ error: "Valor ou moeda do pagamento não correspondem ao pedido." }, { status: 409 });
+  }
+  if (payment?.status === "approved" && payment?.currency_id !== "BRL") {
+    return NextResponse.json({ error: "Moeda do pagamento inválida." }, { status: 409 });
+  }
 
   const statusMap: Record<string,string> = {
     approved: "paid",
@@ -64,7 +82,6 @@ export async function POST(request: Request) {
     : 0;
   const paymentMethod = typeof payment?.payment_method_id === "string" ? payment.payment_method_id : null;
 
-  const admin = createAdminClient();
   const { data, error } = await admin.rpc("settle_fans_checkout", {
     p_order_id: orderId,
     p_provider: "mercadopago",
