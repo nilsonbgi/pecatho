@@ -30,8 +30,9 @@ export async function POST(request: Request) {
   const providerPaymentId = typeof body?.provider_payment_id === "string" ? body.provider_payment_id.trim() : "";
   const status = body?.status;
   const paymentMethod = typeof body?.payment_method === "string" ? body.payment_method.trim() : null;
+  const providerFee = Number(body?.provider_fee ?? 0);
 
-  if (!orderId || !provider || !providerPaymentId || !["pending","authorized","paid","failed","cancelled","refunded","partially_refunded","chargeback"].includes(status)) {
+  if (!orderId || !provider || !providerPaymentId || !Number.isFinite(providerFee) || providerFee < 0 || !["pending","authorized","paid","failed","cancelled","refunded","partially_refunded","chargeback"].includes(status)) {
     return NextResponse.json({ error: "Payload de pagamento inválido." }, { status: 400 });
   }
 
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
     p_provider_payment_id: providerPaymentId,
     p_payment_status: status,
     p_payment_method: paymentMethod,
+    p_provider_fee: providerFee,
   });
 
   if (error) {
