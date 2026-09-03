@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type Media = { id: string; media_type: "image" | "video"; mime_type: string | null; url: string; is_preview: boolean; sort_order: number };
@@ -14,6 +14,7 @@ type Payload = {
 
 export default function PublicFansPublicationPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const [data, setData] = useState<Payload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
