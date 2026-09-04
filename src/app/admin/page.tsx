@@ -18,9 +18,10 @@ export default function AdminPage() {
     try { supabase = createClient(); }
     catch (err) { setError(err instanceof Error ? err.message : "Configuração do Supabase indisponível."); setState("error"); return () => { active = false; }; }
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (!active) return;
-      if (authErrorMissing(user)) { router.replace("/login"); return; }
+      if (authError?.message === "Auth session missing!" || !user) { router.replace("/login"); return; }
+      if (authError) { setError(authError.message); setState("error"); return; }
       const { data: roleRow, error: roleError } = await supabase.from("user_roles").select("role").eq("user_id", user.id).in("role", ["super_admin", "admin", "moderator", "support", "finance"]).limit(1).maybeSingle();
       if (!active) return;
       if (roleError) { setError(roleError.message); setState("error"); return; }
@@ -28,8 +29,6 @@ export default function AdminPage() {
     })().catch((err: unknown) => { if (!active) return; setError(err instanceof Error ? err.message : "Erro inesperado ao carregar a administração."); setState("error"); });
     return () => { active = false; };
   }, [router]);
-
-  function authErrorMissing(user: unknown) { return !user; }
 
   if (state === "loading") return <main className="shell"><section className="hero"><div className="eyebrow">ADMINISTRAÇÃO PECATHO</div><h1>Carregando <em>administração.</em></h1><p className="heroCopy">Preparando o centro de gestão da plataforma.</p><div className="authCard"><p>Verificando a conta administrativa...</p></div></section></main>;
   if (state === "error") return <main className="shell"><section className="hero"><div className="eyebrow">ADMINISTRAÇÃO PECATHO</div><h1>Não foi possível carregar a <em>administração.</em></h1><div className="authCard"><p className="formError">{error}</p><button type="button" className="primaryButton" onClick={() => window.location.reload()}>Tentar novamente</button></div></section></main>;
