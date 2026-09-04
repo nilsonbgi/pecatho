@@ -39,6 +39,12 @@ begin
 
   if p_action='pay' then
     if nullif(trim(coalesce(p_provider,'')),'') is null or nullif(trim(coalesce(p_provider_reference,'')),'') is null then raise exception 'Informe provedor e referência do pagamento'; end if;
+
+    -- Serialize all payout settlements for the same creator so concurrent
+    -- payout requests cannot consume the same balance.
+    perform 1 from public.fans_creators where id=v_payout.creator_id for update;
+    if not found then raise exception 'Criador não encontrado'; end if;
+
     select coalesce(sum(case when direction='credit' then amount else 0 end),0), coalesce(sum(case when direction='debit' then amount else 0 end),0)
       into v_ledger_credits,v_ledger_debits from public.fans_financial_ledger where creator_id=v_payout.creator_id and status='posted';
     select coalesce(sum(amount),0) into v_outstanding from public.fans_payout_requests where creator_id=v_payout.creator_id and status in ('requested','approved','processing') and id<>v_payout.id;
