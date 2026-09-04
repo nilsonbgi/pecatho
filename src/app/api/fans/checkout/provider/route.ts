@@ -30,7 +30,7 @@ export async function POST(request: Request) {
 
   const { data: payment } = await admin
     .from("payments")
-    .select("id,status,provider,provider_payment_id")
+    .select("id,status,provider,provider_payment_id,raw_reference")
     .eq("order_id", order.id)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -38,6 +38,7 @@ export async function POST(request: Request) {
 
   if (!payment) return NextResponse.json({ error: "Registro de pagamento não encontrado." }, { status: 409 });
   if (payment.status === "paid") return NextResponse.json({ error: "Este pedido já foi pago." }, { status: 409 });
+  if (payment.provider_payment_id) return NextResponse.json({ error: "Este pedido já possui uma transação associada no provedor." }, { status: 409 });
 
   const creatorId = typeof order.metadata?.creator_id === "string" ? order.metadata.creator_id : "";
   const title = typeof order.metadata?.title === "string" ? order.metadata.title : "Conteúdo Pecatho Fans";
@@ -54,8 +55,9 @@ export async function POST(request: Request) {
 
     await admin.from("payments").update({
       provider: "mercadopago",
-      provider_payment_id: preference.id,
+      provider_payment_id: null,
       raw_reference: {
+        ...(payment.raw_reference && typeof payment.raw_reference === "object" ? payment.raw_reference : {}),
         channel: "pecatho_fans",
         provider: "mercadopago",
         preference_id: preference.id,
