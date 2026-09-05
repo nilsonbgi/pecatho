@@ -15,5 +15,38 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Verify critical modules
+      - name: Verify critical source contract
         run: node scripts/verify-regression-contract.mjs
+
+  browser-regression:
+    runs-on: ubuntu-latest
+    needs: critical-contract
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install
+      - name: Build application
+        run: npm run build
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run browser regression suite
+        run: npm run test:e2e
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pecatho-playwright-report
+          path: playwright-report/
+          if-no-files-found: ignore
+      - name: Upload browser diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pecatho-browser-diagnostics
+          path: test-results/
+          if-no-files-found: ignore
