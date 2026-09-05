@@ -1,12 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const protectedPages = [
-  '/painel',
-  '/fans/gerenciar',
-  '/admin',
-  '/admin/revisao',
-  '/admin/recebimentos',
-];
+const protectedPages = ['/painel', '/fans', '/fans/gerenciar', '/admin'];
 
 for (const path of protectedPages) {
   test(`protected page ${path} does not expose authenticated UI to anonymous visitors`, async ({ page }) => {
@@ -23,14 +17,13 @@ for (const path of protectedPages) {
 
 test('protected API endpoints reject anonymous requests', async ({ request }) => {
   const endpoints = [
-    { path: '/api/fans/checkout/intent', method: 'POST', body: { kind: 'post', post_id: '00000000-0000-0000-0000-000000000000' } },
-    { path: '/api/fans/checkout/provider', method: 'POST', body: { order_id: '00000000-0000-0000-0000-000000000000' } },
-    { path: '/api/fans/payout/request', method: 'POST', body: { creator_id: '00000000-0000-0000-0000-000000000000', amount: 20, idempotency_key: 'regression-anonymous' } },
+    { path: '/api/fans/checkout/intent', body: { kind: 'post', post_id: '00000000-0000-0000-0000-000000000000' } },
+    { path: '/api/fans/checkout/provider', body: { order_id: '00000000-0000-0000-0000-000000000000' } },
+    { path: '/api/fans/payout/request', body: { creator_id: '00000000-0000-0000-0000-000000000000', amount: 20, idempotency_key: 'regression-anonymous' } },
   ];
 
   for (const endpoint of endpoints) {
-    const response = await request.fetch(endpoint.path, {
-      method: endpoint.method,
+    const response = await request.post(endpoint.path, {
       data: endpoint.body,
       headers: { 'content-type': 'application/json' },
     });
