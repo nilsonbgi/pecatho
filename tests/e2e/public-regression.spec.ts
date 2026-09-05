@@ -5,7 +5,6 @@ const publicRoutes = [
   { path: '/login', heading: /entrar|acesso/i },
   { path: '/cadastro', heading: /crie seu espaço/i },
   { path: '/anunciantes', heading: /anunciantes/i },
-  { path: '/fans', heading: /fans/i },
 ];
 
 for (const route of publicRoutes) {
@@ -20,6 +19,17 @@ for (const route of publicRoutes) {
     expect(errors, errors.join('\n')).toEqual([]);
   });
 }
+
+test('Fans protected entry redirects unauthenticated visitors to login', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+
+  const response = await page.goto('/fans', { waitUntil: 'domcontentloaded' });
+  expect(response?.ok()).toBeTruthy();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.locator('body')).toContainText(/Entrar no Pecatho/i);
+  expect(errors, errors.join('\n')).toEqual([]);
+});
 
 test('cadastro preserves the complete five-step onboarding flow', async ({ page }) => {
   await page.goto('/cadastro', { waitUntil: 'domcontentloaded' });
