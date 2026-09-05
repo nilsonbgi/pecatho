@@ -59,8 +59,8 @@ test('cadastro preserves the complete five-step onboarding flow', async ({ page 
     });
   });
   await page.getByLabel('CEP').fill('80010000');
-  await expect(page.getByDisplayValue('Curitiba')).toBeVisible();
-  await expect(page.getByDisplayValue('PR')).toBeVisible();
+  await expect(page.locator('input[readonly][value="Curitiba"]')).toBeVisible();
+  await expect(page.locator('input[readonly][value="PR"]')).toBeVisible();
   await page.getByLabel('Número').fill('100');
   await page.getByRole('button', { name: /Continuar/i }).click();
 
@@ -72,10 +72,6 @@ test('cadastro preserves the complete five-step onboarding flow', async ({ page 
 
 test('cadastro remains usable on mobile without horizontal overflow', async ({ page }) => {
   await page.goto('/cadastro', { waitUntil: 'domcontentloaded' });
-  const viewport = page.viewportSize();
-  expect(viewport).not.toBeNull();
-  if (!viewport) return;
-
   const metrics = await page.evaluate(() => ({
     width: document.documentElement.scrollWidth,
     viewport: window.innerWidth,
