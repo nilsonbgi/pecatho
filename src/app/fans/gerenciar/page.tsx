@@ -19,17 +19,19 @@ export default async function FansManagePage() {
 
   if (!creator) redirect("/fans/ativar");
 
-  const [plans, posts, subscribers, purchases, tips, payouts] = await Promise.all([
+  const [plans, posts, subscribers, purchases, tips, payouts, activity] = await Promise.all([
     supabase.from("fans_plans").select("id", { count: "exact", head: true }).eq("creator_id", creator.id),
     supabase.from("fans_posts").select("id", { count: "exact", head: true }).eq("creator_id", creator.id),
     supabase.from("fans_subscriptions").select("id", { count: "exact", head: true }).eq("creator_id", creator.id),
     supabase.from("fans_purchases").select("id", { count: "exact", head: true }).eq("creator_id", creator.id),
     supabase.from("fans_tips").select("id", { count: "exact", head: true }).eq("creator_id", creator.id),
     supabase.from("fans_payout_requests").select("id", { count: "exact", head: true }).eq("creator_id", creator.id),
-  ]) as [CountResult, CountResult, CountResult, CountResult, CountResult, CountResult];
+    supabase.from("fans_notifications").select("id,type,read_at,created_at", { count: "exact" }).eq("user_id", user.id).in("type", ["fans_like", "fans_comment"]).order("created_at", { ascending: false }).limit(5),
+  ]) as [CountResult, CountResult, CountResult, CountResult, CountResult, CountResult, { data: { id: string; type: string; read_at: string | null; created_at: string }[] | null; count: number | null }];
 
   const activePlans = await supabase.from("fans_plans").select("id", { count: "exact", head: true }).eq("creator_id", creator.id).eq("status", "active");
   const publishedPosts = await supabase.from("fans_posts").select("id", { count: "exact", head: true }).eq("creator_id", creator.id).eq("status", "published");
+  const unreadActivity = activity.data?.filter((item) => !item.read_at).length ?? 0;
 
   const cards = [
     { href: "/fans/gerenciar/perfil", icon: "◉", title: "Perfil do criador", text: "Nome, apresentação, avatar e identidade pública." },
@@ -65,11 +67,13 @@ export default async function FansManagePage() {
         <section className="fansMetrics">
           <article className="card"><span className="metricLabel">GORJETAS</span><strong>{tips.count ?? 0}</strong><p>Transações registradas</p></article>
           <article className="card"><span className="metricLabel">SAQUES</span><strong>{payouts.count ?? 0}</strong><p>Solicitações registradas</p></article>
+          <Link href="/fans/gerenciar/atividade" className="card" style={{ textDecoration: "none" }}><span className="metricLabel">ATIVIDADE</span><strong>{activity.count ?? 0}</strong><p>{unreadActivity ? `${unreadActivity} não lidas` : "Curtidas e comentários"}</p><span className="serviceLabel">ABRIR →</span></Link>
         </section>
 
         <section className="fansOnboarding card">
           <div className="eyebrow">CENTRAL DE OPERAÇÃO</div><h2>Gerencie seu Fans</h2>
           <p>Central operacional do criador para perfil, planos, publicações, mídia, audiência e recebimentos. Os módulos financeiros permanecem somente de consulta até que o fluxo transacional seguro esteja implementado.</p>
+          <div className="heroActions"><Link className="primaryButton" href="/fans/gerenciar/atividade">Ver atividade</Link><Link className="secondaryButton" href="/painel/notificacoes">Central de notificações</Link></div>
         </section>
 
         <section className="fansMetrics">
