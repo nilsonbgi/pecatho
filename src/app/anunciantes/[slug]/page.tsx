@@ -68,6 +68,10 @@ export default function PublicAdvertiserPage() {
   const [mediaTab, setMediaTab] = useState<"all" | "image" | "video">("all");
   const [unlocking, setUnlocking] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
+  const [following, setFollowing] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
+  const [followNotice, setFollowNotice] = useState("");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -106,6 +110,13 @@ export default function PublicAdvertiserPage() {
       setProfile(typed); setAddress((a.data as Address | null) || null); setCity((c.data as City | null) || null); setState((s.data as State | null) || null); setCategory((cat.data as Category | null) || null);
       setAttributes((attrs.data ?? []) as Attribute[]); setAttributeValues((attrValues.data ?? []) as AttributeValue[]); setServices((svc.data ?? []) as Service[]); setProfileServices((svcValues.data ?? []) as ProfileService[]);
       setFans((fansResult.data as FansCreator | null) || null); setMedia(gallery); setReviews((reviewResult.data ?? []) as Review[]); setLoading(false);
+
+      const { data: authData } = await supabase.auth.getUser();
+      if (authData.user && authData.user.id !== typed.user_id) {
+        if (active) setCurrentUserId(authData.user.id);
+        const { data: followRow } = await supabase.from("user_follows").select("profile_id").eq("follower_id", authData.user.id).eq("profile_id", typed.id).maybeSingle();
+        if (active) setFollowing(Boolean(followRow));
+      }
     })().catch((err) => { console.error(err); if (active) { setError("Não foi possível carregar este perfil."); setLoading(false); } });
     return () => { active = false; };
   }, [params.slug]);
@@ -120,6 +131,36 @@ export default function PublicAdvertiserPage() {
   const selectedServices = services.filter((service) => profileServices.some((entry) => entry.service_id === service.id && entry.selected));
   const prices = Array.isArray(profile?.pricing?.periods) ? (profile?.pricing?.periods as Array<Record<string, unknown>>) : [];
   const validPrices = prices.filter((row) => Number.isFinite(Number(row.price)) && Number(row.price) >= 0);
+
+  async function toggleFollow() {
+    if (!profile) return;
+    setFollowBusy(true); setFollowNotice("");
+    try {
+      const supabase = createClient();
+      const { data: authData } = await supabase.auth.getUser();
+      if (!authData.user) {
+        setFollowNotice("Entre na sua conta para acompanhar este perfil.");
+        return;
+      }
+      if (authData.user.id === profile.user_id) {
+        setFollowNotice("Você não pode acompanhar o próprio perfil.");
+        return;
+      }
+      setCurrentUserId(authData.user.id);
+      if (following) {
+        const { error: deleteError } = await supabase.from("user_follows").delete().eq("follower_id", authData.user.id).eq("profile_id", profile.id);
+        if (deleteError) throw deleteError;
+        setFollowing(false);
+      } else {
+        const { error: insertError } = await supabase.from("user_follows").insert({ follower_id: authData.user.id, profile_id: profile.id });
+        if (insertError) throw insertError;
+        setFollowing(true);
+      }
+    } catch (err) {
+      console.error(err);
+      setFollowNotice("Não foi possível atualizar seu acompanhamento agora.");
+    } finally { setFollowBusy(false); }
+  }
 
   async function unlock(item: GalleryItem) {
     setUnlocking(item.id); setNotice("");
@@ -146,6 +187,7 @@ export default function PublicAdvertiserPage() {
         <div className="eyebrow">{category?.name || "ANUNCIANTE"}</div>
         <div className="profileTitleRow"><div><h1>{profile.title || profile.display_name || "Perfil Pecatho"}</h1><p className="heroCopy">{profile.summary || "Conheça este perfil no Pecatho."}</p></div><div className="profileTrust">{profile.verification_status === "verified" ? <span>✓ PERFIL VERIFICADO</span> : <span>PERFIL PUBLICADO</span>}{reviews.length > 0 && <strong>★ {averageRating.toFixed(1)} <small>({reviews.length} avaliações)</small></strong>}</div></div>
         <div className="profileStats"><span>📷 {publicImages} fotos</span><span>▶ {publicVideos} vídeos</span><span>★ {reviews.length} avaliações verificadas</span>{age && <span>◷ {age} anos</span>}{city?.name && <span>⌖ {city.name}{state?.uf ? ` · ${state.uf}` : ""}</span>}</div>
+        <div className="profileEngagement"><button type="button" className={`followButton ${following ? "active" : ""}`} onClick={toggleFollow} disabled={followBusy}>{followBusy ? "Atualizando..." : following ? "✓ Acompanhando" : "＋ Acompanhar perfil"}</button>{currentUserId && <span>Você receberá este perfil na sua área de acompanhamento.</span>}{followNotice && <span className="followNotice">{followNotice}</span>}</div>
       </section>
 
       {(visibleAttributeRows.length > 0 || profile.height_cm || profile.weight_kg || age) && <section className="profileDetails card"><div className="sectionHeading"><div><div className="eyebrow">CARACTERÍSTICAS</div><h2>Perfil e características</h2><p>Informações públicas configuradas pela anunciante e liberadas pela política do catálogo.</p></div></div><div className="detailGrid">{age && <div><span>Idade</span><strong>{age} anos</strong></div>}{profile.height_cm && <div><span>Altura</span><strong>{Number(profile.height_cm)} cm</strong></div>}{profile.weight_kg && <div><span>Peso</span><strong>{Number(profile.weight_kg)} kg</strong></div>}{visibleAttributeRows.map(({ attribute, value }) => <div key={attribute.id}><span>{attribute.name}</span><strong>{labelValue(value)}</strong></div>)}</div></section>}
