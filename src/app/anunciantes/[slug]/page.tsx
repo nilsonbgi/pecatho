@@ -72,6 +72,8 @@ export default function PublicAdvertiserPage() {
   const [followBusy, setFollowBusy] = useState(false);
   const [followNotice, setFollowNotice] = useState("");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [conversationBusy, setConversationBusy] = useState(false);
+  const [conversationNotice, setConversationNotice] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -162,6 +164,30 @@ export default function PublicAdvertiserPage() {
     } finally { setFollowBusy(false); }
   }
 
+  async function startConversation() {
+    if (!profile || conversationBusy) return;
+    setConversationBusy(true); setConversationNotice("");
+    try {
+      const supabase = createClient();
+      const { data: authData } = await supabase.auth.getUser();
+      if (!authData.user) {
+        window.location.href = `/login?redirect=/anunciantes/${params.slug}`;
+        return;
+      }
+      if (authData.user.id === profile.user_id) {
+        setConversationNotice("Você não pode iniciar uma conversa com o próprio perfil.");
+        return;
+      }
+      const { data, error: rpcError } = await supabase.rpc("start_advertiser_conversation", { p_profile_id: profile.id });
+      if (rpcError) throw rpcError;
+      if (!data) throw new Error("A conversa não foi criada.");
+      window.location.href = `/painel/mensagens/${data}`;
+    } catch (err) {
+      console.error(err);
+      setConversationNotice("Não foi possível iniciar a conversa agora.");
+    } finally { setConversationBusy(false); }
+  }
+
   async function unlock(item: GalleryItem) {
     setUnlocking(item.id); setNotice("");
     try {
@@ -187,7 +213,7 @@ export default function PublicAdvertiserPage() {
         <div className="eyebrow">{category?.name || "ANUNCIANTE"}</div>
         <div className="profileTitleRow"><div><h1>{profile.title || profile.display_name || "Perfil Pecatho"}</h1><p className="heroCopy">{profile.summary || "Conheça este perfil no Pecatho."}</p></div><div className="profileTrust">{profile.verification_status === "verified" ? <span>✓ PERFIL VERIFICADO</span> : <span>PERFIL PUBLICADO</span>}{reviews.length > 0 && <strong>★ {averageRating.toFixed(1)} <small>({reviews.length} avaliações)</small></strong>}</div></div>
         <div className="profileStats"><span>📷 {publicImages} fotos</span><span>▶ {publicVideos} vídeos</span><span>★ {reviews.length} avaliações verificadas</span>{age && <span>◷ {age} anos</span>}{city?.name && <span>⌖ {city.name}{state?.uf ? ` · ${state.uf}` : ""}</span>}</div>
-        <div className="profileEngagement"><button type="button" className={`followButton ${following ? "active" : ""}`} onClick={toggleFollow} disabled={followBusy}>{followBusy ? "Atualizando..." : following ? "✓ Acompanhando" : "＋ Acompanhar perfil"}</button>{currentUserId && <span>Você receberá este perfil na sua área de acompanhamento.</span>}{followNotice && <span className="followNotice">{followNotice}</span>}</div>
+        <div className="profileEngagement"><button type="button" className="primaryButton" onClick={startConversation} disabled={conversationBusy}>{conversationBusy ? "Abrindo conversa..." : "✉ Enviar mensagem"}</button><button type="button" className={`followButton ${following ? "active" : ""}`} onClick={toggleFollow} disabled={followBusy}>{followBusy ? "Atualizando..." : following ? "✓ Acompanhando" : "＋ Acompanhar perfil"}</button>{conversationNotice && <span className="followNotice">{conversationNotice}</span>}{currentUserId && <span>Você receberá este perfil na sua área de acompanhamento.</span>}{followNotice && <span className="followNotice">{followNotice}</span>}</div>
       </section>
 
       {(visibleAttributeRows.length > 0 || profile.height_cm || profile.weight_kg || age) && <section className="profileDetails card"><div className="sectionHeading"><div><div className="eyebrow">CARACTERÍSTICAS</div><h2>Perfil e características</h2><p>Informações públicas configuradas pela anunciante e liberadas pela política do catálogo.</p></div></div><div className="detailGrid">{age && <div><span>Idade</span><strong>{age} anos</strong></div>}{profile.height_cm && <div><span>Altura</span><strong>{Number(profile.height_cm)} cm</strong></div>}{profile.weight_kg && <div><span>Peso</span><strong>{Number(profile.weight_kg)} kg</strong></div>}{visibleAttributeRows.map(({ attribute, value }) => <div key={attribute.id}><span>{attribute.name}</span><strong>{labelValue(value)}</strong></div>)}</div></section>}
