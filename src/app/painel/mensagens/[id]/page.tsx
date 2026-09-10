@@ -18,6 +18,11 @@ export default function ConversationPage() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
 
+  async function markAsRead(supabase = createClient()) {
+    const { error: readError } = await supabase.rpc("mark_conversation_read", { p_conversation_id: params.id });
+    if (readError) console.error("Não foi possível marcar a conversa como lida:", readError);
+  }
+
   async function load() {
     const supabase = createClient();
     const { data: authData } = await supabase.auth.getUser();
@@ -44,14 +49,34 @@ export default function ConversationPage() {
     if (messageResult.error) throw messageResult.error;
     setProfile((profileResult.data as Profile | null) || null);
     setMessages((messageResult.data ?? []) as Message[]);
-    await supabase.from("conversation_members").update({ last_read_at: new Date().toISOString() }).eq("conversation_id", params.id).eq("user_id", authData.user.id);
+    await markAsRead(supabase);
   }
 
   useEffect(() => {
     let active = true;
+    const supabase = createClient();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
     (async () => {
       try {
         await load();
+        if (!active) return;
+
+        channel = supabase
+          .channel(`conversation:${params.id}`)
+          .on(
+            "postgres_changes",
+            { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${params.id}` },
+            (payload) => {
+              const incoming = payload.new as Message;
+              setMessages((current) => {
+                if (current.some((message) => message.id === incoming.id)) return current;
+                return [...current, incoming];
+              });
+              void markAsRead(supabase);
+            },
+          )
+          .subscribe();
       } catch (err) {
         console.error(err);
         if (active) setError("Não foi possível carregar esta conversa.");
@@ -59,7 +84,11 @@ export default function ConversationPage() {
         if (active) setLoading(false);
       }
     })();
-    return () => { active = false; };
+
+    return () => {
+      active = false;
+      if (channel) void supabase.removeChannel(channel);
+    };
   }, [params.id]);
 
   async function sendMessage(event: FormEvent) {
@@ -76,9 +105,9 @@ export default function ConversationPage() {
         .select("id,sender_id,body,status,created_at")
         .single();
       if (insertError) throw insertError;
-      setMessages((current) => [...current, data as Message]);
+      setMessages((current) => current.some((message) => message.id === data.id) ? current : [...current, data as Message]);
       setBody("");
-      await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", params.id);
+      await markAsRead(supabase);
     } catch (err) {
       console.error(err);
       setError("Não foi possível enviar a mensagem.");
