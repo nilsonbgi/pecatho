@@ -34,6 +34,23 @@ function statusClass(status: string) {
   return "bg-amber-100 text-amber-800";
 }
 
+type PaymentRow = {
+  order_id: string;
+  status: string;
+  provider: string | null;
+  provider_payment_id: string | null;
+  payment_method: string | null;
+  paid_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type CreatorRow = {
+  id: string;
+  slug: string;
+  display_name: string;
+};
+
 type HistoryRow = {
   id: string;
   orderNumber: string;
@@ -72,13 +89,13 @@ export default async function MyFansPurchasesPage() {
   const [{ data: payments }, { data: creators }] = await Promise.all([
     orderIds.length
       ? admin.from("payments").select("order_id,status,provider,provider_payment_id,payment_method,paid_at,created_at,updated_at").eq("user_id", user.id).in("order_id", orderIds)
-      : Promise.resolve({ data: [] as { order_id: string; status: string; provider: string | null; provider_payment_id: string | null; payment_method: string | null; paid_at: string | null; created_at: string; updated_at: string }[] }),
+      : Promise.resolve({ data: [] as PaymentRow[] }),
     purchases?.length
       ? admin.from("fans_creators").select("id,slug,display_name").in("id", [...new Set(purchases.map((purchase) => purchase.creator_id))])
-      : Promise.resolve({ data: [] as { id: string; slug: string; display_name: string }[] }),
+      : Promise.resolve({ data: [] as CreatorRow[] }),
   ]);
 
-  const paymentByOrder = new Map<string, (typeof payments extends Array<infer T> ? T : never)>();
+  const paymentByOrder = new Map<string, PaymentRow>();
   for (const payment of payments ?? []) {
     const previous = paymentByOrder.get(payment.order_id);
     if (!previous || new Date(payment.created_at).getTime() > new Date(previous.created_at).getTime()) paymentByOrder.set(payment.order_id, payment);
