@@ -18,11 +18,11 @@ export default function ConversationPage() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
 
-  async function markAsRead(supabase = createClient()) {
+  async function markAsRead(supabase = createClient(), authenticatedUserId = userId) {
     const { error: readError } = await supabase.rpc("mark_conversation_read", { p_conversation_id: params.id });
     if (readError) console.error("Não foi possível marcar a conversa como lida:", readError);
-    if (userId) {
-      const { error: notificationError } = await supabase.from("fans_notifications").update({ read_at: new Date().toISOString() }).eq("user_id", userId).eq("type", "message_received").is("read_at", null).filter("data->>conversation_id", "eq", params.id);
+    if (authenticatedUserId) {
+      const { error: notificationError } = await supabase.from("fans_notifications").update({ read_at: new Date().toISOString() }).eq("user_id", authenticatedUserId).eq("type", "message_received").is("read_at", null).filter("data->>conversation_id", "eq", params.id);
       if (notificationError) console.error("Não foi possível marcar a notificação como lida:", notificationError);
     }
   }
@@ -49,7 +49,7 @@ export default function ConversationPage() {
     if (messageResult.error) throw messageResult.error;
     setProfile((profileResult.data as Profile | null) || null);
     setMessages((messageResult.data ?? []) as Message[]);
-    await markAsRead(supabase);
+    await markAsRead(supabase, authData.user.id);
   }
 
   useEffect(() => {
@@ -89,7 +89,7 @@ export default function ConversationPage() {
       if (insertError) throw insertError;
       setMessages((current) => current.some((message) => message.id === data.id) ? current : [...current, data as Message]);
       setBody("");
-      await markAsRead(supabase);
+      await markAsRead(supabase, userId);
     } catch (err) {
       console.error(err);
       setError("Não foi possível enviar a mensagem.");
