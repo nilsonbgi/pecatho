@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type Plan = {
@@ -17,6 +17,8 @@ type Plan = {
 export default function FansSubscriptionPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const renewal = searchParams.get("renovar") === "1";
   const [plan, setPlan] = useState<Plan | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
@@ -28,7 +30,7 @@ export default function FansSubscriptionPage() {
       .then(async response => {
         const json = await response.json().catch(() => ({}));
         if (response.status === 401) {
-          router.push(`/login?next=/fans/assinar/${params.id}`);
+          router.push(`/login?next=/fans/assinar/${params.id}${renewal ? "?renovar=1" : ""}`);
           return null;
         }
         if (!response.ok) throw new Error(json.error || "Plano não encontrado.");
@@ -38,7 +40,7 @@ export default function FansSubscriptionPage() {
       .catch(err => { if (alive) setError(err instanceof Error ? err.message : "Não foi possível carregar o plano."); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [params.id, router]);
+  }, [params.id, renewal, router]);
 
   async function subscribe() {
     if (!plan || processing) return;
@@ -48,11 +50,11 @@ export default function FansSubscriptionPage() {
       const intent = await fetch("/api/fans/checkout/intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan_id: plan.id }),
+        body: JSON.stringify({ plan_id: plan.id, renewal }),
       });
       const intentBody = await intent.json().catch(() => ({}));
       if (intent.status === 401) {
-        router.push(`/login?next=/fans/assinar/${plan.id}`);
+        router.push(`/login?next=/fans/assinar/${plan.id}${renewal ? "?renovar=1" : ""}`);
         return;
       }
       if (!intent.ok) throw new Error(intentBody.error || "Não foi possível iniciar a assinatura.");
@@ -80,7 +82,7 @@ export default function FansSubscriptionPage() {
         <Link href={`/fans/${plan.creator.slug}`} className="text-sm font-semibold text-slate-700">← Voltar para {plan.creator.display_name}</Link>
         <article className="mt-5 overflow-hidden rounded-3xl border bg-white shadow-sm">
           <div className="bg-slate-950 p-7 text-white sm:p-9">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Pecatho Fans · Assinatura</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Pecatho Fans · {renewal ? "Renovação" : "Assinatura"}</p>
             <h1 className="mt-3 text-3xl font-bold tracking-tight">{plan.name}</h1>
             <p className="mt-2 text-sm text-slate-300">Plano de {plan.creator.display_name}</p>
           </div>
@@ -89,10 +91,10 @@ export default function FansSubscriptionPage() {
             <div className="mt-6 rounded-2xl border bg-slate-50 p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Investimento</p>
               <p className="mt-2 text-3xl font-bold text-slate-950">{new Intl.NumberFormat("pt-BR", { style: "currency", currency: plan.currency || "BRL" }).format(Number(plan.price || 0))}</p>
-              <p className="mt-1 text-sm text-slate-500">Acesso por {plan.duration_days} dias após a confirmação do pagamento.</p>
+              <p className="mt-1 text-sm text-slate-500">{renewal ? `Mais ${plan.duration_days} dias após a confirmação do pagamento.` : `Acesso por ${plan.duration_days} dias após a confirmação do pagamento.`}</p>
             </div>
-            <p className="mt-5 text-xs leading-5 text-slate-500">A assinatura só será ativada após a confirmação oficial do pagamento pelo provedor. Iniciar o checkout não libera conteúdo.</p>
-            <button onClick={subscribe} disabled={processing} className="mt-6 w-full rounded-xl bg-slate-900 px-5 py-3.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{processing ? "Preparando checkout…" : "Continuar para pagamento"}</button>
+            <p className="mt-5 text-xs leading-5 text-slate-500">{renewal ? "A renovação é manual e somente estende uma assinatura existente depois da confirmação oficial do pagamento." : "A assinatura só será ativada após a confirmação oficial do pagamento pelo provedor. Iniciar o checkout não libera conteúdo."}</p>
+            <button onClick={subscribe} disabled={processing} className="mt-6 w-full rounded-xl bg-slate-900 px-5 py-3.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{processing ? "Preparando checkout…" : renewal ? "Continuar para renovação" : "Continuar para pagamento"}</button>
             {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
           </div>
         </article>
