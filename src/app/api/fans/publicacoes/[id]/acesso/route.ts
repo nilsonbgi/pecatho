@@ -22,11 +22,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!post || post.status !== "published") return NextResponse.json({ error: "Publicação não encontrada." }, { status: 404 });
 
   const { data: creator } = await admin.from("fans_creators")
-    .select("id,slug,display_name,bio,avatar_url,status,advertiser_profile_id")
+    .select("id,slug,display_name,bio,avatar_url,status,advertiser_profile_id,user_id")
     .eq("id", post.creator_id).maybeSingle();
   if (!creator || creator.status !== "active") return NextResponse.json({ error: "Criador não disponível." }, { status: 404 });
 
-  const isOwner = !!user && user.id === (await admin.from("fans_creators").select("user_id").eq("id", creator.id).maybeSingle()).data?.user_id;
+  const isOwner = !!user && user.id === creator.user_id;
   let isStaff = false;
   if (user) {
     const { data: role } = await admin.from("user_roles").select("role").eq("user_id", user.id).in("role", ["super_admin", "admin", "moderator", "support"]).maybeSingle();
@@ -53,8 +53,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   const visibleMedia = (media ?? []).filter(item => entitled || item.is_preview);
   const signed = await Promise.all(visibleMedia.map(async item => {
-    if (item.storage_bucket !== "pecatho-private") return null;
-    const { data, error } = await admin.storage.from("pecatho-private").createSignedUrl(item.storage_path, 180);
+    const bucket = String(item.storage_bucket || "fans-private").trim();
+    if (!bucket || !item.storage_path) return null;
+    const { data, error } = await admin.storage.from(bucket).createSignedUrl(item.storage_path, 180);
     if (error || !data?.signedUrl) return null;
     return { id: item.id, media_type: item.media_type, mime_type: item.mime_type, size_bytes: item.size_bytes, width: item.width, height: item.height, duration_seconds: item.duration_seconds, sort_order: item.sort_order, is_preview: item.is_preview, url: data.signedUrl };
   }));
