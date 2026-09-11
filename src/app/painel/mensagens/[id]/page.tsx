@@ -21,6 +21,10 @@ export default function ConversationPage() {
   async function markAsRead(supabase = createClient()) {
     const { error: readError } = await supabase.rpc("mark_conversation_read", { p_conversation_id: params.id });
     if (readError) console.error("Não foi possível marcar a conversa como lida:", readError);
+    if (userId) {
+      const { error: notificationError } = await supabase.from("fans_notifications").update({ read_at: new Date().toISOString() }).eq("user_id", userId).eq("type", "message_received").is("read_at", null).filter("data->>conversation_id", "eq", params.id);
+      if (notificationError) console.error("Não foi possível marcar a notificação como lida:", notificationError);
+    }
   }
 
   async function load() {
@@ -32,11 +36,7 @@ export default function ConversationPage() {
     }
     setUserId(authData.user.id);
 
-    const { data: conversation, error: conversationError } = await supabase
-      .from("conversations")
-      .select("id,profile_id")
-      .eq("id", params.id)
-      .maybeSingle();
+    const { data: conversation, error: conversationError } = await supabase.from("conversations").select("id,profile_id").eq("id", params.id).maybeSingle();
     if (conversationError || !conversation) throw conversationError || new Error("Conversa não encontrada.");
 
     const [profileResult, messageResult] = await Promise.all([
@@ -61,22 +61,11 @@ export default function ConversationPage() {
       try {
         await load();
         if (!active) return;
-
-        channel = supabase
-          .channel(`conversation:${params.id}`)
-          .on(
-            "postgres_changes",
-            { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${params.id}` },
-            (payload) => {
-              const incoming = payload.new as Message;
-              setMessages((current) => {
-                if (current.some((message) => message.id === incoming.id)) return current;
-                return [...current, incoming];
-              });
-              void markAsRead(supabase);
-            },
-          )
-          .subscribe();
+        channel = supabase.channel(`conversation:${params.id}`).on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${params.id}` }, (payload) => {
+          const incoming = payload.new as Message;
+          setMessages((current) => current.some((message) => message.id === incoming.id) ? current : [...current, incoming]);
+          void markAsRead(supabase);
+        }).subscribe();
       } catch (err) {
         console.error(err);
         if (active) setError("Não foi possível carregar esta conversa.");
@@ -85,10 +74,7 @@ export default function ConversationPage() {
       }
     })();
 
-    return () => {
-      active = false;
-      if (channel) void supabase.removeChannel(channel);
-    };
+    return () => { active = false; if (channel) void supabase.removeChannel(channel); };
   }, [params.id]);
 
   async function sendMessage(event: FormEvent) {
@@ -99,11 +85,7 @@ export default function ConversationPage() {
     setError("");
     try {
       const supabase = createClient();
-      const { data, error: insertError } = await supabase
-        .from("messages")
-        .insert({ conversation_id: params.id, sender_id: userId, body: text, status: "sent" })
-        .select("id,sender_id,body,status,created_at")
-        .single();
+      const { data, error: insertError } = await supabase.from("messages").insert({ conversation_id: params.id, sender_id: userId, body: text, status: "sent" }).select("id,sender_id,body,status,created_at").single();
       if (insertError) throw insertError;
       setMessages((current) => current.some((message) => message.id === data.id) ? current : [...current, data as Message]);
       setBody("");
