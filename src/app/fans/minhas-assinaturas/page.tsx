@@ -105,7 +105,7 @@ export default async function MyFansSubscriptionsPage() {
 
               <div className="mt-5 flex flex-wrap gap-3">
                 {row.creator?.slug && <Link href={`/fans/${row.creator.slug}`} className="inline-flex rounded-xl border px-4 py-2.5 text-sm font-semibold text-slate-900">Ver criador e conteúdo</Link>}
-                {row.plan?.status === "active" && !row.active && <Link href={`/fans/assinar/${row.plan_id}`} className="inline-flex rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white">Renovar assinatura</Link>}
+                {row.plan?.status === "active" && <Link href={`/fans/assinar/${row.plan_id}?renovar=1`} className="inline-flex rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white">Renovar assinatura</Link>}
               </div>
 
               {row.active && (
