@@ -32,6 +32,7 @@ export default async function FansPage() {
       <nav className="topbar">
         <div className="brand"><span className="brandMark">P</span><span>Pecatho <small>Fans</small></span></div>
         <div className="navLinks">
+          <Link href="/fans/minhas-assinaturas">Minhas assinaturas</Link>
           <Link href="/painel">Painel Pecatho</Link>
           <Link href="/">Página inicial</Link>
         </div>
@@ -50,7 +51,7 @@ export default async function FansPage() {
             <div className="cardIcon">F</div>
             <h2>Crie seu espaço no Fans</h2>
             <p>Você não precisa anunciar serviços no Pecatho para utilizar o Fans. Crie seu perfil de criador, configure sua página e depois cadastre planos e conteúdos.</p>
-            <Link className="primaryButton" href="/fans/ativar">Criar meu espaço Fans</Link>
+            <div className="heroActions"><Link className="primaryButton" href="/fans/ativar">Criar meu espaço Fans</Link><Link className="secondaryButton" href="/fans/minhas-assinaturas">Minhas assinaturas</Link></div>
             <small>Seu perfil de anunciante, se existir, continuará separado e poderá ser associado ao Fans posteriormente.</small>
           </section>
         ) : (
@@ -71,9 +72,9 @@ export default async function FansPage() {
             </section>
 
             <section className="fansOnboarding card">
-              <h2>Próxima etapa</h2>
-              <p>Seu espaço está criado. A seguir vamos estruturar o painel do criador para administrar perfil, planos, publicações, mídia, assinantes, vendas e recebimentos.</p>
-              <Link className="primaryButton" href="/fans/gerenciar">Gerenciar meu Fans</Link>
+              <h2>Área do fã</h2>
+              <p>Consulte suas assinaturas e os acessos adquiridos independentemente da sua atuação como criador.</p>
+              <div className="heroActions"><Link className="primaryButton" href="/fans/minhas-assinaturas">Minhas assinaturas</Link><Link className="secondaryButton" href="/fans/gerenciar">Gerenciar meu Fans</Link></div>
             </section>
           </>
         )}
