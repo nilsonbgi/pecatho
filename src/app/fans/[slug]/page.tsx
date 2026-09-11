@@ -32,7 +32,13 @@ export default async function FansCreatorPublicPage({ params }: Props) {
       admin.from("fans_comments").select("id", { count: "exact", head: true }).eq("post_id", post.id).eq("status", "visible"),
     ]);
     let previewUrl: string | null = null;
-    if (preview?.storage_bucket === "pecatho-private") { const { data } = await admin.storage.from("pecatho-private").createSignedUrl(preview.storage_path, 180); previewUrl = data?.signedUrl ?? null; }
+    if (preview?.storage_path) {
+      const bucket = String(preview.storage_bucket || "fans-private").trim();
+      if (bucket) {
+        const { data } = await admin.storage.from(bucket).createSignedUrl(preview.storage_path, 180);
+        previewUrl = data?.signedUrl ?? null;
+      }
+    }
     return { ...post, body: isOwner || post.access_type === "free" ? post.body : null, previewUrl, previewType: preview?.media_type ?? null, likesCount: likesCount ?? 0, commentsCount: commentsCount ?? 0 } as Card;
   }));
   const activePlans = (plans ?? []) as Plan[];
