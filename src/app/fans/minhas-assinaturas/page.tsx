@@ -56,6 +56,7 @@ export default async function MyFansSubscriptionsPage() {
         <Link href="/fans" className="font-semibold text-slate-900">Pecatho <span className="text-slate-500">Fans</span></Link>
         <div className="flex flex-wrap gap-2 text-sm">
           <Link href="/fans" className="rounded-lg border bg-white px-3 py-2">Explorar</Link>
+          <Link href="/fans/minhas-compras" className="rounded-lg border bg-white px-3 py-2">Minhas compras</Link>
           <Link href="/painel" className="rounded-lg bg-slate-900 px-3 py-2 text-white">Painel Pecatho</Link>
         </div>
       </nav>
@@ -68,6 +69,7 @@ export default async function MyFansSubscriptionsPage() {
           <div className="mt-6 flex flex-wrap gap-3 text-sm">
             <span className="rounded-full border border-white/15 bg-white/5 px-4 py-2">{activeCount} ativa(s)</span>
             <span className="rounded-full border border-white/15 bg-white/5 px-4 py-2">{rows.length} registro(s)</span>
+            <Link href="/fans/minhas-compras" className="rounded-full border border-white/15 bg-white/10 px-4 py-2 font-semibold text-white">Ver histórico de compras →</Link>
           </div>
         </header>
 
@@ -76,7 +78,7 @@ export default async function MyFansSubscriptionsPage() {
             <div className="rounded-2xl border border-dashed bg-white p-10 text-center">
               <h2 className="text-xl font-bold text-slate-950">Você ainda não possui assinaturas</h2>
               <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-600">Explore os criadores do Pecatho Fans e escolha um plano. A assinatura somente será criada após a confirmação oficial do pagamento.</p>
-              <Link href="/anunciantes" className="mt-5 inline-flex rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white">Explorar Pecatho</Link>
+              <Link href="/fans" className="mt-5 inline-flex rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white">Explorar Fans</Link>
             </div>
           ) : rows.map(row => (
             <article key={row.id} className="rounded-2xl border bg-white p-6 shadow-sm sm:p-7">
