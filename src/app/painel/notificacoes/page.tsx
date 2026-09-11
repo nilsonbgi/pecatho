@@ -15,10 +15,7 @@ type Notification = {
 };
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
 function getNotificationContext(item: Notification) {
@@ -26,6 +23,7 @@ function getNotificationContext(item: Notification) {
   if (item.type === "profile_followed") return { label: "ACOMPANHAMENTO", action: "Abrir meu anúncio", href: route || "/painel/anuncio" };
   if (item.type === "fans_like") return { label: "CURTIDA", action: "Abrir atividade do Fans", href: route || "/fans/gerenciar" };
   if (item.type === "fans_comment") return { label: "COMENTÁRIO", action: "Abrir atividade do Fans", href: route || "/fans/gerenciar" };
+  if (item.type === "message_received") return { label: "MENSAGEM", action: "Abrir conversa", href: route || "/painel/mensagens" };
   return { label: "ATIVIDADE", action: route ? "Abrir atividade" : null, href: route };
 }
 
@@ -38,34 +36,37 @@ export default function NotificacoesPage() {
   useEffect(() => {
     let active = true;
     const supabase = createClient();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
     (async () => {
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) {
-        if (active) {
-          setMessage("Entre na sua conta para visualizar suas notificações.");
-          setLoading(false);
-        }
+        if (active) { setMessage("Entre na sua conta para visualizar suas notificações."); setLoading(false); }
         return;
       }
-      const { data, error } = await supabase
-        .from("fans_notifications")
-        .select("id,type,title,body,data,read_at,created_at")
-        .eq("user_id", auth.user.id)
-        .order("created_at", { ascending: false })
-        .limit(100);
+      const { data, error } = await supabase.from("fans_notifications").select("id,type,title,body,data,read_at,created_at").eq("user_id", auth.user.id).order("created_at", { ascending: false }).limit(100);
       if (error) throw error;
-      if (active) {
-        setItems((data ?? []) as Notification[]);
-        setLoading(false);
-      }
+      if (!active) return;
+      setItems((data ?? []) as Notification[]);
+      setLoading(false);
+
+      channel = supabase
+        .channel(`notifications:${auth.user.id}`)
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "fans_notifications", filter: `user_id=eq.${auth.user.id}` }, (payload) => {
+          const incoming = payload.new as Notification;
+          setItems((current) => current.some((item) => item.id === incoming.id) ? current : [incoming, ...current].slice(0, 100));
+        })
+        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "fans_notifications", filter: `user_id=eq.${auth.user.id}` }, (payload) => {
+          const incoming = payload.new as Notification;
+          setItems((current) => current.map((item) => item.id === incoming.id ? incoming : item));
+        })
+        .subscribe();
     })().catch((error) => {
       console.error(error);
-      if (active) {
-        setMessage("Não foi possível carregar suas notificações.");
-        setLoading(false);
-      }
+      if (active) { setMessage("Não foi possível carregar suas notificações."); setLoading(false); }
     });
-    return () => { active = false; };
+
+    return () => { active = false; if (channel) void supabase.removeChannel(channel); };
   }, []);
 
   async function markRead(id: string) {
