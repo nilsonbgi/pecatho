@@ -97,8 +97,8 @@ begin
     raise exception 'Configure ao menos uma forma de pagamento antes do envio/publicação';
   end if;
 
-  if coalesce(length(regexp_replace(coalesce(new.phone, ''), '\\D', '', 'g')), 0) < 10
-     and coalesce(length(regexp_replace(coalesce(new.whatsapp, ''), '\\D', '', 'g')), 0) < 10 then
+  if coalesce(length(regexp_replace(coalesce(new.phone, ''), '\D', '', 'g')), 0) < 10
+     and coalesce(length(regexp_replace(coalesce(new.whatsapp, ''), '\D', '', 'g')), 0) < 10 then
     raise exception 'Informe um telefone ou WhatsApp válido para contato antes do envio/publicação';
   end if;
 
