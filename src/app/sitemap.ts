@@ -2,23 +2,41 @@ import type { MetadataRoute } from "next";
 import { createClient } from "@/lib/supabase/server";
 
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://pecatho.com.br").replace(/\/$/, "");
+const PAGE_SIZE = 1000;
 
 type PublishedProfile = {
   slug: string | null;
   updated_at: string | null;
 };
 
+async function getPublishedProfiles(): Promise<PublishedProfile[]> {
+  const supabase = await createClient();
+  const profiles: PublishedProfile[] = [];
+  let from = 0;
+
+  while (true) {
+    const { data, error } = await supabase
+      .from("advertiser_profiles")
+      .select("slug,updated_at")
+      .eq("status", "published")
+      .not("slug", "is", null)
+      .order("updated_at", { ascending: false })
+      .range(from, from + PAGE_SIZE - 1);
+
+    if (error || !data?.length) break;
+
+    profiles.push(...(data as PublishedProfile[]));
+
+    if (data.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+
+  return profiles;
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("advertiser_profiles")
-    .select("slug,updated_at")
-    .eq("status", "published")
-    .not("slug", "is", null)
-    .order("updated_at", { ascending: false });
-
-  const profiles = (data || []) as PublishedProfile[];
+  const profiles = await getPublishedProfiles();
 
   return [
     {
