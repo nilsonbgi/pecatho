@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
 import "./anunciantes/discovery.css";
+import "./anunciantes/discovery-state.css";
 import "./public-profile.css";
 import "./public-profile-error.css";
 import "./public-profile-not-found.css";
