@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import "./anunciantes/discovery.css";
 import "./public-profile.css";
+import "./public-profile-error.css";
 import SessionBar from "@/components/SessionBar";
 
 export const metadata: Metadata = {
