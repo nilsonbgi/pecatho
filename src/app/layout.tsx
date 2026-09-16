@@ -4,6 +4,7 @@ import "./globals.css";
 import "./anunciantes/discovery.css";
 import "./public-profile.css";
 import "./public-profile-error.css";
+import "./public-profile-not-found.css";
 import SessionBar from "@/components/SessionBar";
 
 export const metadata: Metadata = {
