@@ -5,6 +5,15 @@ const FALLBACK_SUPABASE_URL = "https://haplmoswsojbibgamqju.supabase.co";
 const FALLBACK_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_gbJA-2Tqt7SCeqokRLFuCQ_ubJy7QvD";
 const FANS_HOSTS = new Set(["fans.pecatho.com.br", "www.fans.pecatho.com.br"]);
 
+function applySecurityHeaders(response: NextResponse) {
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("X-Frame-Options", "SAMEORIGIN");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  return response;
+}
+
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
   const hostname = request.headers.get("host")?.split(":")[0].toLowerCase();
@@ -32,17 +41,17 @@ export async function middleware(request: NextRequest) {
     if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
-      return NextResponse.redirect(url);
+      return applySecurityHeaders(NextResponse.redirect(url));
     }
   }
 
   if (isFansHost && !pathname.startsWith("/fans") && !pathname.startsWith("/_next") && pathname !== "/favicon.ico") {
     const url = request.nextUrl.clone();
     url.pathname = pathname === "/" ? "/fans" : `/fans${pathname}`;
-    return NextResponse.rewrite(url);
+    return applySecurityHeaders(NextResponse.rewrite(url));
   }
 
-  return response;
+  return applySecurityHeaders(response);
 }
 
 export const config = {
