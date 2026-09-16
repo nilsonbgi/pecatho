@@ -14,8 +14,7 @@ type PublicProfile = {
   category_id: number | null;
 };
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
+async function getPublicProfile(slug: string) {
   const supabase = await createClient();
   const { data: profile } = await supabase
     .from("advertiser_profiles")
@@ -24,13 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .eq("status", "published")
     .maybeSingle();
 
-  if (!profile) {
-    return {
-      title: "Anúncio não encontrado | Pecatho",
-      description: "Este anúncio não está disponível no Pecatho.",
-      robots: { index: false, follow: false },
-    };
-  }
+  if (!profile) return null;
 
   const typed = profile as PublicProfile;
   const [cityResult, stateResult, categoryResult] = await Promise.all([
@@ -47,6 +40,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = (typed.summary || `Conheça ${name} no Pecatho.`).slice(0, 160);
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://pecatho.com.br";
   const canonical = `${baseUrl.replace(/\/$/, "")}/anunciantes/${encodeURIComponent(typed.slug || slug)}`;
+
+  return { typed, name, category, location, description, canonical };
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const profile = await getPublicProfile(slug);
+
+  if (!profile) {
+    return {
+      title: "Anúncio não encontrado | Pecatho",
+      description: "Este anúncio não está disponível no Pecatho.",
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const { typed, name, category, location, description, canonical } = profile;
   const verified = typed.verification_status === "verified" ? " · Perfil verificado" : "";
 
   return {
@@ -70,6 +80,42 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default function PublicAdvertiserLayout({ children }: Props) {
-  return children;
+export default async function PublicAdvertiserLayout({ children, params }: Props) {
+  const { slug } = await params;
+  const profile = await getPublicProfile(slug);
+
+  const structuredData = profile
+    ? {
+        "@context": "https://schema.org",
+        "@type": "ProfilePage",
+        name: `${profile.name} | Pecatho`,
+        url: profile.canonical,
+        description: profile.description,
+        inLanguage: "pt-BR",
+        isPartOf: {
+          "@type": "WebSite",
+          name: "Pecatho",
+          url: process.env.NEXT_PUBLIC_SITE_URL || "https://pecatho.com.br",
+        },
+        mainEntity: {
+          "@type": "Person",
+          name: profile.name,
+          description: profile.description,
+          jobTitle: profile.category,
+          areaServed: profile.location,
+        },
+      }
+    : null;
+
+  return (
+    <>
+      {structuredData ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }}
+        />
+      ) : null}
+      {children}
+    </>
+  );
 }
