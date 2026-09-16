@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
+import "./anunciantes/discovery.css";
 import SessionBar from "@/components/SessionBar";
 
 export const metadata: Metadata = {
