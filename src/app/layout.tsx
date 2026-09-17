@@ -7,6 +7,7 @@ import "./public-profile.css";
 import "./public-profile-error.css";
 import "./public-profile-not-found.css";
 import "./home-editorial.css";
+import "./fans-editorial.css";
 import SessionBar from "@/components/SessionBar";
 
 export const metadata: Metadata = {
@@ -31,14 +32,7 @@ export const metadata: Metadata = {
     siteName: "Pecatho",
     title: "Pecatho — Descubra, conecte-se e escolha",
     description: "Um ecossistema para descobrir perfis, conhecer experiências e acessar o Pecatho Fans.",
-    images: [
-      {
-        url: "/opengraph-image",
-        width: 1200,
-        height: 630,
-        alt: "Pecatho — Descubra, conecte-se e escolha",
-      },
-    ],
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Pecatho — Descubra, conecte-se e escolha" }],
   },
   twitter: {
     card: "summary_large_image",
@@ -49,31 +43,12 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-      "max-video-preview": -1,
-    },
+    googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 },
   },
 };
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
-  themeColor: "#000309",
-  colorScheme: "dark",
-};
+export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#000309", colorScheme: "dark" };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
-  return (
-    <html lang="pt-BR">
-      <body>
-        {children}
-        <SessionBar />
-      </body>
-    </html>
-  );
+  return <html lang="pt-BR"><body>{children}<SessionBar /></body></html>;
 }
