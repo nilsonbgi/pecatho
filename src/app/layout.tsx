@@ -20,10 +20,7 @@ export const metadata: Metadata = {
   keywords: ["Pecatho", "anunciantes", "perfis", "Pecatho Fans", "conteúdo", "descoberta"],
   alternates: { canonical: "/" },
   icons: {
-    icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/icon-maskable.svg", type: "image/svg+xml", purpose: "maskable" },
-    ],
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
     apple: [{ url: "/apple-icon.svg", type: "image/svg+xml" }],
   },
   openGraph: {
