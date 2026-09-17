@@ -21,6 +21,7 @@ async function getPublishedProfiles(): Promise<PublishedProfile[]> {
       .eq("status", "published")
       .not("slug", "is", null)
       .order("updated_at", { ascending: false })
+      .order("slug", { ascending: true })
       .range(from, from + PAGE_SIZE - 1);
 
     if (error || !data?.length) break;
