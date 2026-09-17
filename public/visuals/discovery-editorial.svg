@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="760" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#19131b"/>
+      <stop offset="1" stop-color="#08090d"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="300" y1="120" x2="900" y2="650" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F7E7A0"/>
+      <stop offset=".45" stop-color="#E7C33F"/>
+      <stop offset="1" stop-color="#9B7620"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(770 270) rotate(125) scale(410 330)">
+      <stop stop-color="#E7C33F" stop-opacity=".2"/>
+      <stop offset="1" stop-color="#E7C33F" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="760" rx="36" fill="url(#bg)"/>
+  <rect width="1200" height="760" rx="36" fill="url(#glow)"/>
+  <path d="M730 90C625 120 578 226 620 321C653 396 734 407 760 484C784 555 730 628 650 690H1080V90H730Z" fill="#24202A"/>
+  <path d="M786 124C720 174 690 250 712 320C731 381 790 406 807 468C824 527 790 590 746 640" stroke="url(#gold)" stroke-width="2" opacity=".7"/>
+  <path d="M850 148C777 205 754 273 780 339C804 399 862 423 877 481C890 533 871 579 838 616" stroke="#E7C33F" stroke-width="1" opacity=".35"/>
+  <circle cx="842" cy="184" r="72" fill="#D7B86A" opacity=".18"/>
+  <path d="M822 210C783 236 771 280 786 318C799 350 827 365 832 398C837 430 818 455 793 475L754 515C729 542 720 579 728 616L1008 616C1000 550 971 507 929 473C899 449 884 423 886 386C889 340 924 312 924 270C924 224 885 192 848 194C838 194 830 201 822 210Z" fill="url(#gold)" opacity=".9"/>
+  <path d="M820 215C795 251 796 291 817 320C840 351 865 366 863 404C861 447 822 472 800 504C781 532 780 572 791 616" stroke="#FFF4C7" stroke-width="3" stroke-linecap="round" opacity=".65"/>
+  <path d="M120 620C290 555 410 590 548 650" stroke="#E7C33F" stroke-width="2" opacity=".5"/>
+  <path d="M120 646C285 585 414 621 535 680" stroke="#E7C33F" stroke-width="1" opacity=".25"/>
+  <text x="88" y="112" fill="#E7C33F" font-family="Arial,sans-serif" font-size="18" letter-spacing="6">PECATHO</text>
+  <text x="88" y="660" fill="#FFFFFF" font-family="Arial,sans-serif" font-size="24" letter-spacing="2">PRESENÇA · ESTILO · CONEXÃO</text>
+</svg>
