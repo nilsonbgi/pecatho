@@ -6,6 +6,7 @@ import "./anunciantes/discovery-state.css";
 import "./public-profile.css";
 import "./public-profile-error.css";
 import "./public-profile-not-found.css";
+import "./home-editorial.css";
 import SessionBar from "@/components/SessionBar";
 
 export const metadata: Metadata = {
