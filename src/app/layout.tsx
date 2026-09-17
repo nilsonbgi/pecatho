@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/icon-maskable.svg", type: "image/svg+xml" },
+      { url: "/icon-maskable.svg", type: "image/svg+xml", purpose: "maskable" },
     ],
     apple: [{ url: "/apple-icon.svg", type: "image/svg+xml" }],
   },
@@ -33,11 +33,20 @@ export const metadata: Metadata = {
     siteName: "Pecatho",
     title: "Pecatho — Descubra, conecte-se e escolha",
     description: "Um ecossistema para descobrir perfis, conhecer experiências e acessar o Pecatho Fans.",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Pecatho — Descubra, conecte-se e escolha",
+      },
+    ],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "Pecatho — Descubra, conecte-se e escolha",
     description: "Descubra perfis, conecte-se e explore o ecossistema Pecatho.",
+    images: ["/opengraph-image"],
   },
   robots: {
     index: true,
