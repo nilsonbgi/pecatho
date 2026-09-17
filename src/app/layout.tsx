@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
 import "./anunciantes/discovery.css";
@@ -19,11 +19,54 @@ export const metadata: Metadata = {
   generator: "Next.js",
   keywords: ["Pecatho", "anunciantes", "perfis", "Pecatho Fans", "conteúdo", "descoberta"],
   alternates: { canonical: "/" },
-  openGraph: { type: "website", locale: "pt_BR", url: "https://pecatho.com.br/", siteName: "Pecatho", title: "Pecatho — Descubra, conecte-se e escolha", description: "Um ecossistema para descobrir perfis, conhecer experiências e acessar o Pecatho Fans." },
-  twitter: { card: "summary", title: "Pecatho — Descubra, conecte-se e escolha", description: "Descubra perfis, conecte-se e explore o ecossistema Pecatho." },
-  robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 } },
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon-maskable.svg", type: "image/svg+xml" },
+    ],
+    apple: [{ url: "/apple-icon.svg", type: "image/svg+xml" }],
+  },
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    url: "https://pecatho.com.br/",
+    siteName: "Pecatho",
+    title: "Pecatho — Descubra, conecte-se e escolha",
+    description: "Um ecossistema para descobrir perfis, conhecer experiências e acessar o Pecatho Fans.",
+  },
+  twitter: {
+    card: "summary",
+    title: "Pecatho — Descubra, conecte-se e escolha",
+    description: "Descubra perfis, conecte-se e explore o ecossistema Pecatho.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#000309",
+  colorScheme: "dark",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
-  return <html lang="pt-BR"><body>{children}<SessionBar /></body></html>;
+  return (
+    <html lang="pt-BR">
+      <body>
+        {children}
+        <SessionBar />
+      </body>
+    </html>
+  );
 }
