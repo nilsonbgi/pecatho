@@ -61,7 +61,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   }));
 
   return NextResponse.json({
-    post: { id: post.id, title: post.title, body: post.body, price: post.price, currency: post.currency, access_type: post.access_type, published_at: post.published_at },
+    post: { id: post.id, title: post.title, body: entitled ? post.body : null, price: post.price, currency: post.currency, access_type: post.access_type, published_at: post.published_at },
     creator: { id: creator.id, slug: creator.slug, display_name: creator.display_name, bio: creator.bio, avatar_url: creator.avatar_url },
     access: { entitled, requires_login: !entitled && post.access_type !== "free", requires_purchase: !entitled && post.access_type === "paid", requires_subscription: !entitled && post.access_type === "subscriber" },
     media: signed.filter(Boolean),
