@@ -26,7 +26,8 @@ export default function FansSubscriptionPage() {
 
   useEffect(() => {
     let alive = true;
-    fetch(`/api/fans/planos/${params.id}`, { cache: "no-store" })
+    const query = renewal ? "?renovar=1" : "";
+    fetch(`/api/fans/planos/${params.id}${query}`, { cache: "no-store" })
       .then(async response => {
         const json = await response.json().catch(() => ({}));
         if (response.status === 401) {
