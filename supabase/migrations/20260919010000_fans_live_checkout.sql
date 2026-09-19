@@ -75,11 +75,6 @@ create trigger trg_fans_live_sessions_updated_at
 before update on public.fans_live_sessions
 for each row execute function public.touch_fans_live_session();
 
--- Apenas o servidor pode criar pedidos de videochamada.
-revoke all on function public.create_fans_live_checkout_intent(uuid) from public;
-revoke all on function public.create_fans_live_checkout_intent(uuid) from anon;
-revoke all on function public.create_fans_live_checkout_intent(uuid) from authenticated;
-
 create or replace function public.create_fans_live_checkout_intent(p_offer_id uuid)
 returns jsonb
 language plpgsql
@@ -257,6 +252,8 @@ end;
 $$;
 
 grant execute on function public.create_fans_live_checkout_intent(uuid) to authenticated;
+revoke all on function public.create_fans_live_checkout_intent(uuid) from public;
+revoke all on function public.create_fans_live_checkout_intent(uuid) from anon;
 
 -- Atualiza o settlement existente para tratar videochamadas como produto comercial.
 create or replace function public.settle_fans_checkout(
