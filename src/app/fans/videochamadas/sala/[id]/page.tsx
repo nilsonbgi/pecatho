@@ -432,9 +432,9 @@ export default function FansLiveRoomPage() {
     : `${Math.floor(remaining / 60).toString().padStart(2, "0")}:${(remaining % 60).toString().padStart(2, "0")}`;
 
   return (
-    <main className="min-h-screen bg-slate-950 px-4 py-6 text-white sm:px-6">
-      <div className="mx-auto max-w-6xl">
-        <nav className="flex items-center justify-between">
+    <main className="min-h-screen bg-[#07090d] px-3 py-3 text-white sm:px-5 sm:py-5">
+      <div className="mx-auto max-w-[1440px]">
+        <nav className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 backdrop-blur">
           <Link href="/fans/videochamadas" className="font-semibold">Pecatho <span className="text-slate-400">Fans</span></Link>
           <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold">{timer}</span>
         </nav>
@@ -449,7 +449,7 @@ export default function FansLiveRoomPage() {
           </div>
         ) : access ? (
           <>
-            <header className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <header className="mt-4 flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:flex-row sm:items-end sm:justify-between sm:p-5">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Sala privada · {access.role === "creator" ? "Criador" : "Cliente"}</p>
                 <h1 className="mt-2 text-2xl font-bold">{access.title}</h1>
@@ -460,8 +460,8 @@ export default function FansLiveRoomPage() {
 
             {error && <p className="mt-4 rounded-xl border border-amber-400/20 bg-amber-400/10 p-3 text-sm text-amber-100">{error}</p>}
 
-            <section className="mt-6 grid gap-4 lg:grid-cols-2">
-              <div className="relative aspect-video overflow-hidden rounded-2xl border border-white/10 bg-black">
+            <section className="mt-4 grid gap-3 lg:grid-cols-[1.35fr_.65fr]">
+              <div className="relative aspect-video overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl">
                 <video ref={localVideoRef} autoPlay muted playsInline className="h-full w-full object-cover" />
                 <span className="absolute bottom-3 left-3 rounded-full bg-black/60 px-3 py-1 text-xs">Você</span>
               </div>
@@ -473,10 +473,10 @@ export default function FansLiveRoomPage() {
             </section>
 
             {access.role === "buyer" && (
-              <section className="mt-6 rounded-2xl border border-amber-300/20 bg-amber-300/5 p-5">
+              <section className="mt-6 rounded-2xl border border-amber-300/20 bg-gradient-to-br from-amber-300/10 to-white/[0.03] p-5 shadow-lg">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                   <div>
-                    <h2 className="font-semibold">Enviar gorjeta durante a chamada</h2>
+                    <div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-300 text-slate-950">★</span><h2 className="font-bold">Apoiar durante a chamada</h2></div>
                     <p className="mt-1 text-xs leading-5 text-slate-400">O pagamento é confirmado pelo Mercado Pago antes de a gorjeta aparecer como recebida.</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -495,7 +495,7 @@ export default function FansLiveRoomPage() {
             )}
 
             {paidTips.length > 0 && (
-              <section className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+              <section className="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="font-semibold">{access.role === "creator" ? "Gorjetas recebidas" : "Gorjetas confirmadas"}</h2>
                   <span className="text-xs text-slate-500">Pagamento confirmado</span>
