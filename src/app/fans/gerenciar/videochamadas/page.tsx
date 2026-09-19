@@ -82,34 +82,34 @@ export default function LiveOffersPage() {
   const money = (value: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 
-  return <main className="shell fansShell">
-    <nav className="topbar">
-      <Link href="/fans/gerenciar" className="brand"><span className="brandMark">P</span><span>Pecatho <small>Fans</small></span></Link>
-      <div className="navLinks"><Link href="/fans">Visão geral</Link><Link href="/painel">Painel Pecatho</Link></div>
+  return <main className="min-h-screen bg-[#f6f7f9] text-slate-950">
+    <nav className="border-b bg-white px-4 py-4 sm:px-6">
+      <Link href="/fans/gerenciar" className="mx-auto flex max-w-6xl items-center text-lg font-black"><span>Pecatho <small>Fans</small></span></Link>
+      <div className="ml-auto flex gap-2 text-sm"><Link href="/fans">Visão geral</Link><Link href="/painel">Painel Pecatho</Link></div>
     </nav>
-    <section className="hero fansHero">
-      <div className="eyebrow">INTERAÇÕES PAGAS</div>
-      <h1>Videochamadas <em>privadas.</em></h1>
-      <p className="heroCopy">Crie ofertas comerciais de videochamada. A chamada somente será liberada após pagamento confirmado pelo provedor.</p>
-      <div className="card" style={{ marginTop: 24 }}>
-        <h2>Nova oferta</h2>
+    <section className="mx-auto max-w-6xl px-4 py-7 sm:px-6 sm:py-10">
+      <div className="text-xs font-bold uppercase tracking-[0.22em] text-slate-500">Área do anunciante · monetização</div>
+      <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Videochamadas privadas.</h1>
+      <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">Crie ofertas comerciais de videochamada. A chamada somente será liberada após pagamento confirmado pelo provedor.</p>
+      <div className="mt-7 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
+        <h2 className="text-2xl font-black">Crie sua oferta</h2>
         <form onSubmit={createOffer} style={{ display: "grid", gap: 14, marginTop: 18 }}>
           <label>Título<input value={title} onChange={e => setTitle(e.target.value)} maxLength={120} placeholder="Videochamada privada" /></label>
           <label>Descrição<textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={1000} rows={3} placeholder="Explique o que está incluído na chamada." /></label>
           <label>Duração<select value={duration} onChange={e => setDuration(Number(e.target.value))}>{durations.map(item => <option key={item} value={item}>{item} minutos</option>)}</select></label>
           <label>Preço (BRL)<input inputMode="decimal" value={price} onChange={e => setPrice(e.target.value)} placeholder="49,90" /></label>
-          <button className="primaryButton" disabled={saving}>{saving ? "Salvando..." : "Publicar oferta"}</button>
+          <button className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white" disabled={saving}>{saving ? "Salvando..." : "Publicar oferta"}</button>
         </form>
       </div>
       {error && <p className="fieldNote" style={{ marginTop: 12 }}>{error}</p>}
-      <section className="fansMetrics" style={{ marginTop: 24 }}>
-        {loading ? <article className="card"><p>Carregando ofertas...</p></article> :
+      <section className="mt-8 grid gap-4 md:grid-cols-2">
+        {loading ? <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><p>Carregando ofertas...</p></article> :
           offers.length === 0 ? <article className="card"><h2>Nenhuma oferta criada.</h2><p>Cadastre sua primeira modalidade de videochamada paga.</p></article> :
           offers.map(offer => <article className="card" key={offer.id}>
-            <span className="metricLabel">{offer.status === "active" ? "ATIVA" : "INATIVA"}</span>
+            <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">{offer.status === "active" ? "ATIVA" : "INATIVA"}</span>
             <h2>{offer.title}</h2><strong>{money(Number(offer.price))}</strong>
             <p>{offer.duration_minutes} minutos{offer.description ? " · " + offer.description : ""}</p>
-            <button className="secondaryButton" onClick={() => void toggle(offer)}>{offer.status === "active" ? "Desativar" : "Ativar"}</button>
+            <button className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-900" onClick={() => void toggle(offer)}>{offer.status === "active" ? "Desativar" : "Ativar"}</button>
           </article>)}
       </section>
       <p style={{ marginTop: 24 }}><div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}><Link href="/fans/gerenciar/videochamadas/sessoes" className="primaryButton">Solicitações recebidas</Link><Link href="/fans/gerenciar" className="secondaryButton">← Voltar ao painel</Link></div></p>
