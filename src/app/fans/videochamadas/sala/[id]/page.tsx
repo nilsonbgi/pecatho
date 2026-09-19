@@ -41,6 +41,11 @@ export default function FansLiveRoomPage() {
   const [remoteConnected, setRemoteConnected] = useState(false);
   const [remaining, setRemaining] = useState<number | null>(null);
   const [ending, setEnding] = useState(false);
+  const [tipAmount, setTipAmount] = useState(10);
+  const [tipMessage, setTipMessage] = useState("");
+  const [tipLoading, setTipLoading] = useState(false);
+  const [tipError, setTipError] = useState("");
+  const [paidTips, setPaidTips] = useState<Array<{ id: string; amount: number; message: string | null; created_at: string }>>([]);
 
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -51,6 +56,53 @@ export default function FansLiveRoomPage() {
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
   const endedRef = useRef(false);
+
+  const loadPaidTips = useCallback(async () => {
+    const { data } = await supabase
+      .from("fans_tips")
+      .select("id,amount,message,created_at")
+      .eq("session_id", sessionId)
+      .eq("status", "paid")
+      .order("created_at", { ascending: false })
+      .limit(20);
+    setPaidTips((data ?? []).map((tip) => ({
+      id: tip.id,
+      amount: Number(tip.amount),
+      message: tip.message,
+      created_at: tip.created_at,
+    })));
+  }, [sessionId, supabase]);
+
+  const openTipCheckout = useCallback(async () => {
+    if (accessRef.current?.role !== "buyer" || !sessionId || tipLoading) return;
+    setTipLoading(true);
+    setTipError("");
+    try {
+      const intentResponse = await fetch("/api/fans/live/tip", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sessionId, amount: tipAmount, message: tipMessage }),
+      });
+      const intent = await intentResponse.json().catch(() => null);
+      if (!intentResponse.ok) throw new Error(intent?.error ?? "Não foi possível criar a gorjeta.");
+
+      const providerResponse = await fetch("/api/fans/checkout/provider", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_id: intent.order_id }),
+      });
+      const provider = await providerResponse.json().catch(() => null);
+      if (!providerResponse.ok || typeof provider?.checkout_url !== "string") {
+        throw new Error(provider?.error ?? "Não foi possível abrir o pagamento.");
+      }
+      window.open(provider.checkout_url, "_blank", "noopener,noreferrer");
+      setTipMessage("");
+    } catch (tipCheckoutError) {
+      setTipError(tipCheckoutError instanceof Error ? tipCheckoutError.message : "Não foi possível iniciar o pagamento.");
+    } finally {
+      setTipLoading(false);
+    }
+  }, [sessionId, supabase, tipAmount, tipLoading, tipMessage]);
 
   const sendSignal = useCallback(async (
     signalType: Signal["signal_type"],
@@ -288,6 +340,21 @@ export default function FansLiveRoomPage() {
         .on(
           "postgres_changes",
           {
+            event: "*",
+            schema: "public",
+            table: "fans_tips",
+            filter: `session_id=eq.${sessionId}`,
+          },
+          (payload) => {
+            const tip = payload.new as { id?: string; amount?: number | string; message?: string | null; status?: string; created_at?: string };
+            if (tip.status === "paid" && tip.id) {
+              setPaidTips((current) => [{ id: tip.id as string, amount: Number(tip.amount ?? 0), message: tip.message ?? null, created_at: tip.created_at ?? new Date().toISOString() }, ...current.filter((item) => item.id !== tip.id)].slice(0, 20));
+            }
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
             event: "UPDATE",
             schema: "public",
             table: "fans_live_sessions",
@@ -321,6 +388,7 @@ export default function FansLiveRoomPage() {
         pc.addTrack(track, localStreamRef.current as MediaStream);
       }
 
+      await loadPaidTips();
       await sendSignal("join");
       setLoading(false);
     }
@@ -336,7 +404,7 @@ export default function FansLiveRoomPage() {
       pcRef.current?.close();
       pcRef.current = null;
     };
-  }, [createPeer, handleSignal, router, sendSignal, sessionId, supabase]);
+  }, [createPeer, handleSignal, loadPaidTips, router, sendSignal, sessionId, supabase]);
 
   useEffect(() => {
     if (!access) return;
@@ -403,6 +471,48 @@ export default function FansLiveRoomPage() {
                 <span className="absolute bottom-3 left-3 rounded-full bg-black/60 px-3 py-1 text-xs">Participante</span>
               </div>
             </section>
+
+            {access.role === "buyer" && (
+              <section className="mt-6 rounded-2xl border border-amber-300/20 bg-amber-300/5 p-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <h2 className="font-semibold">Enviar gorjeta durante a chamada</h2>
+                    <p className="mt-1 text-xs leading-5 text-slate-400">O pagamento é confirmado pelo Mercado Pago antes de a gorjeta aparecer como recebida.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {[10, 25, 50, 100].map((value) => (
+                      <button key={value} onClick={() => setTipAmount(value)} className={`rounded-lg border px-3 py-2 text-xs font-semibold ${tipAmount === value ? "border-amber-300 bg-amber-300/20 text-amber-100" : "border-white/10 bg-white/5 text-slate-300"}`}>R$ {value}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                  <input type="number" min={5} max={10000} step={0.01} value={tipAmount} onChange={(event) => setTipAmount(Number(event.target.value))} className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-3 text-sm outline-none sm:max-w-40" />
+                  <input value={tipMessage} onChange={(event) => setTipMessage(event.target.value)} maxLength={500} placeholder="Mensagem opcional" className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-3 text-sm outline-none" />
+                  <button onClick={() => void openTipCheckout()} disabled={tipLoading} className="rounded-xl bg-amber-300 px-5 py-3 text-sm font-bold text-slate-950 disabled:opacity-60">{tipLoading ? "Abrindo pagamento..." : "Enviar gorjeta"}</button>
+                </div>
+                {tipError && <p className="mt-2 text-xs text-red-300">{tipError}</p>}
+              </section>
+            )}
+
+            {paidTips.length > 0 && (
+              <section className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="font-semibold">{access.role === "creator" ? "Gorjetas recebidas" : "Gorjetas confirmadas"}</h2>
+                  <span className="text-xs text-slate-500">Pagamento confirmado</span>
+                </div>
+                <div className="mt-3 space-y-2">
+                  {paidTips.map((tip) => (
+                    <div key={tip.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-black/20 px-3 py-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold">R$ {tip.amount.toFixed(2).replace(".", ",")}</p>
+                        {tip.message && <p className="truncate text-xs text-slate-400">{tip.message}</p>}
+                      </div>
+                      <span className="text-[11px] text-slate-500">{new Date(tip.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
             <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
               <button onClick={() => toggleTrack("audio")} className="rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-semibold">{micEnabled ? "Microfone ativo" : "Microfone desligado"}</button>
