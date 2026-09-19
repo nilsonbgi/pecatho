@@ -147,6 +147,13 @@ begin
     '         and status in (''pending_payment'',''paid'',''scheduled'',''active'');'||nl||
     '    elsif v_product_type = ''live_tip'' then'||nl||
     '      update public.fans_tips set status=''refunded'' where id=v_tip_id and status=''paid'';'||nl||
+    '      if not exists (select 1 from public.fans_financial_ledger where order_id=v_order.id and entry_type=''refund_creator_credit'' and status=''posted'' and metadata->>''tip_id''=v_tip_id::text) then'||nl||
+    '        insert into public.fans_financial_ledger(order_id,payment_id,purchase_id,subscription_id,creator_id,entry_type,direction,amount,currency,status,provider,provider_reference,metadata)'||nl||
+    '        values'||nl||
+    '        (v_order.id,v_payment.id,null,null,v_creator_id,''refund_gross'',''debit'',v_amount,v_order.currency,''posted'',p_provider,p_provider_payment_id,jsonb_build_object(''tip_id'',v_tip_id)),'||nl||
+    '        (v_order.id,v_payment.id,null,null,v_creator_id,''refund_platform_fee'',''credit'',v_platform_fee,v_order.currency,''posted'',p_provider,p_provider_payment_id,jsonb_build_object(''tip_id'',v_tip_id)),'||nl||
+    '        (v_order.id,v_payment.id,null,null,v_creator_id,''refund_creator_credit'',''debit'',v_creator_amount,v_order.currency,''posted'',p_provider,p_provider_payment_id,jsonb_build_object(''tip_id'',v_tip_id));'||nl||
+    '      end if;'||nl||
     '    else'||nl);
   v_def:=replace(v_def,
     '         and status=''pending_payment'';'||nl||'    end if;'||nl||nl||'    return jsonb_build_object(''ok'',true,''idempotent'',false,''status'',''failed''',
