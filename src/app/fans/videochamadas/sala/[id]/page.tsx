@@ -33,7 +33,6 @@ export default function FansLiveRoomPage() {
   const supabase = supabaseRef.current;
 
   const [access, setAccess] = useState<Access | null>(null);
-  const [userId, setUserId] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [connection, setConnection] = useState("Preparando sala...");
@@ -66,7 +65,7 @@ export default function FansLiveRoomPage() {
       payload,
     });
     if (signalError) setError(signalError.message);
-  }, [sessionId, supabase, userId]);
+  }, [sessionId, supabase]);
 
   const flushCandidates = useCallback(async (pc: RTCPeerConnection) => {
     if (!pc.remoteDescription) return;
@@ -200,7 +199,7 @@ export default function FansLiveRoomPage() {
       setConnection("A outra pessoa saiu da sala.");
       if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
     }
-  }, [currentAccess?.role, createOffer, flushCandidates, sendSignal, userId]);
+  }, [createOffer, flushCandidates, sendSignal]);
 
   const endSession = useCallback(async (redirect = true) => {
     if (endedRef.current) return;
@@ -234,7 +233,6 @@ export default function FansLiveRoomPage() {
       }
       if (cancelled) return;
       userIdRef.current = user.id;
-      setUserId(user.id);
 
       const { data, error: accessError } = await supabase.rpc("get_fans_live_room_access", {
         p_session_id: sessionId,
