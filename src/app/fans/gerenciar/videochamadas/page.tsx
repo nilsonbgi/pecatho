@@ -112,7 +112,7 @@ export default function LiveOffersPage() {
             <button className="secondaryButton" onClick={() => void toggle(offer)}>{offer.status === "active" ? "Desativar" : "Ativar"}</button>
           </article>)}
       </section>
-      <p style={{ marginTop: 24 }}><Link href="/fans/gerenciar" className="secondaryButton">← Voltar ao painel</Link></p>
+      <p style={{ marginTop: 24 }}><div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}><Link href="/fans/gerenciar/videochamadas/sessoes" className="primaryButton">Solicitações recebidas</Link><Link href="/fans/gerenciar" className="secondaryButton">← Voltar ao painel</Link></div></p>
     </section>
   </main>;
 }
