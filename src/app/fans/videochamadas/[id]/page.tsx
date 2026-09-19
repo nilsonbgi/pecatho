@@ -1,115 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect,useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams,useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
 
-type Offer = {
-  id: string;
-  creator_id: string;
-  title: string;
-  description: string | null;
-  duration_minutes: number;
-  price: number;
-  currency: string;
-  status: "active" | "inactive";
-};
+type Offer={id:string;creator_id:string;title:string;description:string|null;duration_minutes:number;price:number;currency:string;status:"active"|"inactive"};
 
-export default function FansVideoCallCheckoutPage() {
-  const params = useParams<{ id: string }>();
-  const router = useRouter();
-  const [offer, setOffer] = useState<Offer | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [paying, setPaying] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    async function load() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.replace(`/login?next=/fans/videochamadas/${params.id}`);
-        return;
-      }
-      const { data, error: queryError } = await supabase
-        .from("fans_live_offers")
-        .select("id,creator_id,title,description,duration_minutes,price,currency,status")
-        .eq("id", params.id)
-        .eq("status", "active")
-        .maybeSingle();
-      if (queryError || !data) setError("Esta oferta não está disponível.");
-      else setOffer(data as Offer);
-      setLoading(false);
-    }
-    void load();
-  }, [params.id, router]);
-
-  async function checkout() {
-    if (!offer || paying) return;
-    setPaying(true);
-    setError("");
-    try {
-      const response = await fetch("/api/fans/live/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ offer_id: offer.id }),
-      });
-      const result = await response.json().catch(() => null);
-      if (!response.ok) {
-        setError(result?.error || "Não foi possível criar o pagamento.");
-        setPaying(false);
-        return;
-      }
-
-      const providerResponse = await fetch("/api/fans/checkout/provider", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ order_id: result.session.order_id }),
-      });
-      const providerResult = await providerResponse.json().catch(() => null);
-      if (!providerResponse.ok || !providerResult?.checkout_url) {
-        setError(providerResult?.error || "Não foi possível abrir o checkout do provedor.");
-        setPaying(false);
-        return;
-      }
-
-      window.location.href = providerResult.checkout_url;
-    } catch {
-      setError("Não foi possível iniciar o pagamento.");
-      setPaying(false);
-    }
-  }
-
-  const money = (value: number, currency: string) =>
-    new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(Number(value || 0));
-
-  if (loading) return <main className="mx-auto min-h-screen max-w-3xl px-4 py-12"><p className="text-slate-600">Carregando oferta...</p></main>;
-
-  if (!offer) return <main className="mx-auto min-h-screen max-w-3xl px-4 py-12"><Link href="/fans" className="text-sm font-semibold text-slate-900">← Voltar ao Fans</Link><div className="mt-8 rounded-2xl border bg-white p-8"><h1 className="text-2xl font-bold text-slate-950">Oferta indisponível</h1><p className="mt-2 text-slate-600">{error || "Esta oferta não está mais disponível."}</p></div></main>;
-
-  return <main className="mx-auto min-h-screen max-w-3xl bg-slate-50 px-4 py-10 sm:px-6">
-    <Link href="/fans" className="text-sm font-semibold text-slate-900">← Pecatho Fans</Link>
-    <section className="mt-6 overflow-hidden rounded-3xl border bg-white shadow-sm">
-      <div className="bg-slate-950 px-6 py-8 text-white sm:px-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">Videochamada privada</p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight">{offer.title}</h1>
-        <p className="mt-3 text-slate-300">{offer.duration_minutes} minutos · pagamento único</p>
-      </div>
-      <div className="p-6 sm:p-8">
-        {offer.description && <p className="text-sm leading-7 text-slate-600">{offer.description}</p>}
-        <div className="mt-6 rounded-2xl border bg-slate-50 p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Valor</p>
-          <p className="mt-1 text-3xl font-bold text-slate-950">{money(Number(offer.price), offer.currency)}</p>
-        </div>
-        <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-          O acesso à videochamada não é liberado pela criação do pedido. A chamada somente ficará disponível depois que o Pecatho confirmar o pagamento pelo provedor.
-        </div>
-        {error && <p className="mt-4 text-sm font-medium text-red-700">{error}</p>}
-        <button onClick={() => void checkout()} disabled={paying} className="mt-6 w-full rounded-xl bg-slate-950 px-5 py-3.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">
-          {paying ? "Abrindo pagamento..." : `Pagar ${money(Number(offer.price), offer.currency)}`}
-        </button>
-      </div>
-    </section>
-  </main>;
+export default function FansVideoCallCheckoutPage(){
+ const params=useParams<{id:string}>(); const router=useRouter(); const [offer,setOffer]=useState<Offer|null>(null); const [loading,setLoading]=useState(true); const [paying,setPaying]=useState(false); const [error,setError]=useState("");
+ useEffect(()=>{async function load(){const supabase=createClient();const {data:{user}}=await supabase.auth.getUser();if(!user){router.replace(`/login?next=/fans/videochamadas/${params.id}`);return;}const {data,error:queryError}=await supabase.from("fans_live_offers").select("id,creator_id,title,description,duration_minutes,price,currency,status").eq("id",params.id).eq("status","active").maybeSingle();if(queryError||!data)setError("Esta oferta não está disponível.");else setOffer(data as Offer);setLoading(false)}void load()},[params.id,router]);
+ async function checkout(){if(!offer||paying)return;setPaying(true);setError("");try{const response=await fetch("/api/fans/live/checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({offer_id:offer.id})});const result=await response.json().catch(()=>null);if(!response.ok){setError(result?.error||"Não foi possível criar o pagamento.");setPaying(false);return;}const providerResponse=await fetch("/api/fans/checkout/provider",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({order_id:result.session.order_id})});const providerResult=await providerResponse.json().catch(()=>null);if(!providerResponse.ok||!providerResult?.checkout_url){setError(providerResult?.error||"Não foi possível abrir o checkout do provedor.");setPaying(false);return;}window.location.href=providerResult.checkout_url}catch{setError("Não foi possível iniciar o pagamento.");setPaying(false)}}
+ const money=(value:number,currency:string)=>new Intl.NumberFormat("pt-BR",{style:"currency",currency}).format(Number(value||0));
+ if(loading)return <main className="min-h-screen bg-[#f5f5f7] px-5 py-12"><div className="mx-auto max-w-4xl rounded-3xl border bg-white p-8 shadow-sm">Carregando experiência...</div></main>;
+ if(!offer)return <main className="min-h-screen bg-[#f5f5f7] px-5 py-10"><div className="mx-auto max-w-4xl"><Link href="/fans" className="text-sm font-bold text-slate-900">← Pecatho Fans</Link><div className="mt-8 rounded-3xl border bg-white p-8 shadow-sm"><h1 className="text-2xl font-black">Oferta indisponível</h1><p className="mt-2 text-slate-600">{error||"Esta oferta não está mais disponível."}</p></div></div></main>;
+ return <main className="min-h-screen bg-[#f5f5f7] text-slate-950"><div className="mx-auto max-w-5xl px-4 py-7 sm:px-6"><nav className="flex items-center justify-between"><Link href="/fans" className="font-black tracking-tight text-slate-950">Pecatho <span className="text-violet-600">Fans</span></Link><Link href="/fans/videochamadas" className="rounded-xl border bg-white px-4 py-2 text-xs font-bold">Minhas videochamadas</Link></nav><div className="mt-7 grid gap-5 lg:grid-cols-[1.35fr_.8fr]"><section className="overflow-hidden rounded-[30px] bg-[#090a0f] text-white shadow-2xl"><div className="p-7 sm:p-10"><span className="text-[10px] font-black uppercase tracking-[.2em] text-slate-400">Experiência privada</span><h1 className="mt-4 text-4xl font-black tracking-[-.06em] sm:text-6xl">{offer.title}</h1><p className="mt-4 max-w-xl text-sm leading-7 text-slate-300">{offer.description||"Uma experiência privada com acesso por tempo determinado."}</p><div className="mt-8 flex flex-wrap gap-2"><span className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold">{offer.duration_minutes} minutos</span><span className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold">Pagamento único</span><span className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold">Sala privada</span></div></div></section><aside className="rounded-[30px] border bg-white p-6 shadow-sm sm:p-7"><span className="text-[10px] font-black uppercase tracking-[.18em] text-slate-500">Resumo</span><div className="mt-4 flex items-end justify-between gap-4"><div><p className="text-xs text-slate-500">Valor total</p><p className="text-4xl font-black tracking-[-.05em]">{money(Number(offer.price),offer.currency)}</p></div><span className="text-xs font-bold text-slate-500">{offer.duration_minutes} min</span></div><div className="mt-6 space-y-3 border-y py-5 text-xs text-slate-600"><div className="flex justify-between"><span>Experiência</span><strong>{offer.title}</strong></div><div className="flex justify-between"><span>Acesso</span><strong>Privado</strong></div><div className="flex justify-between"><span>Liberação</span><strong>Após pagamento confirmado</strong></div></div><div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs leading-6 text-amber-900">O pedido não libera a sala. O acesso somente fica disponível após a confirmação do pagamento e a confirmação do horário.</div>{error&&<p className="mt-4 text-xs font-bold text-red-700">{error}</p>}<button onClick={()=>void checkout()} disabled={paying} className="mt-5 w-full rounded-2xl bg-[#090a0f] px-5 py-4 text-sm font-black text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-50">{paying?"Abrindo pagamento...":`Pagar ${money(Number(offer.price),offer.currency)}`}</button><p className="mt-3 text-center text-[10px] leading-5 text-slate-500">Você será direcionado ao checkout oficial do pagamento.</p></aside></div></div></main>;
 }
