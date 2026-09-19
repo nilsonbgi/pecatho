@@ -29,7 +29,8 @@ export default function FansLiveRoomPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const sessionId = params.id;
-  const supabase = createClient();
+  const supabaseRef = useRef(createClient());
+  const supabase = supabaseRef.current;
 
   const [access, setAccess] = useState<Access | null>(null);
   const [userId, setUserId] = useState("");
@@ -46,6 +47,8 @@ export default function FansLiveRoomPage() {
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
+  const userIdRef = useRef("");
+  const accessRef = useRef<Access | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
   const endedRef = useRef(false);
@@ -54,10 +57,11 @@ export default function FansLiveRoomPage() {
     signalType: Signal["signal_type"],
     payload: Record<string, unknown> = {}
   ) => {
-    if (!sessionId || !userId) return;
+    const senderUserId = userIdRef.current;
+    if (!sessionId || !senderUserId) return;
     const { error: signalError } = await supabase.from("fans_live_signals").insert({
       session_id: sessionId,
-      sender_user_id: userId,
+      sender_user_id: senderUserId,
       signal_type: signalType,
       payload,
     });
@@ -133,16 +137,18 @@ export default function FansLiveRoomPage() {
   }, [sendSignal]);
 
   const handleSignal = useCallback(async (signal: Signal) => {
-    if (!userId || signal.sender_user_id === userId) return;
+    const currentUserId = userIdRef.current;
+    const currentAccess = accessRef.current;
+    if (!currentUserId || signal.sender_user_id === currentUserId) return;
     const pc = pcRef.current;
     if (!pc) return;
 
-    if (signal.signal_type === "join" && access?.role === "creator") {
+    if (signal.signal_type === "join" && currentAccess?.role === "creator") {
       await createOffer();
       return;
     }
 
-    if (signal.signal_type === "offer" && access?.role === "buyer") {
+    if (signal.signal_type === "offer" && currentAccess?.role === "buyer") {
       const description = {
         type: "offer" as RTCSdpType,
         sdp: String(signal.payload.sdp ?? ""),
@@ -160,7 +166,7 @@ export default function FansLiveRoomPage() {
       return;
     }
 
-    if (signal.signal_type === "answer" && access?.role === "creator") {
+    if (signal.signal_type === "answer" && currentAccess?.role === "creator") {
       try {
         await pc.setRemoteDescription({
           type: "answer" as RTCSdpType,
@@ -194,7 +200,7 @@ export default function FansLiveRoomPage() {
       setConnection("A outra pessoa saiu da sala.");
       if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
     }
-  }, [access?.role, createOffer, flushCandidates, sendSignal, userId]);
+  }, [currentAccess?.role, createOffer, flushCandidates, sendSignal, userId]);
 
   const endSession = useCallback(async (redirect = true) => {
     if (endedRef.current) return;
@@ -227,6 +233,7 @@ export default function FansLiveRoomPage() {
         return;
       }
       if (cancelled) return;
+      userIdRef.current = user.id;
       setUserId(user.id);
 
       const { data, error: accessError } = await supabase.rpc("get_fans_live_room_access", {
@@ -248,6 +255,7 @@ export default function FansLiveRoomPage() {
 
       const roomAccess = data as Access;
       if (cancelled) return;
+      accessRef.current = roomAccess;
       setAccess(roomAccess);
 
       try {
