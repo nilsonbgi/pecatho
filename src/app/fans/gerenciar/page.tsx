@@ -2,86 +2,42 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export const dynamic = "force-dynamic";
+export const dynamic="force-dynamic";
+type CountResult={count:number|null};
 
-type CountResult = { count: number | null };
-
-export default async function FansManagePage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const { data: creator } = await supabase
-    .from("fans_creators")
-    .select("id,slug,display_name,bio,status,avatar_url,advertiser_profile_id")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (!creator) redirect("/fans/ativar");
-
-  const [plans, posts, subscribers, purchases, tips, payouts, activity] = await Promise.all([
-    supabase.from("fans_plans").select("id", { count: "exact", head: true }).eq("creator_id", creator.id),
-    supabase.from("fans_posts").select("id", { count: "exact", head: true }).eq("creator_id", creator.id),
-    supabase.from("fans_subscriptions").select("id", { count: "exact", head: true }).eq("creator_id", creator.id),
-    supabase.from("fans_purchases").select("id", { count: "exact", head: true }).eq("creator_id", creator.id),
-    supabase.from("fans_tips").select("id", { count: "exact", head: true }).eq("creator_id", creator.id),
-    supabase.from("fans_payout_requests").select("id", { count: "exact", head: true }).eq("creator_id", creator.id),
-    supabase.from("fans_notifications").select("id,type,read_at,created_at", { count: "exact" }).eq("user_id", user.id).in("type", ["fans_like", "fans_comment"]).order("created_at", { ascending: false }).limit(5),
-  ]) as [CountResult, CountResult, CountResult, CountResult, CountResult, CountResult, { data: { id: string; type: string; read_at: string | null; created_at: string }[] | null; count: number | null }];
-
-  const activePlans = await supabase.from("fans_plans").select("id", { count: "exact", head: true }).eq("creator_id", creator.id).eq("status", "active");
-  const publishedPosts = await supabase.from("fans_posts").select("id", { count: "exact", head: true }).eq("creator_id", creator.id).eq("status", "published");
-  const unreadActivity = activity.data?.filter((item) => !item.read_at).length ?? 0;
-
-  const cards = [
-    { href: "/fans/gerenciar/perfil", icon: "◉", title: "Perfil do criador", text: "Nome, apresentação, avatar e identidade pública." },
-    { href: "/fans/gerenciar/planos", icon: "R$", title: "Planos", text: "Crie e administre planos de assinatura." },
-    { href: "/fans/gerenciar/publicacoes", icon: "✦", title: "Publicações", text: "Produza conteúdos, organize mídia e envie para moderação." },
-    { href: "/fans/gerenciar/assinantes", icon: "♙", title: "Assinantes", text: "Acompanhe sua audiência e relacionamento." },
-    { href: "/fans/gerenciar/vendas", icon: "↗", title: "Vendas", text: "Acompanhe compras de conteúdo e resultados." },
-    { href: "/fans/gerenciar/gorjetas", icon: "♥", title: "Gorjetas", text: "Consulte as gorjetas recebidas e seu histórico." },
-    { href: "/fans/gerenciar/recebimentos", icon: "₿", title: "Recebimentos", text: "Saldo, solicitações de saque e histórico financeiro." },
-    { href: "/fans/gerenciar/configuracoes", icon: "⚙", title: "Configurações", text: "Preferências e controles do seu espaço Fans." },
-    { href: "/painel/mensagens", icon: "◉", title: "Mensagens Fans", text: "Converse em tempo real com clientes e acompanhe novas interações." },
-    { href: "/fans/gerenciar/videochamadas", icon: "◉", title: "Videochamadas", text: "Configure ofertas pagas de videochamada com duração e preço." },
-  ];
-
-  return (
-    <main className="shell fansShell">
-      <nav className="topbar">
-        <div className="brand"><span className="brandMark">P</span><span>Pecatho <small>Fans</small></span></div>
-        <div className="navLinks"><Link href="/fans">Visão geral</Link><Link href="/painel">Painel Pecatho</Link></div>
-      </nav>
-
-      <section className="hero fansHero">
-        <div className="eyebrow">PAINEL DO CRIADOR</div>
-        <div className="fansCreator card">
-          <div><span className="serviceLabel">ESPAÇO FANS</span><h1>{creator.display_name}</h1><p>{creator.bio || "Administre aqui seu conteúdo, audiência e monetização."}</p></div>
-          <span className="statusBadge">{creator.status === "active" ? "Ativo" : creator.status}</span>
-        </div>
-
-        <section className="fansMetrics">
-          <article className="card"><span className="metricLabel">PLANOS</span><strong>{plans.count ?? 0}</strong><p>{activePlans.count ?? 0} ativos</p></article>
-          <article className="card"><span className="metricLabel">PUBLICAÇÕES</span><strong>{posts.count ?? 0}</strong><p>{publishedPosts.count ?? 0} publicadas</p></article>
-          <article className="card"><span className="metricLabel">ASSINANTES</span><strong>{subscribers.count ?? 0}</strong><p>Registros de assinatura</p></article>
-          <article className="card"><span className="metricLabel">VENDAS</span><strong>{purchases.count ?? 0}</strong><p>Compras registradas</p></article>
-        </section>
-        <section className="fansMetrics">
-          <article className="card"><span className="metricLabel">GORJETAS</span><strong>{tips.count ?? 0}</strong><p>Transações registradas</p></article>
-          <article className="card"><span className="metricLabel">SAQUES</span><strong>{payouts.count ?? 0}</strong><p>Solicitações registradas</p></article>
-          <Link href="/fans/gerenciar/atividade" className="card" style={{ textDecoration: "none" }}><span className="metricLabel">ATIVIDADE</span><strong>{activity.count ?? 0}</strong><p>{unreadActivity ? `${unreadActivity} não lidas` : "Curtidas e comentários"}</p><span className="serviceLabel">ABRIR →</span></Link>
-        </section>
-
-        <section className="fansOnboarding card">
-          <div className="eyebrow">CENTRAL DE OPERAÇÃO</div><h2>Gerencie seu Fans</h2>
-          <p>Central operacional do criador para perfil, planos, publicações, mídia, audiência e recebimentos. Os módulos financeiros permanecem somente de consulta até que o fluxo transacional seguro esteja implementado.</p>
-          <div className="heroActions"><Link className="primaryButton" href="/fans/gerenciar/atividade">Ver atividade</Link><Link className="secondaryButton" href="/painel/notificacoes">Central de notificações</Link></div>
-        </section>
-
-        <section className="fansMetrics">
-          {cards.map((card) => <Link key={card.href} href={card.href} className="card" style={{ textDecoration: "none" }}><span className="cardIcon">{card.icon}</span><h2>{card.title}</h2><p>{card.text}</p><span className="serviceLabel">ABRIR →</span></Link>)}
-        </section>
-      </section>
-    </main>
-  );
+export default async function FansManagePage(){
+ const supabase=await createClient();const {data:{user}}=await supabase.auth.getUser();if(!user)redirect("/login");
+ const {data:creator}=await supabase.from("fans_creators").select("id,slug,display_name,bio,status,avatar_url,advertiser_profile_id").eq("user_id",user.id).maybeSingle();if(!creator)redirect("/fans/ativar");
+ const [plans,posts,subscribers,purchases,tips,payouts,activity]=await Promise.all([
+  supabase.from("fans_plans").select("id",{count:"exact",head:true}).eq("creator_id",creator.id),
+  supabase.from("fans_posts").select("id",{count:"exact",head:true}).eq("creator_id",creator.id),
+  supabase.from("fans_subscriptions").select("id",{count:"exact",head:true}).eq("creator_id",creator.id),
+  supabase.from("fans_purchases").select("id",{count:"exact",head:true}).eq("creator_id",creator.id),
+  supabase.from("fans_tips").select("id",{count:"exact",head:true}).eq("creator_id",creator.id),
+  supabase.from("fans_payout_requests").select("id",{count:"exact",head:true}).eq("creator_id",creator.id),
+  supabase.from("fans_notifications").select("id,type,read_at,created_at",{count:"exact"}).eq("user_id",user.id).in("type",["fans_like","fans_comment"]).order("created_at",{ascending:false}).limit(5)
+ ]) as [CountResult,CountResult,CountResult,CountResult,CountResult,CountResult,{data:{id:string;type:string;read_at:string|null;created_at:string}[]|null;count:number|null}];
+ const activePlans=await supabase.from("fans_plans").select("id",{count:"exact",head:true}).eq("creator_id",creator.id).eq("status","active");
+ const publishedPosts=await supabase.from("fans_posts").select("id",{count:"exact",head:true}).eq("creator_id",creator.id).eq("status","published");
+ const unreadActivity=activity.data?.filter(i=>!i.read_at).length??0;
+ const cards=[
+  ["/fans/gerenciar/perfil","Perfil do criador","Nome, apresentação, avatar e identidade pública.","◉"],
+  ["/fans/gerenciar/planos","Planos","Crie e administre planos de assinatura.","R$"],
+  ["/fans/gerenciar/publicacoes","Publicações","Produza conteúdos, organize mídia e envie para moderação.","✦"],
+  ["/fans/gerenciar/assinantes","Assinantes","Acompanhe sua audiência e relacionamento.","♙"],
+  ["/fans/gerenciar/vendas","Vendas","Acompanhe compras de conteúdo e resultados.","↗"],
+  ["/fans/gerenciar/gorjetas","Gorjetas","Consulte gorjetas recebidas e histórico.","♥"],
+  ["/fans/gerenciar/recebimentos","Recebimentos","Saldo, solicitações de saque e histórico financeiro.","₿"],
+  ["/painel/mensagens","Mensagens","Converse em tempo real com clientes e acompanhe interações.","◉"],
+  ["/fans/gerenciar/videochamadas","Videochamadas","Ofertas privadas com duração e preço.","◉"],
+  ["/fans/gerenciar/configuracoes","Configurações","Preferências e controles do espaço Fans.","⚙"]
+ ];
+ return <main className="min-h-screen bg-[#f5f5f7] text-slate-950"><div className="mx-auto max-w-7xl px-4 py-6 sm:px-6"><style>{`
+ .fm-nav{height:62px;display:flex;align-items:center;justify-content:space-between}.fm-brand{font-size:21px;font-weight:950;letter-spacing:-.06em}.fm-brand small{font-size:10px;color:#7c3aed;letter-spacing:.02em}.fm-navlinks{display:flex;gap:8px}.fm-navlinks a{background:#fff;border:1px solid #e5e7eb;border-radius:11px;padding:9px 12px;font-size:11px;font-weight:800;color:#111827;text-decoration:none}.fm-hero{margin-top:12px;border-radius:30px;background:#090a0f;color:#fff;padding:30px;box-shadow:0 25px 70px rgba(15,23,42,.14)}.fm-top{display:flex;justify-content:space-between;gap:20px;align-items:flex-start}.fm-kicker{font-size:10px;letter-spacing:.19em;font-weight:900;color:#9ca3af}.fm-hero h1{font-size:clamp(35px,5vw,56px);letter-spacing:-.07em;line-height:1;margin:8px 0}.fm-hero p{color:#aeb4c2;font-size:13px;line-height:1.7;max-width:680px;margin:0}.fm-status{border:1px solid rgba(167,243,208,.2);background:rgba(167,243,208,.07);color:#a7f3d0;border-radius:999px;padding:8px 11px;font-size:10px;font-weight:850}.fm-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:22px}.fm-action{border-radius:11px;padding:11px 14px;text-decoration:none;font-size:11px;font-weight:850}.fm-primary{background:#fff;color:#090a0f}.fm-secondary{border:1px solid rgba(255,255,255,.14);color:#fff}.fm-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}.fm-stat{border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.04);border-radius:16px;padding:16px}.fm-stat span{font-size:9px;letter-spacing:.14em;color:#7f8797}.fm-stat strong{display:block;font-size:27px;letter-spacing:-.05em;margin-top:8px}.fm-stat p{font-size:10px;margin-top:4px;color:#858d9e}.fm-section{margin-top:28px}.fm-section-title{display:flex;justify-content:space-between;align-items:end;gap:12px;margin-bottom:12px}.fm-section-title h2{font-size:23px;letter-spacing:-.045em;margin:4px 0}.fm-section-title p{font-size:11px;color:#6b7280;margin:0}.fm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.fm-card{background:#fff;border:1px solid #e5e7eb;border-radius:20px;padding:19px;text-decoration:none;color:#0f172a;transition:.18s;box-shadow:0 7px 25px rgba(15,23,42,.035)}.fm-card:hover{transform:translateY(-2px);box-shadow:0 15px 35px rgba(15,23,42,.08)}.fm-icon{width:36px;height:36px;border-radius:11px;background:#f1f2f5;display:grid;place-items:center;font-size:13px;font-weight:900}.fm-card h3{font-size:14px;margin:15px 0 5px;letter-spacing:-.02em}.fm-card p{font-size:11px;line-height:1.6;color:#6b7280;min-height:35px}.fm-open{display:block;margin-top:13px;font-size:10px;font-weight:900;letter-spacing:.08em;color:#7c3aed}.fm-note{margin-top:12px;border:1px solid #e5e7eb;background:#fff;border-radius:17px;padding:15px;color:#6b7280;font-size:11px;line-height:1.6}
+ @media(max-width:850px){.fm-hero{padding:23px}.fm-stats{grid-template-columns:repeat(2,1fr)}.fm-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:560px){.fm-navlinks a:first-child{display:none}.fm-top{display:block}.fm-status{display:inline-block;margin-top:16px}.fm-stats{grid-template-columns:1fr 1fr}.fm-grid{grid-template-columns:1fr}.fm-hero h1{font-size:38px}.fm-actions{display:grid;grid-template-columns:1fr}.fm-action{text-align:center}}
+ `}</style>
+ <nav className="fm-nav"><Link href="/fans" className="fm-brand" style={{textDecoration:"none",color:"#090a0f"}}>Pecatho <small>Fans</small></Link><div className="fm-navlinks"><Link href={`/fans/${creator.slug}`}>Ver meu perfil</Link><Link href="/painel">Painel Pecatho</Link></div></nav>
+ <section className="fm-hero"><div className="fm-top"><div><div className="fm-kicker">PAINEL DO CRIADOR · PECATHO FANS</div><h1>{creator.display_name}</h1><p>{creator.bio||"Administre conteúdo, audiência, experiências privadas e monetização em um único espaço."}</p></div><span className="fm-status">{creator.status==="active"?"Ativo":creator.status}</span></div><div className="fm-actions"><Link className="fm-action fm-primary" href={`/fans/${creator.slug}`}>Abrir perfil público</Link><Link className="fm-action fm-secondary" href="/fans/gerenciar/videochamadas">Gerenciar videochamadas</Link><Link className="fm-action fm-secondary" href="/fans/gerenciar/publicacoes">Nova publicação</Link></div><div className="fm-stats"><div className="fm-stat"><span>PLANOS</span><strong>{plans.count??0}</strong><p>{activePlans.count??0} ativos</p></div><div className="fm-stat"><span>PUBLICAÇÕES</span><strong>{posts.count??0}</strong><p>{publishedPosts.count??0} publicadas</p></div><div className="fm-stat"><span>ASSINANTES</span><strong>{subscribers.count??0}</strong><p>Registros de assinatura</p></div><div className="fm-stat"><span>VENDAS</span><strong>{purchases.count??0}</strong><p>Compras registradas</p></div></div></section>
+ <section className="fm-section"><div className="fm-section-title"><div><div className="fm-kicker">OPERAÇÃO</div><h2>Seu espaço de trabalho</h2></div><p>{unreadActivity?unreadActivity+" atividade(s) não lida(s)":"Tudo centralizado em um só lugar"}</p></div><div className="fm-grid">{cards.map(([href,title,text,icon])=><Link key={href} href={href} className="fm-card"><span className="fm-icon">{icon}</span><h3>{title}</h3><p>{text}</p><span className="fm-open">ABRIR →</span></Link>)}</div><div className="fm-note">Os módulos financeiros exibem dados registrados pela plataforma. Liquidação, confirmação e repasse permanecem subordinados aos fluxos transacionais seguros do Pecatho.</div></section>
+ </div></main>;
 }
