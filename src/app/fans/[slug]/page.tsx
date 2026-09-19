@@ -14,7 +14,7 @@ const money=(value:number,currency="BRL")=>new Intl.NumberFormat("pt-BR",{style:
 const durationLabel=(days:number)=>days===30?"por mês":days===90?"por trimestre":days===365?"por ano":`por ${days} dias`;
 
 export default async function FansCreatorPublicPage({params}:Props){
- const {slug}=await params; const supabase=await createClient(); const {data:{user}}=await supabase.auth.getUser(); const admin=createAdminClient();
+ const {slug}=await params; const supabase=await createClient(); const {data:{user}}=await supabase.auth.getUser(); let admin; try { admin=createAdminClient(); } catch { admin=supabase; }
  const {data:creator}=await admin.from("fans_creators").select("id,slug,display_name,bio,avatar_url,status,user_id").eq("slug",slug).maybeSingle();
  if(!creator||creator.status!=="active") notFound();
  const isOwner=!!user&&creator.user_id===user.id;
