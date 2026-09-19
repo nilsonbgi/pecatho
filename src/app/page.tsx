@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 const categories = [
   ["01", "Anunciantes", "Perfis, categorias, localização, características, serviços e disponibilidade."],
@@ -15,8 +18,23 @@ const highlights = [
 ];
 
 export default function HomePage() {
+  const [ageVerified, setAgeVerified] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    setAgeVerified(window.localStorage.getItem("pecatho_age_verified") === "true");
+  }, []);
+
+  function confirmAge() {
+    window.localStorage.setItem("pecatho_age_verified", "true");
+    setAgeVerified(true);
+  }
+
+  function leaveAgeRestrictedSite() {
+    window.location.href = "https://www.google.com";
+  }
+
   return (
-    <main className="pecathoHome">
+    <main className="pecathoHome">\n      {ageVerified === false && (\n        <div className="pAgeGate" role="dialog" aria-modal="true" aria-labelledby="pecatho-age-title">\n          <div className="pAgeCard">\n            <div className="pAgeMark">18+</div>\n            <div className="pAgeKicker">ACESSO RESTRITO</div>\n            <h2 id="pecatho-age-title">Conteúdo destinado a maiores de 18 anos</h2>\n            <p>O Pecatho reúne anúncios e experiências de natureza adulta. Para continuar, você deve confirmar que possui 18 anos ou mais e que o acesso a esse conteúdo é permitido no local onde se encontra.</p>\n            <div className="pAgeWarning"><strong>⚠ Aviso:</strong> este ambiente pode apresentar conteúdo sexualmente explícito. Se você tiver menos de 18 anos, não prossiga.</div>\n            <div className="pAgeActions"><button type="button" className="pAgeEnter" onClick={confirmAge}>TENHO 18 ANOS OU MAIS · ENTRAR</button><button type="button" className="pAgeLeave" onClick={leaveAgeRestrictedSite}>SAIR</button></div>\n            <div className="pAgeLegal">Ao entrar, você confirma sua maioridade. A confirmação é armazenada neste navegador para evitar a repetição do aviso em acessos futuros.</div>\n          </div>\n        </div>\n      )}
       <style>{`
         .pecathoHome{min-height:100vh;background:#07080c;color:#f7f7fa;overflow:hidden}
         .pecathoHome *{box-sizing:border-box}
@@ -34,7 +52,7 @@ export default function HomePage() {
         .pFans{margin:72px 0 35px;border:1px solid rgba(255,255,255,.13);border-radius:24px;padding:36px;display:flex;align-items:center;justify-content:space-between;gap:30px;background:linear-gradient(110deg,rgba(130,112,255,.13),rgba(255,255,255,.035) 60%,rgba(255,255,255,.015));position:relative;overflow:hidden}.pFans:after{content:"";position:absolute;right:-80px;top:-150px;width:360px;height:360px;border-radius:50%;border:1px solid rgba(210,190,255,.15);box-shadow:0 0 0 35px rgba(210,190,255,.035),0 0 0 70px rgba(210,190,255,.025)}.pFans h2{font-size:31px;letter-spacing:-.06em;margin:0 0 11px}.pFans p{font-size:13px;line-height:1.7;color:#949cad;max-width:680px;margin:0}.pFans a{position:relative;z-index:1;flex:0 0 auto}.pFooter{display:flex;justify-content:space-between;gap:20px;padding:25px 0 42px;color:#626b7c;font-size:11px}
         @media(max-width:950px){.pHero{grid-template-columns:1fr;gap:35px}.pShowcase{max-width:650px}.pCategoryGrid{grid-template-columns:1fr 1fr}.pSectionHead{align-items:start;flex-direction:column}.pSectionHead p{text-align:left}.pExperienceGrid{grid-template-columns:1fr;gap:38px}.pFans{align-items:flex-start;flex-direction:column}}
         @media(max-width:560px){.pWrap{padding:0 17px}.pNav{height:72px}.pNavLinks{gap:10px}.pNavLinks a:not(.pNavCta){display:none}.pHero{padding:64px 0 55px}.pHero h1{font-size:49px}.pLead{font-size:16px}.pActions{flex-direction:column}.pPrimary,.pSecondary{width:100%}.pCategoryGrid,.pHighlightGrid{grid-template-columns:1fr}.pCategory{min-height:170px}.pCategory h3{margin-top:42px}.pExperience{margin-top:65px;padding:45px 0}.pExperience h2{font-size:36px}.pFans{padding:26px;margin-top:55px}.pFans h2{font-size:27px}.pFooter{flex-direction:column}}
-      `}</style>
+        .pAgeGate{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:20px;background:rgba(0,0,0,.84);backdrop-filter:blur(14px)}.pAgeCard{width:min(570px,100%);border:1px solid rgba(231,195,63,.28);border-radius:25px;padding:34px;background:radial-gradient(circle at 50% 0,rgba(231,195,63,.11),transparent 42%),linear-gradient(145deg,#12110e,#080808);box-shadow:0 40px 120px rgba(0,0,0,.65);text-align:center}.pAgeMark{width:58px;height:58px;border-radius:17px;border:1px solid rgba(231,195,63,.55);display:grid;place-items:center;margin:0 auto 18px;color:#e7c33f;font-size:27px;font-weight:950;background:rgba(231,195,63,.07)}.pAgeKicker{color:#e7c33f;font-size:10px;font-weight:900;letter-spacing:.2em}.pAgeCard h2{font-size:34px;letter-spacing:-.055em;margin:10px 0 12px}.pAgeCard p{font-size:13px;line-height:1.75;color:#a19b91;margin:0 auto;max-width:470px}.pAgeWarning{margin:20px 0;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px;background:rgba(255,255,255,.025);color:#d8d2c7;font-size:11px;line-height:1.65}.pAgeActions{display:flex;gap:10px;justify-content:center;margin-top:22px}.pAgeActions button{min-height:48px;border-radius:11px;padding:0 19px;font:inherit;font-size:12px;font-weight:900;cursor:pointer}.pAgeEnter{border:0;background:linear-gradient(135deg,#f3d06a,#dcae31);color:#111}.pAgeLeave{border:1px solid rgba(255,255,255,.12);background:transparent;color:#c2bdb3}.pAgeLegal{margin-top:15px;color:#68645d;font-size:9px;line-height:1.6}@media(max-width:560px){.pAgeCard{padding:28px 20px}.pAgeCard h2{font-size:29px}.pAgeActions{flex-direction:column}.pAgeActions button{width:100%}}\n      `}</style>
 
       <div className="pWrap">
         <nav className="pNav">
