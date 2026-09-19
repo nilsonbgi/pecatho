@@ -42,6 +42,7 @@ export default async function FansManagePage() {
     { href: "/fans/gerenciar/gorjetas", icon: "♥", title: "Gorjetas", text: "Consulte as gorjetas recebidas e seu histórico." },
     { href: "/fans/gerenciar/recebimentos", icon: "₿", title: "Recebimentos", text: "Saldo, solicitações de saque e histórico financeiro." },
     { href: "/fans/gerenciar/configuracoes", icon: "⚙", title: "Configurações", text: "Preferências e controles do seu espaço Fans." },
+    { href: "/painel/mensagens", icon: "◉", title: "Mensagens Fans", text: "Converse em tempo real com clientes e acompanhe novas interações." },
   ];
 
   return (
