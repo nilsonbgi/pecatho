@@ -34,7 +34,20 @@ export default function HomePage() {
   }
 
   return (
-    <main className="pecathoHome">\n      {ageVerified === false && (\n        <div className="pAgeGate" role="dialog" aria-modal="true" aria-labelledby="pecatho-age-title">\n          <div className="pAgeCard">\n            <div className="pAgeMark">18+</div>\n            <div className="pAgeKicker">ACESSO RESTRITO</div>\n            <h2 id="pecatho-age-title">Conteúdo destinado a maiores de 18 anos</h2>\n            <p>O Pecatho reúne anúncios e experiências de natureza adulta. Para continuar, você deve confirmar que possui 18 anos ou mais e que o acesso a esse conteúdo é permitido no local onde se encontra.</p>\n            <div className="pAgeWarning"><strong>⚠ Aviso:</strong> este ambiente pode apresentar conteúdo sexualmente explícito. Se você tiver menos de 18 anos, não prossiga.</div>\n            <div className="pAgeActions"><button type="button" className="pAgeEnter" onClick={confirmAge}>TENHO 18 ANOS OU MAIS · ENTRAR</button><button type="button" className="pAgeLeave" onClick={leaveAgeRestrictedSite}>SAIR</button></div>\n            <div className="pAgeLegal">Ao entrar, você confirma sua maioridade. A confirmação é armazenada neste navegador para evitar a repetição do aviso em acessos futuros.</div>\n          </div>\n        </div>\n      )}
+    <main className="pecathoHome">
+      {ageVerified === false && (
+        <div className="pAgeGate" role="dialog" aria-modal="true" aria-labelledby="pecatho-age-title">
+          <div className="pAgeCard">
+            <div className="pAgeMark">18+</div>
+            <div className="pAgeKicker">ACESSO RESTRITO</div>
+            <h2 id="pecatho-age-title">Conteúdo destinado a maiores de 18 anos</h2>
+            <p>O Pecatho reúne anúncios e experiências de natureza adulta. Para continuar, você deve confirmar que possui 18 anos ou mais e que o acesso a esse conteúdo é permitido no local onde se encontra.</p>
+            <div className="pAgeWarning"><strong>⚠ Aviso:</strong> este ambiente pode apresentar conteúdo sexualmente explícito. Se você tiver menos de 18 anos, não prossiga.</div>
+            <div className="pAgeActions"><button type="button" className="pAgeEnter" onClick={confirmAge}>TENHO 18 ANOS OU MAIS · ENTRAR</button><button type="button" className="pAgeLeave" onClick={leaveAgeRestrictedSite}>SAIR</button></div>
+            <div className="pAgeLegal">Ao entrar, você confirma sua maioridade. A confirmação é armazenada neste navegador para evitar a repetição do aviso em acessos futuros.</div>
+          </div>
+        </div>
+      )}
       <style>{`
         .pecathoHome{min-height:100vh;background:#07080c;color:#f7f7fa;overflow:hidden}
         .pecathoHome *{box-sizing:border-box}
