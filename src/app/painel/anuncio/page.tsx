@@ -46,7 +46,7 @@ export default function AnuncioPage() {
   const [states, setStates] = useState<StateRow[]>([]); const [cities, setCities] = useState<CityRow[]>([]); const [categories, setCategories] = useState<CategoryRow[]>([]); const [attributes, setAttributes] = useState<AttributeRow[]>([]); const [services, setServices] = useState<ServiceRow[]>([]);
   const [attributeValues, setAttributeValues] = useState<Record<string, unknown>>({}); const [selectedServices, setSelectedServices] = useState<Record<string, boolean>>({}); const [serviceNotes, setServiceNotes] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true); const [catalogBusy, setCatalogBusy] = useState(false); const [busy, setBusy] = useState(false); const [message, setMessage] = useState(""); const [error, setError] = useState("");
-  const [media, setMedia] = useState<MediaRow[]>([]); const [mediaBusy, setMediaBusy] = useState(false);
+  const [media, setMedia] = useState<MediaRow[]>([]); const [mediaBusy, setMediaBusy] = useState(false); const [profileStatus, setProfileStatus] = useState(""); const [verificationStatus, setVerificationStatus] = useState(""); const [publishBusy, setPublishBusy] = useState(false);
 
   const visibleCities = useMemo(() => cities.filter((c) => !stateId || String(c.state_id) === stateId), [cities, stateId]);
   const selectedCategory = categories.find((c) => String(c.id) === categoryId);
@@ -89,7 +89,7 @@ export default function AnuncioPage() {
         }
         if (profile) {
           const pricing = asObject(profile.pricing); const serviceOptions = asObject(profile.service_options); const paymentOptions = asObject(profile.payment_options); const socialLinks = asObject(profile.social_links);
-          setTitle(profile.title || ""); setName(profile.display_name || ""); setSummary(profile.summary || ""); setDescription(profile.description || ""); setStateId(profile.state_id ? String(profile.state_id) : ""); setCityId(profile.city_id ? String(profile.city_id) : ""); setCategoryId(profile.category_id ? String(profile.category_id) : "");
+          setProfileStatus(profile.status || ""); setVerificationStatus(profile.verification_status || ""); setTitle(profile.title || ""); setName(profile.display_name || ""); setSummary(profile.summary || ""); setDescription(profile.description || ""); setStateId(profile.state_id ? String(profile.state_id) : ""); setCityId(profile.city_id ? String(profile.city_id) : ""); setCategoryId(profile.category_id ? String(profile.category_id) : "");
           setBirthDate(accountProfile?.birth_date || profile.birth_date || ""); setAge(calculateAge(accountProfile?.birth_date || profile.birth_date || null)); setHeight(profile.height_cm == null ? "" : String(profile.height_cm)); setWeight(profile.weight_kg == null ? "" : String(profile.weight_kg)); setAvailability(profile.availability || "");
           setPrice(pricing.price == null ? "" : String(pricing.price)); setServicesText(typeof serviceOptions.description === "string" ? serviceOptions.description : ""); setPaymentOptionsText(JSON.stringify(paymentOptions, null, 2)); setSocialLinksText(JSON.stringify(socialLinks, null, 2)); setPositioning(profile.positioning || "");
           setPhone(profile.phone || accountProfile?.phone || ""); setWhatsapp(profile.whatsapp || ""); setPhoneSecondary(profile.phone_secondary || "");
@@ -195,6 +195,25 @@ export default function AnuncioPage() {
     } catch (err) { setError(err instanceof Error ? err.message : "Não foi possível enviar a mídia."); } finally { setMediaBusy(false); e.target.value = ""; }
   }
 
+  async function requestPublication() {
+    setPublishBusy(true); setMessage(""); setError("");
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { window.location.href = "/login"; return; }
+      const { data: profile } = await supabase.from("advertiser_profiles").select("id").eq("user_id", user.id).maybeSingle();
+      if (!profile?.id) throw new Error("Salve o rascunho do anúncio antes de solicitar a análise.");
+      const { data, error: rpcError } = await supabase.rpc("submit_advertiser_for_review", { p_profile_id: profile.id });
+      if (rpcError) throw new Error(rpcError.message);
+      setProfileStatus(data?.status || "pending_review");
+      setMessage("Anúncio enviado para análise. A publicação dependerá da validação administrativa e da moderação das mídias.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível enviar o anúncio para análise.");
+    } finally {
+      setPublishBusy(false);
+    }
+  }
+
   async function submit(e: FormEvent) {
     e.preventDefault(); setBusy(true); setMessage(""); setError("");
     try {
@@ -239,6 +258,6 @@ export default function AnuncioPage() {
     {active === "Serviços" && <><h2>Serviços</h2>{catalogBusy ? <p className="fieldNote">Carregando serviços...</p> : services.length ? <div className="serviceList">{services.map((s) => <label key={s.id} className="serviceCheck"><span><input type="checkbox" checked={selectedServices[s.id] === true} onChange={(e) => toggleService(s.id, e.target.checked)} /> <strong>{s.name}{s.required ? " *" : ""}</strong></span>{s.description && <small>{s.description}</small>}{selectedServices[s.id] && <textarea value={serviceNotes[s.id] || ""} onChange={(e) => setServiceNotes((current) => ({ ...current, [s.id]: e.target.value }))} placeholder="Observação específica (opcional)" rows={2} />}</label>)}</div> : <p className="fieldNote">Esta categoria ainda não possui serviços configurados.</p>}<label>Observações gerais sobre serviços<textarea value={servicesText} onChange={(e) => setServicesText(e.target.value)} rows={5} /></label></>}
     {active === "Preços" && <><h2>Preços</h2><label>Valor de referência (R$)<input value={price} onChange={(e) => setPrice(e.target.value)} inputMode="decimal" placeholder="0,00" /></label><p className="fieldNote">Os dados de preço são preservados no objeto de preços existente; somente o valor de referência é atualizado aqui.</p></>}
     {active === "Contato" && <><h2>Contato e apresentação comercial</h2><div className="formGrid"><label>Telefone<input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" /></label><label>WhatsApp<input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} inputMode="tel" /></label><label>Telefone secundário<input value={phoneSecondary} onChange={(e) => setPhoneSecondary(e.target.value)} inputMode="tel" /></label><label>Posicionamento<input value={positioning} onChange={(e) => setPositioning(e.target.value)} /></label></div><label>Opções de pagamento (JSON)<textarea value={paymentOptionsText} onChange={(e) => setPaymentOptionsText(e.target.value)} rows={6} /></label><label>Redes sociais (JSON)<textarea value={socialLinksText} onChange={(e) => setSocialLinksText(e.target.value)} rows={6} /></label></>}
-    {active === "Publicação" && <><h2>Publicação</h2><div className="publicationBox"><p>O anúncio será salvo como <strong>rascunho</strong>. A publicação deve ocorrer somente após revisão, moderação das mídias e validação administrativa.</p><p>Categoria: <strong>{selectedCategory?.name || "não selecionada"}</strong></p><p>Localização: <strong>{locationVisibility === "approximate" ? "aproximada para o público" : "privada"}</strong></p><p>Você poderá revisar todas as etapas antes de solicitar a publicação.</p></div></>}
+    {active === "Publicação" && <><h2>Publicação</h2><div className="publicationBox"><div className="publicationStatus"><span>STATUS DO ANÚNCIO</span><strong>{profileStatus === "pending_review" ? "Em análise" : profileStatus === "published" ? "Publicado" : profileStatus === "paused" ? "Pausado" : "Rascunho"}</strong><small>{verificationStatus === "verified" ? "Identidade verificada" : verificationStatus === "pending" ? "Verificação em análise" : "Verificação ainda não concluída"}</small></div><div className="publicationChecklist"><div><span>✓</span><p><strong>Apresentação</strong><small>Título, resumo, descrição e categoria</small></p></div><div><span>✓</span><p><strong>Localização</strong><small>Endereço, cidade, Estado e coordenadas</small></p></div><div><span>{media.length ? "✓" : "!"}</span><p><strong>Mídias</strong><small>{media.length ? `${media.length} arquivo(s) associado(s); a foto principal precisa ser aprovada.` : "Adicione pelo menos uma imagem."}</small></p></div><div><span>✓</span><p><strong>Revisão administrativa</strong><small>Após o envio, a equipe valida o anúncio e as mídias.</small></p></div></div><p>Categoria: <strong>{selectedCategory?.name || "não selecionada"}</strong></p><p>Localização pública: <strong>{locationVisibility === "approximate" ? "aproximada" : "privada"}</strong></p>{profileStatus === "pending_review" && <div className="publicationWaiting">Seu anúncio já está na fila de análise. Novos ajustes deverão ser feitos conforme o retorno da moderação.</div>}{profileStatus !== "pending_review" && profileStatus !== "published" && <button type="button" className="primaryButton publicationSubmit" onClick={() => void requestPublication()} disabled={publishBusy || busy || catalogBusy}>{publishBusy ? "Enviando para análise..." : "Solicitar análise e publicação"}</button>}</div></>}
     {error && <p className="formError">{error}</p>}{message && <p className="formSuccess">{message}</p>}<div className="editorSaveBar"><div><strong>{busy ? "Salvando alterações..." : "Tudo pronto para salvar"}</strong><span>As alterações ficam no rascunho até a publicação ser solicitada.</span></div><button className="primaryButton" disabled={busy || catalogBusy}>{busy ? "Salvando..." : "Salvar rascunho"}</button></div></form></div></section></main>;
 }
