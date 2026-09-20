@@ -269,7 +269,7 @@ export default function FansLiveRoomPage() {
     }
     localStreamRef.current?.getTracks().forEach((track) => track.stop());
     pcRef.current?.close();
-    if (redirect) router.push("/fans/videochamadas");
+    if (redirect) router.push(accessRef.current?.role === "creator" ? "/fans/gerenciar/videochamadas/sessoes" : "/fans/videochamadas");
   }, [router, sendSignal, sessionId, supabase]);
 
   useEffect(() => {
@@ -363,7 +363,7 @@ export default function FansLiveRoomPage() {
           (payload) => {
             if (payload.new.status === "completed") {
               setConnection("Chamada encerrada.");
-              window.setTimeout(() => router.push("/fans/videochamadas"), 900);
+              window.setTimeout(() => router.push(accessRef.current?.role === "creator" ? "/fans/gerenciar/videochamadas/sessoes" : "/fans/videochamadas"), 900);
             }
           }
         );
