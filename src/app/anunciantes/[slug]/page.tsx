@@ -74,6 +74,11 @@ export default function PublicAdvertiserPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [conversationBusy, setConversationBusy] = useState(false);
   const [conversationNotice, setConversationNotice] = useState("");
+  const [ageVerified, setAgeVerified] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    setAgeVerified(window.localStorage.getItem("pecatho_age_verified") === "true");
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -207,6 +212,19 @@ export default function PublicAdvertiserPage() {
 
   return (
     <main className="shell publicProfile">
+      {ageVerified === false && (
+        <div className="pAgeGate" role="dialog" aria-modal="true" aria-labelledby="advertiser-age-title">
+          <div className="pAgeCard">
+            <div className="pAgeMark">18+</div>
+            <div className="pAgeKicker">ACESSO RESTRITO</div>
+            <h2 id="advertiser-age-title">Conteúdo destinado a maiores de 18 anos</h2>
+            <p>Este perfil integra a área de anunciantes de serviços adultos do Pecatho. Para continuar, confirme que você possui 18 anos ou mais.</p>
+            <div className="pAgeWarning"><strong>⚠ Aviso:</strong> este perfil pode apresentar imagens, serviços e informações de natureza sexualmente explícita. Menores de 18 anos não podem prosseguir.</div>
+            <div className="pAgeActions"><button type="button" className="pAgeEnter" onClick={() => { window.localStorage.setItem("pecatho_age_verified", "true"); setAgeVerified(true); }}>TENHO 18 ANOS OU MAIS · ENTRAR</button><button type="button" className="pAgeLeave" onClick={() => { window.location.href = "https://www.google.com"; }}>SAIR</button></div>
+            <div className="pAgeLegal">A confirmação é armazenada neste navegador para evitar a repetição do aviso em acessos futuros.</div>
+          </div>
+        </div>
+      )}
       <nav className="topbar"><Link href="/" className="brand"><span className="brandMark">P</span><span>Pecatho</span></Link><Link href="/anunciantes" className="navCta">Ver anunciantes</Link></nav>
 
       <section className="publicProfileHero">
