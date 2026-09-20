@@ -9,7 +9,7 @@ type Message = { id: string; sender_id: string; body: string; status: string; cr
 type Profile = { id: string; title: string | null; display_name: string | null; slug: string | null };
 type FansConversation = { id: string; creator_id: string; buyer_user_id: string; source: string; source_id: string | null; status: string };
 type LiveOffer = { id: string; creator_id: string; title: string; description: string | null; duration_minutes: number; price: number; currency: string; status: string };
-type LiveSession = { id: string; offer_id: string; creator_id: string; buyer_user_id: string; conversation_id: string | null; title: string; duration_minutes: number; amount: number; currency: string; status: string; paid_at: string | null; scheduled_for: string | null; confirmed_at: string | null };
+type LiveSession = { id: string; offer_id: string; creator_id: string; buyer_user_id: string; conversation_id: string | null; order_id: string | null; title: string; duration_minutes: number; amount: number; currency: string; status: string; paid_at: string | null; scheduled_for: string | null; confirmed_at: string | null };
 
 export default function ConversationPage() {
   const params = useParams<{ id: string }>();
@@ -75,7 +75,7 @@ export default function ConversationPage() {
         .order("created_at", { ascending: false }),
       supabase
         .from("fans_live_sessions")
-        .select("id,offer_id,creator_id,buyer_user_id,conversation_id,title,duration_minutes,amount,currency,status,paid_at,scheduled_for,confirmed_at")
+        .select("id,offer_id,creator_id,buyer_user_id,conversation_id,order_id,title,duration_minutes,amount,currency,status,paid_at,scheduled_for,confirmed_at")
         .eq("conversation_id", params.id)
         .order("created_at", { ascending: false }),
     ]);
@@ -243,6 +243,30 @@ export default function ConversationPage() {
     }
   }
 
+  async function continuePayment(session: LiveSession) {
+    if (!userId || !fansConversation || userId !== fansConversation.buyer_user_id || !session.order_id || checkoutBusy) return;
+    setCheckoutBusy(session.id);
+    setCommercialError("");
+    try {
+      const providerResponse = await fetch("/api/fans/checkout/provider", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_id: session.order_id }),
+      });
+      const providerResult = await providerResponse.json().catch(() => null);
+      if (!providerResponse.ok || !providerResult?.checkout_url) {
+        setCommercialError(providerResult?.error || "Não foi possível retomar o pagamento.");
+        return;
+      }
+      window.location.href = providerResult.checkout_url;
+    } catch (err) {
+      console.error(err);
+      setCommercialError("Não foi possível retomar o pagamento.");
+    } finally {
+      setCheckoutBusy(null);
+    }
+  }
+
   async function sendTip(amount: number) {
     if (!userId || !fansConversation || userId !== fansConversation.buyer_user_id) return;
     const activeSession = sessions.find((session) => session.status === "active");
@@ -345,12 +369,14 @@ export default function ConversationPage() {
                     </p>
                   </div>
                   {isBuyer && pendingOrPaidSession.status === "pending_payment" && (
-                    <Link href="/fans/videochamadas" className="primaryButton">Continuar para minhas videochamadas</Link>
+                    <button type="button" className="primaryButton" disabled={checkoutBusy === pendingOrPaidSession.id} onClick={() => void continuePayment(pendingOrPaidSession)}>
+                      {checkoutBusy === pendingOrPaidSession.id ? "Abrindo pagamento..." : "Continuar pagamento"}
+                    </button>
                   )}
                   {isBuyer && pendingOrPaidSession.status === "paid" && <Link href="/fans/videochamadas" className="primaryButton">Escolher horário</Link>}
                   {pendingOrPaidSession.status === "scheduled" && pendingOrPaidSession.confirmed_at && <Link href={`/fans/videochamadas/sala/${pendingOrPaidSession.id}`} className="primaryButton">Entrar na sala privada</Link>}
                   {pendingOrPaidSession.status === "active" && <Link href={`/fans/videochamadas/sala/${pendingOrPaidSession.id}`} className="primaryButton">Entrar na chamada</Link>}
-                  {isCreator && <Link href="/fans/gerenciar/videochamadas/sessoes" className="secondaryButton">Gerenciar esta solicitação</Link>}
+                  {isCreator && pendingOrPaidSession.status === "scheduled" && <Link href="/fans/gerenciar/videochamadas/sessoes" className="secondaryButton">Gerenciar esta solicitação</Link>}
                 </div>
               )}
 
