@@ -6,7 +6,8 @@ import { createClient } from "@/lib/supabase/browser";
 
 type Session = {
   id:string; title:string; duration_minutes:number; amount:number; currency:string;
-  status:string; scheduled_for:string|null; confirmed_at:string|null; created_at:string; creator_id:string;
+  status:string; scheduled_for:string|null; confirmed_at:string|null; created_at:string;
+  creator_id:string; rejection_reason:string|null;
 };
 
 const statusMap:Record<string,{label:string; tone:string}> = {
@@ -21,25 +22,58 @@ const statusMap:Record<string,{label:string; tone:string}> = {
 };
 
 export default function MyFansCallsPage(){
- const [sessions,setSessions]=useState<Session[]>([]); const [loading,setLoading]=useState(true);
- const [error,setError]=useState(""); const [saving,setSaving]=useState<string|null>(null);
+ const [sessions,setSessions]=useState<Session[]>([]);
+ const [loading,setLoading]=useState(true);
+ const [error,setError]=useState("");
+ const [saving,setSaving]=useState<string|null>(null);
  const [dates,setDates]=useState<Record<string,string>>({});
 
  async function load(){
-  const s=createClient(); const {data:{user}}=await s.auth.getUser();
+  const s=createClient();
+  const {data:{user}}=await s.auth.getUser();
   if(!user){window.location.href="/login?next=/fans/videochamadas";return;}
-  const {data,error}=await s.from("fans_live_sessions").select("id,title,duration_minutes,amount,currency,status,scheduled_for,confirmed_at,created_at,creator_id").eq("buyer_user_id",user.id).order("created_at",{ascending:false});
-  if(error)setError("Não foi possível carregar suas videochamadas."); else setSessions((data??[]) as Session[]);
+  const {data,error}=await s.from("fans_live_sessions").select("id,title,duration_minutes,amount,currency,status,scheduled_for,confirmed_at,created_at,creator_id,rejection_reason").eq("buyer_user_id",user.id).order("created_at",{ascending:false});
+  if(error)setError("Não foi possível carregar suas videochamadas.");
+  else setSessions((data??[]) as Session[]);
   setLoading(false);
  }
+
  useEffect(()=>{void load()},[]);
 
+ useEffect(()=>{
+  let channel: ReturnType<ReturnType<typeof createClient>["channel"]>|null=null;
+  let cancelled=false;
+  void (async()=>{
+   const s=createClient();
+   const {data:{user}}=await s.auth.getUser();
+   if(!user||cancelled)return;
+   channel=s.channel("fans-live-buyer-sessions-"+user.id)
+    .on("postgres_changes",{event:"UPDATE",schema:"public",table:"fans_live_sessions",filter:"buyer_user_id=eq."+user.id},payload=>{
+      const next=payload.new as Session;
+      setSessions(current=>{
+       const exists=current.some(item=>item.id===next.id);
+       if(!exists)return current;
+       return current.map(item=>item.id===next.id?{...item,...next}:item);
+      });
+    })
+    .on("postgres_changes",{event:"INSERT",schema:"public",table:"fans_live_sessions",filter:"buyer_user_id=eq."+user.id},payload=>{
+      const next=payload.new as Session;
+      setSessions(current=>current.some(item=>item.id===next.id)?current:[next,...current]);
+    })
+    .subscribe();
+  })();
+  return ()=>{cancelled=true;if(channel)void createClient().removeChannel(channel)};
+ },[]);
+
  async function schedule(id:string){
-  const value=dates[id]; if(!value){setError("Informe a data e horário.");return;}
+  const value=dates[id];
+  if(!value){setError("Informe a data e horário.");return;}
   setSaving(id);setError("");
   const {error}=await createClient().rpc("request_fans_live_schedule",{p_session_id:id,p_scheduled_for:new Date(value).toISOString()});
-  if(error)setError(error.message); else await load(); setSaving(null);
+  if(error)setError(error.message); else await load();
+  setSaving(null);
  }
+
  const money=(v:number,c:string)=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:c}).format(Number(v||0));
  const state=(s:Session)=>statusMap[s.status]??{label:s.status,tone:"bg-slate-100 text-slate-600 border-slate-200"};
  const active=sessions.filter(s=>["paid","scheduled","active"].includes(s.status)).length;
@@ -65,7 +99,7 @@ export default function MyFansCallsPage(){
     <section className="mt-8 grid gap-5 lg:grid-cols-2">{sessions.map(s=>{const st=state(s);return <article key={s.id} className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
      <div className="border-b border-slate-100 p-5 sm:p-6"><div className="flex items-start justify-between gap-4"><div className="min-w-0"><span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-bold ${st.tone}`}>{st.label}</span><h2 className="mt-3 truncate text-xl font-black">{s.title}</h2><p className="mt-1 text-sm text-slate-500">{s.duration_minutes} minutos · contratação privada</p></div><strong className="shrink-0 text-lg">{money(s.amount,s.currency)}</strong></div></div>
      <div className="p-5 sm:p-6">
-      {s.status==="paid"&&<div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4"><p className="text-sm font-bold text-emerald-900">Pagamento confirmado</p><p className="mt-1 text-xs leading-5 text-emerald-800">Escolha um horário disponível para enviar ao criador.</p><label className="mt-4 block text-xs font-bold text-slate-700">Data e horário<input type="datetime-local" className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-slate-950" value={dates[s.id]??""} min={new Date().toISOString().slice(0,16)} onChange={e=>setDates(x=>({...x,[s.id]:e.target.value}))}/></label><button onClick={()=>void schedule(s.id)} disabled={saving===s.id} className="mt-3 w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-bold text-white disabled:opacity-60">{saving===s.id?"Enviando solicitação...":"Solicitar este horário"}</button></div>}
+      {s.status==="paid"&&<div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4"><p className="text-sm font-bold text-emerald-900">{s.rejection_reason?"O criador recusou o horário anterior.":"Pagamento confirmado"}</p><p className="mt-1 text-xs leading-5 text-emerald-800">{s.rejection_reason?s.rejection_reason+" Escolha outro horário para enviar uma nova solicitação.":"Escolha um horário disponível para enviar ao criador."}</p><label className="mt-4 block text-xs font-bold text-slate-700">Data e horário<input type="datetime-local" className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-slate-950" value={dates[s.id]??""} min={new Date().toISOString().slice(0,16)} onChange={e=>setDates(x=>({...x,[s.id]:e.target.value}))}/></label><button onClick={()=>void schedule(s.id)} disabled={saving===s.id} className="mt-3 w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-bold text-white disabled:opacity-60">{saving===s.id?"Enviando solicitação...":"Solicitar este horário"}</button></div>}
       {s.status==="scheduled"&&s.scheduled_for&&<div className={`rounded-2xl border p-4 ${s.confirmed_at?"border-emerald-100 bg-emerald-50":"border-blue-100 bg-blue-50"}`}><p className="text-xs font-bold uppercase tracking-wider text-slate-500">Horário solicitado</p><p className="mt-2 text-base font-bold">{new Intl.DateTimeFormat("pt-BR",{dateStyle:"full",timeStyle:"short"}).format(new Date(s.scheduled_for))}</p><p className="mt-1 text-sm text-slate-600">{s.confirmed_at?"✓ O criador confirmou este horário.":"Aguardando a confirmação do criador."}</p></div>}
       {s.status==="scheduled"&&s.confirmed_at&&<Link href={`/fans/videochamadas/sala/${s.id}`} className="mt-4 flex w-full items-center justify-center rounded-xl bg-slate-950 px-4 py-3 text-sm font-bold text-white">Entrar na sala privada →</Link>}
       {s.status==="active"&&<Link href={`/fans/videochamadas/sala/${s.id}`} className="mt-4 flex w-full items-center justify-center rounded-xl bg-violet-600 px-4 py-3 text-sm font-bold text-white">Entrar na chamada →</Link>}
