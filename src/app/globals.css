@@ -326,3 +326,9 @@
  background:rgba(231,195,63,.045);color:#aaa398;font-size:10px;line-height:1.6
 }
 .advertiserAdEditor .publicationSubmit{margin-top:12px;border:0;background:linear-gradient(135deg,#f3d06a,#dcae31);color:#111;min-height:48px}
+
+.mediaModerationActions{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:0 10px 10px}
+.mediaModerationActions .secondaryButton{min-height:30px;padding:6px 4px;font-size:8px}
+.mediaModerationActions .secondaryButton:first-child{border-color:rgba(120,220,150,.20);color:#a8c8ae}
+.mediaModerationActions .secondaryButton:nth-child(2){border-color:rgba(240,110,110,.18);color:#d59b9b}
+@media(max-width:560px){.mediaModerationActions{grid-template-columns:1fr}}
