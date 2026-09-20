@@ -17,6 +17,7 @@ export default function MessagesPage() {
 
   useEffect(() => {
     let active = true;
+    let channel: ReturnType<typeof createClient>["realtime"]["channels"][number] | null = null;
     (async () => {
       try {
         const supabase = createClient();
@@ -76,6 +77,19 @@ export default function MessagesPage() {
           };
         });
         if (active) setItems(mapped);
+
+        channel = supabase.channel("messages-inbox-" + authData.user.id)
+          .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
+            const incoming = payload.new as MessageRow;
+            if (!conversationIds.includes(incoming.conversation_id)) return;
+            setItems((current) => {
+              const next = current.map((item) => item.id === incoming.conversation_id
+                ? { ...item, updated_at: incoming.created_at, lastMessage: incoming.body, unread: incoming.sender_id !== authData.user.id }
+                : item);
+              return [...next].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+            });
+          })
+          .subscribe();
       } catch (err) {
         console.error(err);
         if (active) setError("Não foi possível carregar suas conversas.");
@@ -83,7 +97,10 @@ export default function MessagesPage() {
         if (active) setLoading(false);
       }
     })();
-    return () => { active = false; };
+    return () => {
+      active = false;
+      if (channel) void supabase.removeChannel(channel);
+    };
   }, []);
 
   return (
