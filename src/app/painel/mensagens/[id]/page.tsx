@@ -312,7 +312,8 @@ export default function ConversationPage() {
   const isBuyer = Boolean(fansConversation && userId === fansConversation.buyer_user_id);
   const isCreator = Boolean(fansConversation && userId === fansConversation.creator_id);
   const activeSession = sessions.find((session) => session.status === "active");
-  const pendingOrPaidSession = [...sessions].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).find((session) => ["pending_payment", "paid", "scheduled", "active"].includes(session.status));\n  const latestSession = [...sessions].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+  const pendingOrPaidSession = [...sessions].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).find((session) => ["pending_payment", "paid", "scheduled", "active"].includes(session.status));
+  const latestSession = [...sessions].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
   return (
     <main className="shell">
