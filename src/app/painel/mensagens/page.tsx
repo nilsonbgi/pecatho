@@ -99,7 +99,10 @@ export default function MessagesPage() {
     })();
     return () => {
       active = false;
-      if (channel) void supabase.removeChannel(channel);
+      if (channel) {
+        const cleanupClient = createClient();
+        void cleanupClient.removeChannel(channel);
+      }
     };
   }, []);
 
