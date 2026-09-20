@@ -21,6 +21,7 @@ export default function ConversationPage() {
   const [otherTyping, setOtherTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const channelRef = useRef<ReturnType<typeof createClient> extends never ? never : any>(null);
+  const userIdRef = useRef<string | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function markAsRead(supabase = createClient(), authenticatedUserId = userId) {
@@ -40,6 +41,7 @@ export default function ConversationPage() {
       return;
     }
     setUserId(authData.user.id);
+    userIdRef.current = authData.user.id;
 
     const { data: conversation, error: conversationError } = await supabase.from("conversations").select("id,profile_id").eq("id", params.id).maybeSingle();
     if (conversationError || !conversation) throw conversationError || new Error("Conversa não encontrada.");
@@ -67,15 +69,15 @@ export default function ConversationPage() {
       try {
         await load();
         if (!active) return;
-        channel = supabase.channel("conversation:" + params.id, { config: { presence: { key: userId || "anonymous" } } });
+        channel = supabase.channel("conversation:" + params.id, { config: { presence: { key: userIdRef.current || "anonymous" } } });
         channelRef.current = channel;
         channel
           .on("presence", { event: "sync" }, () => {
             const state = channel?.presenceState() ?? {};
-            setOtherOnline(Object.keys(state).some((id) => id !== userId));
+            setOtherOnline(Object.keys(state).some((id) => id !== userIdRef.current));
           })
           .on("broadcast", { event: "typing" }, ({ payload }) => {
-            if (payload?.user_id === userId) return;
+            if (payload?.user_id === userIdRef.current) return;
             setOtherTyping(Boolean(payload?.typing));
             if (typingTimeout) clearTimeout(typingTimeout);
             if (payload?.typing) typingTimeout = setTimeout(() => setOtherTyping(false), 2500);
@@ -87,7 +89,7 @@ export default function ConversationPage() {
         })
           .subscribe(async (status) => {
             if (status === "SUBSCRIBED" && channel) {
-              await channel.track({ user_id: userId, online_at: new Date().toISOString() });
+              await channel.track({ user_id: userIdRef.current, online_at: new Date().toISOString() });
             }
           });
       } catch (err) {
@@ -114,7 +116,7 @@ export default function ConversationPage() {
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     if (value.trim()) {
       typingTimeoutRef.current = setTimeout(() => {
-        if (channelRef.current && userId) void channelRef.current.send({ type: "broadcast", event: "typing", payload: { user_id: userId, typing: false } });
+        if (channelRef.current && userIdRef.current) void channelRef.current.send({ type: "broadcast", event: "typing", payload: { user_id: userId, typing: false } });
       }, 1800);
     }
   }
