@@ -301,3 +301,28 @@
   .advertiserAdEditor .editorSaveBar{align-items:stretch;flex-direction:column;padding:14px}
   .advertiserAdEditor .editorSaveBar .primaryButton{width:100%;min-width:0}
 }
+
+.advertiserAdEditor .publicationStatus{
+  display:grid;gap:5px;padding:17px;border:1px solid rgba(231,195,63,.18);
+  border-radius:14px;background:linear-gradient(110deg,rgba(231,195,63,.08),rgba(255,255,255,.015));margin-bottom:14px;
+}
+.advertiserAdEditor .publicationStatus span{font-size:8px;letter-spacing:.16em;color:#e7c33f;font-weight:900}
+.advertiserAdEditor .publicationStatus strong{font-size:20px;color:#f0ece4;letter-spacing:-.03em}
+.advertiserAdEditor .publicationStatus small{font-size:10px;color:#777168}
+.advertiserAdEditor .publicationChecklist{display:grid;gap:8px;margin:14px 0 18px}
+.advertiserAdEditor .publicationChecklist>div{
+ display:flex;align-items:flex-start;gap:10px;padding:12px;border:1px solid rgba(255,255,255,.07);
+ border-radius:11px;background:rgba(255,255,255,.018)
+}
+.advertiserAdEditor .publicationChecklist>div>span{
+ flex:0 0 22px;width:22px;height:22px;border-radius:7px;display:grid;place-items:center;
+ border:1px solid rgba(231,195,63,.25);background:rgba(231,195,63,.05);color:#e7c33f;font-size:10px;font-weight:900
+}
+.advertiserAdEditor .publicationChecklist p{display:grid;gap:3px;margin:0}
+.advertiserAdEditor .publicationChecklist strong{font-size:11px;color:#d9d2c6}
+.advertiserAdEditor .publicationChecklist small{font-size:9px;color:#706a61;line-height:1.45}
+.advertiserAdEditor .publicationWaiting{
+ margin-top:15px;padding:13px;border:1px solid rgba(231,195,63,.18);border-radius:11px;
+ background:rgba(231,195,63,.045);color:#aaa398;font-size:10px;line-height:1.6
+}
+.advertiserAdEditor .publicationSubmit{margin-top:12px;border:0;background:linear-gradient(135deg,#f3d06a,#dcae31);color:#111;min-height:48px}
