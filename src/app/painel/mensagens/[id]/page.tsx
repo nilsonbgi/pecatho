@@ -9,7 +9,7 @@ type Message = { id: string; sender_id: string; body: string; status: string; cr
 type Profile = { id: string; title: string | null; display_name: string | null; slug: string | null };
 type FansConversation = { id: string; creator_id: string; buyer_user_id: string; source: string; source_id: string | null; status: string };
 type LiveOffer = { id: string; creator_id: string; title: string; description: string | null; duration_minutes: number; price: number; currency: string; status: string };
-type LiveSession = { id: string; offer_id: string; creator_id: string; buyer_user_id: string; conversation_id: string | null; order_id: string | null; title: string; duration_minutes: number; amount: number; currency: string; status: string; paid_at: string | null; scheduled_for: string | null; confirmed_at: string | null };
+type LiveSession = { id: string; offer_id: string; creator_id: string; buyer_user_id: string; conversation_id: string | null; order_id: string | null; title: string; duration_minutes: number; amount: number; currency: string; status: string; paid_at: string | null; scheduled_for: string | null; confirmed_at: string | null; rejection_reason: string | null; created_at: string };
 
 export default function ConversationPage() {
   const params = useParams<{ id: string }>();
@@ -75,7 +75,7 @@ export default function ConversationPage() {
         .order("created_at", { ascending: false }),
       supabase
         .from("fans_live_sessions")
-        .select("id,offer_id,creator_id,buyer_user_id,conversation_id,order_id,title,duration_minutes,amount,currency,status,paid_at,scheduled_for,confirmed_at")
+        .select("id,offer_id,creator_id,buyer_user_id,conversation_id,order_id,title,duration_minutes,amount,currency,status,paid_at,scheduled_for,confirmed_at,rejection_reason,created_at")
         .eq("conversation_id", params.id)
         .order("created_at", { ascending: false }),
     ]);
@@ -312,7 +312,7 @@ export default function ConversationPage() {
   const isBuyer = Boolean(fansConversation && userId === fansConversation.buyer_user_id);
   const isCreator = Boolean(fansConversation && userId === fansConversation.creator_id);
   const activeSession = sessions.find((session) => session.status === "active");
-  const pendingOrPaidSession = sessions.find((session) => ["pending_payment", "paid", "scheduled", "active"].includes(session.status));
+  const pendingOrPaidSession = [...sessions].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).find((session) => ["pending_payment", "paid", "scheduled", "active"].includes(session.status));\n  const latestSession = [...sessions].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
   return (
     <main className="shell">
@@ -365,7 +365,7 @@ export default function ConversationPage() {
                       {pendingOrPaidSession.status === "paid" && "Pagamento confirmado. Escolha o horário na área de videochamadas."}
                       {pendingOrPaidSession.status === "scheduled" && pendingOrPaidSession.confirmed_at && "Horário confirmado pelo criador."}
                       {pendingOrPaidSession.status === "scheduled" && !pendingOrPaidSession.confirmed_at && "Horário enviado ao criador e aguardando confirmação."}
-                      {pendingOrPaidSession.status === "active" && "A chamada está em andamento."}
+                      {pendingOrPaidSession.status === "active" && "A chamada está em andamento."}\n                      {pendingOrPaidSession.rejection_reason && pendingOrPaidSession.status === "paid" && `Última solicitação recusada: ${pendingOrPaidSession.rejection_reason}` }
                     </p>
                   </div>
                   {isBuyer && pendingOrPaidSession.status === "pending_payment" && (
@@ -377,6 +377,21 @@ export default function ConversationPage() {
                   {pendingOrPaidSession.status === "scheduled" && pendingOrPaidSession.confirmed_at && <Link href={`/fans/videochamadas/sala/${pendingOrPaidSession.id}`} className="primaryButton">Entrar na sala privada</Link>}
                   {pendingOrPaidSession.status === "active" && <Link href={`/fans/videochamadas/sala/${pendingOrPaidSession.id}`} className="primaryButton">Entrar na chamada</Link>}
                   {isCreator && pendingOrPaidSession.status === "scheduled" && <Link href="/fans/gerenciar/videochamadas/sessoes" className="secondaryButton">Gerenciar esta solicitação</Link>}
+                </div>
+              )}
+
+              {latestSession && ["completed", "refunded", "cancelled", "expired"].includes(latestSession.status) && (
+                <div style={{ marginTop: 16, borderTop: "1px solid rgba(255,255,255,.1)", paddingTop: 16 }}>
+                  <div className="eyebrow">CICLO ENCERRADO</div>
+                  <p className="fieldNote">
+                    {latestSession.status === "completed" && "A videochamada foi concluída. Esta contratação permanece registrada no histórico."}
+                    {latestSession.status === "refunded" && "Esta contratação foi reembolsada. Nenhum novo acesso à sala está disponível."}
+                    {latestSession.status === "cancelled" && "Esta contratação foi cancelada."}
+                    {latestSession.status === "expired" && "O período desta contratação expirou."}
+                  </p>
+                  <Link href={isCreator ? "/fans/gerenciar/videochamadas/sessoes" : "/fans/videochamadas"} className="secondaryButton">
+                    {isCreator ? "Ver minhas sessões" : "Ver minhas videochamadas"}
+                  </Link>
                 </div>
               )}
 
