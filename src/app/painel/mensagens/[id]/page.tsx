@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
@@ -17,6 +17,11 @@ export default function ConversationPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [otherOnline, setOtherOnline] = useState(false);
+  const [otherTyping, setOtherTyping] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const channelRef = useRef<ReturnType<typeof createClient> extends never ? never : any>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function markAsRead(supabase = createClient(), authenticatedUserId = userId) {
     const { error: readError } = await supabase.rpc("mark_conversation_read", { p_conversation_id: params.id });
@@ -56,16 +61,35 @@ export default function ConversationPage() {
     let active = true;
     const supabase = createClient();
     let channel: ReturnType<typeof supabase.channel> | null = null;
+    let typingTimeout: ReturnType<typeof setTimeout> | null = null;
 
     (async () => {
       try {
         await load();
         if (!active) return;
-        channel = supabase.channel(`conversation:${params.id}`).on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${params.id}` }, (payload) => {
+        channel = supabase.channel("conversation:" + params.id, { config: { presence: { key: userId || "anonymous" } } });
+        channelRef.current = channel;
+        channel
+          .on("presence", { event: "sync" }, () => {
+            const state = channel?.presenceState() ?? {};
+            setOtherOnline(Object.keys(state).some((id) => id !== userId));
+          })
+          .on("broadcast", { event: "typing" }, ({ payload }) => {
+            if (payload?.user_id === userId) return;
+            setOtherTyping(Boolean(payload?.typing));
+            if (typingTimeout) clearTimeout(typingTimeout);
+            if (payload?.typing) typingTimeout = setTimeout(() => setOtherTyping(false), 2500);
+          })
+          .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: "conversation_id=eq." + params.id }, (payload) => {
           const incoming = payload.new as Message;
           setMessages((current) => current.some((message) => message.id === incoming.id) ? current : [...current, incoming]);
           void markAsRead(supabase);
-        }).subscribe();
+        })
+          .subscribe(async (status) => {
+            if (status === "SUBSCRIBED" && channel) {
+              await channel.track({ user_id: userId, online_at: new Date().toISOString() });
+            }
+          });
       } catch (err) {
         console.error(err);
         if (active) setError("Não foi possível carregar esta conversa.");
@@ -74,8 +98,30 @@ export default function ConversationPage() {
       }
     })();
 
-    return () => { active = false; if (channel) void supabase.removeChannel(channel); };
+    return () => {
+      active = false;
+      if (typingTimeout) clearTimeout(typingTimeout);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      if (channel) void channel.untrack();
+      if (channel) void supabase.removeChannel(channel);
+    };
   }, [params.id]);
+
+  function handleTyping(value: string) {
+    setBody(value);
+    if (!channelRef.current || !userId) return;
+    void channelRef.current.send({ type: "broadcast", event: "typing", payload: { user_id: userId, typing: Boolean(value.trim()) } });
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    if (value.trim()) {
+      typingTimeoutRef.current = setTimeout(() => {
+        if (channelRef.current && userId) void channelRef.current.send({ type: "broadcast", event: "typing", payload: { user_id: userId, typing: false } });
+      }, 1800);
+    }
+  }
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, otherTyping]);
 
   async function sendMessage(event: FormEvent) {
     event.preventDefault();
@@ -89,6 +135,7 @@ export default function ConversationPage() {
       if (insertError) throw insertError;
       setMessages((current) => current.some((message) => message.id === data.id) ? current : [...current, data as Message]);
       setBody("");
+      if (channelRef.current && userId) void channelRef.current.send({ type: "broadcast", event: "typing", payload: { user_id: userId, typing: false } });
       await markAsRead(supabase, userId);
     } catch (err) {
       console.error(err);
@@ -110,7 +157,7 @@ export default function ConversationPage() {
         {!loading && !error && <>
           <div className="eyebrow">CONVERSA PECATHO</div>
           <h1>{profile?.title || profile?.display_name || "Conversa"}</h1>
-          <p className="heroCopy">{profile?.display_name || "Anunciante"}</p>
+          <p className="heroCopy">{profile?.display_name || "Anunciante"} {otherOnline ? "· online agora" : "· offline"}</p>
           {profile?.slug && <Link href={`/anunciantes/${profile.slug}`} className="secondaryButton">Voltar ao perfil</Link>}
           <section className="card" style={{ marginTop: 24 }}>
             <div style={{ display: "grid", gap: 12, maxHeight: 520, overflowY: "auto", paddingBottom: 16 }}>
@@ -118,7 +165,7 @@ export default function ConversationPage() {
               {messages.map((message) => <div key={message.id} style={{ display: "flex", justifyContent: message.sender_id === userId ? "flex-end" : "flex-start" }}><div style={{ maxWidth: "78%", padding: "12px 14px", borderRadius: 14, background: message.sender_id === userId ? "var(--accent, #E7C33F)" : "rgba(255,255,255,.08)", color: message.sender_id === userId ? "#000" : "inherit" }}><p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{message.body}</p><small style={{ opacity: .7 }}>{new Date(message.created_at).toLocaleString("pt-BR")}</small></div></div>)}
             </div>
             <form onSubmit={sendMessage} style={{ display: "grid", gap: 10, marginTop: 16 }}>
-              <label>Mensagem<textarea value={body} onChange={(event) => setBody(event.target.value)} rows={4} maxLength={4000} placeholder="Escreva sua mensagem..." /></label>
+              <label>Mensagem<textarea value={body} onChange={(event) => handleTyping(event.target.value)} rows={4} maxLength={4000} placeholder="Escreva sua mensagem..." />{otherTyping && <small style={{ display: "block", marginTop: 6, opacity: .72 }}>A outra pessoa está digitando...</small>}</label>
               {error && <p className="fieldNote">{error}</p>}
               <button type="submit" className="primaryButton" disabled={sending || !body.trim()}>{sending ? "Enviando..." : "Enviar mensagem"}</button>
             </form>
