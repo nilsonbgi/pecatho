@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/browser";
 
@@ -23,12 +23,43 @@ export default function AnunciantesPage() {
   const [attributeFilters, setAttributeFilters] = useState<Record<string, string | boolean | string[]>>({}); const [serviceFilters, setServiceFilters] = useState<string[]>([]);
   const [ageMin, setAgeMin] = useState(""); const [ageMax, setAgeMax] = useState(""); const [priceMin, setPriceMin] = useState(""); const [priceMax, setPriceMax] = useState("");
   const [advancedOpen, setAdvancedOpen] = useState(false); const [loading, setLoading] = useState(true); const [metaLoading, setMetaLoading] = useState(true); const [citiesLoading, setCitiesLoading] = useState(false); const [catalogLoading, setCatalogLoading] = useState(false); const [error, setError] = useState("");
+  const hydratedFromUrl = useRef(false);
+  const [urlHydrated, setUrlHydrated] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const nextCategory = params.get("categoria") || "";
+    const nextState = params.get("estado") || "";
+    const nextCity = params.get("cidade") || "";
+    const nextQuery = params.get("q") || "";
+    const nextServices = (params.get("servicos") || "").split(",").map((x) => x.trim()).filter(Boolean);
+    let nextAttributes: Record<string, string | boolean | string[]> = {};
+    const rawAttributes = params.get("atributos");
+    if (rawAttributes) {
+      try {
+        const parsed = JSON.parse(rawAttributes) as unknown;
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          nextAttributes = parsed as Record<string, string | boolean | string[]>;
+        }
+      } catch {
+        nextAttributes = {};
+      }
+    }
+    setCategoryId(nextCategory); setStateId(nextState); setCityId(nextCity); setQuery(nextQuery);
+    setServiceFilters(nextServices); setAttributeFilters(nextAttributes);
+    setAgeMin(params.get("idadeMin") || ""); setAgeMax(params.get("idadeMax") || "");
+    setPriceMin(params.get("precoMin") || ""); setPriceMax(params.get("precoMax") || "");
+    setAdvancedOpen(Boolean(nextServices.length || Object.keys(nextAttributes).length || params.get("idadeMin") || params.get("idadeMax") || params.get("precoMin") || params.get("precoMax")));
+    hydratedFromUrl.current = true;
+    setUrlHydrated(true);
+  }, []);
 
   useEffect(() => { let active = true; (async () => { try { const s = createClient(); const [c, st] = await Promise.all([s.from("categories").select("id,name").eq("display", true).order("name"), s.from("states").select("id,uf,name").order("name")]); if (c.error) throw c.error; if (st.error) throw st.error; if (active) { setCategories(c.data ?? []); setStates(st.data ?? []); } } catch (e) { console.error(e); if (active) setError("Não foi possível carregar as opções de pesquisa."); } finally { if (active) setMetaLoading(false); } })(); return () => { active = false; }; }, []);
 
   useEffect(() => { let active = true; if (!stateId) { setCities([]); setCityId(""); return; } setCitiesLoading(true); (async () => { const { data, error: e } = await createClient().from("cities").select("id,name,state_id").eq("state_id", Number(stateId)).order("name").limit(1000); if (active) { if (e) console.error(e); setCities(data ?? []); setCitiesLoading(false); } })(); return () => { active = false; }; }, [stateId]);
 
-  useEffect(() => { let active = true; setAttributeFilters({}); setServiceFilters([]); if (!categoryId) { setAttributes([]); setServices([]); return; } setCatalogLoading(true); (async () => { const s = createClient(); const [a, sv] = await Promise.all([s.from("category_attributes").select("id,name,slug,field_type,options,display_public,sort_order").eq("category_id", Number(categoryId)).eq("display_public", true).order("sort_order"), s.from("category_services").select("id,name,slug,display_public,sort_order").eq("category_id", Number(categoryId)).eq("display_public", true).order("sort_order")]); if (!active) return; if (a.error || sv.error) { setError("Não foi possível carregar os filtros desta categoria."); setAttributes([]); setServices([]); } else { setAttributes((a.data ?? []) as CatalogAttribute[]); setServices((sv.data ?? []) as CatalogService[]); } setCatalogLoading(false); })(); return () => { active = false; }; }, [categoryId]);
+  useEffect(() => { let active = true; if (!urlHydrated) return; if (!hydratedFromUrl.current) { setAttributeFilters({}); setServiceFilters([]); } else { hydratedFromUrl.current = false; } if (!categoryId) { setAttributes([]); setServices([]); return; } setCatalogLoading(true); (async () => { const s = createClient(); const [a, sv] = await Promise.all([s.from("category_attributes").select("id,name,slug,field_type,options,display_public,sort_order").eq("category_id", Number(categoryId)).eq("display_public", true).order("sort_order"), s.from("category_services").select("id,name,slug,display_public,sort_order").eq("category_id", Number(categoryId)).eq("display_public", true).order("sort_order")]); if (!active) return; if (a.error || sv.error) { setError("Não foi possível carregar os filtros desta categoria."); setAttributes([]); setServices([]); } else { setAttributes((a.data ?? []) as CatalogAttribute[]); setServices((sv.data ?? []) as CatalogService[]); } setCatalogLoading(false); })(); return () => { active = false; }; }, [categoryId]);
 
   useEffect(() => { let active = true; (async () => { setLoading(true); setError(""); try { const s = createClient(); const { data, error: e } = await s.rpc("search_public_advertisers", { p_category_id: categoryId ? Number(categoryId) : null, p_state_id: stateId ? Number(stateId) : null, p_city_id: cityId ? Number(cityId) : null, p_query: query.trim() || null, p_attribute_filters: attributeFilters, p_service_slugs: serviceFilters, p_age_min: ageMin ? Number(ageMin) : null, p_age_max: ageMax ? Number(ageMax) : null, p_price_min: priceMin ? Number(priceMin) : null, p_price_max: priceMax ? Number(priceMax) : null, p_limit: 48, p_offset: 0 }); if (e) throw e; const rows = (data ?? []) as Advertiser[]; let cards = rows.map((x) => ({ ...x, imageUrl: null as string | null })); if (rows.length) { const ids = rows.map((x) => x.id); const { data: mr } = await s.from("profile_media").select("profile_id,storage_bucket,storage_path,kind,is_primary,is_public").in("profile_id", ids).eq("is_public", true).eq("moderation_status", "approved").order("is_primary", { ascending: false }).order("sort_order"); const byProfile = new Map<string, Media>(); for (const m of (mr ?? []) as Media[]) if (!byProfile.has(m.profile_id) && m.kind === "image") byProfile.set(m.profile_id, m); cards = rows.map((x) => { const m = byProfile.get(x.id); if (!m) return { ...x, imageUrl: null }; return { ...x, imageUrl: s.storage.from(m.storage_bucket).getPublicUrl(m.storage_path).data.publicUrl || null }; }); } if (active) setAdvertisers(cards); } catch (e) { console.error(e); if (active) { setAdvertisers([]); setError("Não foi possível carregar os anunciantes publicados."); } } finally { if (active) setLoading(false); } })(); return () => { active = false; }; }, [categoryId, stateId, cityId, query, attributeFilters, serviceFilters, ageMin, ageMax, priceMin, priceMax]);
 
