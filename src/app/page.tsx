@@ -70,7 +70,7 @@ export default function HomePage() {
       <div className="pWrap">
         <nav className="pNav">
           <Link href="/" className="pBrand"><span className="pLogo">P</span><span>Pecatho</span></Link>
-          <div className="pNavLinks"><Link href="/anunciantes">Anunciantes</Link><Link href="/fans">Fans</Link><Link href="/como-funciona">Como funciona</Link><Link href="/login" className="pNavCta">Entrar</Link></div>
+          <div className="pNavLinks"><Link href="/anunciantes">Anunciantes</Link><Link href="/parceiros">Parceiros</Link><Link href="/fans">Fans</Link><Link href="/como-funciona">Como funciona</Link><Link href="/login" className="pNavCta">Entrar</Link></div>
         </nav>
 
         <section className="pHero">
@@ -78,7 +78,7 @@ export default function HomePage() {
             <div className="pEyebrow">PECATHO · CONEXÕES QUE DESPERTAM</div>
             <h1>Descubra. <em>Conecte.</em><br />Viva Pecatho.</h1>
             <p className="pLead">Uma experiência adulta moderna para descobrir anunciantes, conhecer criadores, acompanhar conteúdos e estabelecer conexões com mais liberdade, informação e confiança.</p>
-            <div className="pActions"><Link className="pPrimary" href="/anunciantes">Explorar anunciantes ↗</Link><Link className="pSecondary" href="/fans">Conhecer Pecatho Fans</Link><Link className="pSecondary" href="/cadastro">Criar minha conta</Link></div>
+            <div className="pActions"><Link className="pPrimary" href="/anunciantes">Explorar anunciantes ↗</Link><Link className="pSecondary" href="/fans">Conhecer Pecatho Fans</Link><Link className="pSecondary" href="/parceiros">Anunciar minha casa</Link><Link className="pSecondary" href="/cadastro">Criar minha conta</Link></div>
           </div>
           <aside className="pShowcase">
             <div className="pShowTop"><span>EXPERIÊNCIA PECATHO</span><span className="pStatus"><i className="pDot" /> ONLINE</span></div>
