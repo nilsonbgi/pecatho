@@ -61,6 +61,23 @@ export default function AnunciantesPage() {
 
   useEffect(() => { let active = true; if (!urlHydrated) return; if (!hydratedFromUrl.current) { setAttributeFilters({}); setServiceFilters([]); } else { hydratedFromUrl.current = false; } if (!categoryId) { setAttributes([]); setServices([]); return; } setCatalogLoading(true); (async () => { const s = createClient(); const [a, sv] = await Promise.all([s.from("category_attributes").select("id,name,slug,field_type,options,display_public,sort_order").eq("category_id", Number(categoryId)).eq("display_public", true).order("sort_order"), s.from("category_services").select("id,name,slug,display_public,sort_order").eq("category_id", Number(categoryId)).eq("display_public", true).order("sort_order")]); if (!active) return; if (a.error || sv.error) { setError("Não foi possível carregar os filtros desta categoria."); setAttributes([]); setServices([]); } else { setAttributes((a.data ?? []) as CatalogAttribute[]); setServices((sv.data ?? []) as CatalogService[]); } setCatalogLoading(false); })(); return () => { active = false; }; }, [categoryId]);
 
+  useEffect(() => {
+    if (!urlHydrated || typeof window === "undefined") return;
+    const params = new URLSearchParams();
+    if (query.trim()) params.set("q", query.trim());
+    if (categoryId) params.set("categoria", categoryId);
+    if (stateId) params.set("estado", stateId);
+    if (cityId) params.set("cidade", cityId);
+    if (ageMin) params.set("idadeMin", ageMin);
+    if (ageMax) params.set("idadeMax", ageMax);
+    if (priceMin) params.set("precoMin", priceMin);
+    if (priceMax) params.set("precoMax", priceMax);
+    if (serviceFilters.length) params.set("servicos", serviceFilters.join(","));
+    if (Object.keys(attributeFilters).length) params.set("atributos", JSON.stringify(attributeFilters));
+    const nextUrl = params.toString() ? `/anunciantes?${params.toString()}` : "/anunciantes";
+    window.history.replaceState(null, "", nextUrl);
+  }, [urlHydrated, query, categoryId, stateId, cityId, ageMin, ageMax, priceMin, priceMax, serviceFilters, attributeFilters]);
+
   useEffect(() => { let active = true; (async () => { setLoading(true); setError(""); try { const s = createClient(); const { data, error: e } = await s.rpc("search_public_advertisers", { p_category_id: categoryId ? Number(categoryId) : null, p_state_id: stateId ? Number(stateId) : null, p_city_id: cityId ? Number(cityId) : null, p_query: query.trim() || null, p_attribute_filters: attributeFilters, p_service_slugs: serviceFilters, p_age_min: ageMin ? Number(ageMin) : null, p_age_max: ageMax ? Number(ageMax) : null, p_price_min: priceMin ? Number(priceMin) : null, p_price_max: priceMax ? Number(priceMax) : null, p_limit: 48, p_offset: 0 }); if (e) throw e; const rows = (data ?? []) as Advertiser[]; let cards = rows.map((x) => ({ ...x, imageUrl: null as string | null })); if (rows.length) { const ids = rows.map((x) => x.id); const { data: mr } = await s.from("profile_media").select("profile_id,storage_bucket,storage_path,kind,is_primary,is_public").in("profile_id", ids).eq("is_public", true).eq("moderation_status", "approved").order("is_primary", { ascending: false }).order("sort_order"); const byProfile = new Map<string, Media>(); for (const m of (mr ?? []) as Media[]) if (!byProfile.has(m.profile_id) && m.kind === "image") byProfile.set(m.profile_id, m); cards = rows.map((x) => { const m = byProfile.get(x.id); if (!m) return { ...x, imageUrl: null }; return { ...x, imageUrl: s.storage.from(m.storage_bucket).getPublicUrl(m.storage_path).data.publicUrl || null }; }); } if (active) setAdvertisers(cards); } catch (e) { console.error(e); if (active) { setAdvertisers([]); setError("Não foi possível carregar os anunciantes publicados."); } } finally { if (active) setLoading(false); } })(); return () => { active = false; }; }, [categoryId, stateId, cityId, query, attributeFilters, serviceFilters, ageMin, ageMax, priceMin, priceMax]);
 
   const categoryName = useMemo(() => new Map(categories.map((x) => [x.id, x.name])), [categories]); const stateName = useMemo(() => new Map(states.map((x) => [x.id, x.uf])), [states]); const cityName = useMemo(() => new Map(cities.map((x) => [x.id, x.name])), [cities]);
