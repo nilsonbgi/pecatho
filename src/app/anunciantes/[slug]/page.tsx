@@ -238,7 +238,7 @@ export default function PublicAdvertiserPage() {
 
       {selectedServices.length > 0 && <section className="profileServices card"><div className="eyebrow">SERVIÇOS</div><h2>Serviços e modalidades</h2><div className="serviceChips">{selectedServices.map((service) => <span key={service.id}>{service.name}</span>)}</div></section>}
 
-      {validPrices.length > 0 && <section className="profilePricing card"><div className="eyebrow">VALORES</div><h2>Preços por período</h2><div className="priceGrid">{validPrices.map((row, index) => <div key={`${String(row.minutes ?? row.period ?? index)}-${index}`}><span>{row.minutes ? `${String(row.minutes)} min` : String(row.period || "Período")}</span><strong>{brl(Number(row.price))}</strong></div>)}</div></section>}
+      {validPrices.length > 0 && <section className="profilePricing card"><div className="eyebrow">VALORES</div><h2>Preços por período</h2><div className="priceGrid">{validPrices.map((row, index) => { const minutes = Number(row.minutes); const label = typeof row.period === "string" && row.period ? row.period : minutes === 60 ? "1 Hora" : minutes > 0 ? `${minutes} minutos` : "Período"; return <div key={`${String(row.minutes ?? row.period ?? index)}-${index}`}><span>{label}</span><strong>{row.starting_from === true ? "A partir de " : ""}{brl(Number(row.price))}</strong></div>; })}</div></section>}
 
       {profile.availability && <section className="profileAvailability card"><div className="eyebrow">DISPONIBILIDADE</div><h2>Horários de atendimento</h2><p>{profile.availability}</p></section>}
 
