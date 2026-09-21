@@ -53,7 +53,7 @@ export default function AnuncioPage() {
   const [title, setTitle] = useState(""); const [name, setName] = useState(""); const [summary, setSummary] = useState(""); const [description, setDescription] = useState("");
   const [stateId, setStateId] = useState(""); const [cityId, setCityId] = useState(""); const [categoryId, setCategoryId] = useState("");
   const [birthDate, setBirthDate] = useState(""); const [age, setAge] = useState(""); const [cpf, setCpf] = useState(""); const [height, setHeight] = useState(""); const [weight, setWeight] = useState("");
-  const [availability, setAvailability] = useState(""); const [price, setPrice] = useState(""); const [pricingPeriods, setPricingPeriods] = useState<PricingPeriod[]>([]); const [servicesText, setServicesText] = useState("");
+  const [availability, setAvailability] = useState(""); const [price, setPrice] = useState(""); const [pricingPeriods, setPricingPeriods] = useState<PricingPeriod[]>([{ minutes: 60, price: 0, period: "1 Hora" }]); const [servicesText, setServicesText] = useState("");
   const [phone, setPhone] = useState(""); const [whatsapp, setWhatsapp] = useState(""); const [phoneSecondary, setPhoneSecondary] = useState("");
   const [positioning, setPositioning] = useState(""); const [paymentOptionsText, setPaymentOptionsText] = useState(""); const [socialLinksText, setSocialLinksText] = useState("");
   const [zipcode, setZipcode] = useState(""); const [street, setStreet] = useState(""); const [number, setNumber] = useState(""); const [complement, setComplement] = useState(""); const [neighborhood, setNeighborhood] = useState("");
@@ -116,7 +116,7 @@ export default function AnuncioPage() {
           }) : [];
           const fallbackPrice = pricing.price == null ? "" : String(pricing.price);
           setPrice(fallbackPrice);
-          setPricingPeriods(loadedPeriods.length ? loadedPeriods : fallbackPrice ? [{ minutes: 60, price: Number(fallbackPrice), period: "1 Hora" }] : []);
+          setPricingPeriods(loadedPeriods.length ? loadedPeriods : fallbackPrice ? [{ minutes: 60, price: Number(fallbackPrice), period: "1 Hora" }] : [{ minutes: 60, price: 0, period: "1 Hora" }]);
           setServicesText(typeof serviceOptions.description === "string" ? serviceOptions.description : ""); setPaymentOptionsText(JSON.stringify(paymentOptions, null, 2)); setSocialLinksText(JSON.stringify(socialLinks, null, 2)); setPositioning(profile.positioning || "");
           setPhone(profile.phone || accountProfile?.phone || ""); setWhatsapp(profile.whatsapp || ""); setPhoneSecondary(profile.phone_secondary || "");
           void loadMedia(profile.id);
@@ -251,8 +251,8 @@ export default function AnuncioPage() {
       if (parsedAge != null && (!Number.isInteger(parsedAge) || parsedAge < 18 || parsedAge > 99)) throw new Error("A data de nascimento não produz uma idade válida."); if (parsedHeight != null && (!Number.isFinite(parsedHeight) || parsedHeight < 100 || parsedHeight > 250)) throw new Error("Informe uma altura válida entre 100 e 250 cm."); if (parsedWeight != null && (!Number.isFinite(parsedWeight) || parsedWeight < 30 || parsedWeight > 300)) throw new Error("Informe um peso válido entre 30 e 300 kg.");
       const effectiveBirthDate = birthDate || null;
       if (pricingPeriods.length > 5) throw new Error("Cadastre no máximo 5 períodos de atendimento.");
-      if (!pricingPeriods.some((row) => row.minutes === 60 && row.price >= 0)) throw new Error("O período de 1 Hora é obrigatório como referência do anúncio.");
-      if (pricingPeriods.some((row) => !Number.isFinite(Number(row.price)) || Number(row.price) < 0)) throw new Error("Informe valores válidos para todos os períodos.");
+      if (!pricingPeriods.some((row) => row.minutes === 60 && Number(row.price) > 0)) throw new Error("Informe um valor maior que zero para o período de 1 Hora.");
+      if (pricingPeriods.some((row) => !Number.isFinite(Number(row.price)) || Number(row.price) <= 0)) throw new Error("Informe valores maiores que zero para todos os períodos selecionados.");
       const normalizedPricingPeriods = pricingPeriods.map((row) => ({ minutes: row.minutes, period: row.period, price: Number(row.price), ...(row.starting_from ? { starting_from: true } : {}) }));
       const old = await supabase.from("advertiser_profiles").select("id,pricing,service_options,payment_options,social_links").eq("user_id", user.id).maybeSingle(); if (old.error) throw old.error;
       const oldProfile = old.data; const oldPricing = asObject(oldProfile?.pricing); const oldServiceOptions = asObject(oldProfile?.service_options); const oldPaymentOptions = asObject(oldProfile?.payment_options); const oldSocialLinks = asObject(oldProfile?.social_links);
