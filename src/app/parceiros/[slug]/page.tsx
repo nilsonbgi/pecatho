@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import LeadForm from "./LeadForm";
 
 const types:Record<string,string>={nightclub:"Casa noturna",club:"Boate / clube",bar:"Bar",lounge:"Lounge",event_space:"Espaço para eventos",other:"Outro"};
 const dayNames=["Domingo","Segunda-feira","Terça-feira","Quarta-feira","Quinta-feira","Sexta-feira","Sábado"];
 export const dynamic="force-dynamic";
-
 function brl(value:number|null){if(value===null||value===undefined)return "";return new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(value);}
 function dateTime(value:string){return new Intl.DateTimeFormat("pt-BR",{dateStyle:"full",timeStyle:"short"}).format(new Date(value));}
 
@@ -30,6 +30,7 @@ export default async function ParceiroDetalhe({params}:{params:Promise<{slug:str
   {(hours||[]).length>0&&<section className="authCard"><div className="eyebrow">HORÁRIOS</div><h2>Funcionamento</h2><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:10,marginTop:18}}>{(hours||[]).map(h=><div key={h.weekday} style={{padding:14,border:"1px solid rgba(255,255,255,.08)",borderRadius:12}}><strong>{dayNames[h.weekday]||"Dia"}</strong><div style={{marginTop:6,opacity:.75}}>{h.is_closed?"Fechado":(h.open_time&&h.close_time?h.open_time.slice(0,5)+" às "+h.close_time.slice(0,5):"Horário não informado")}</div></div>)}</div></section>}
   {(services||[]).length>0&&<section className="authCard"><div className="eyebrow">SERVIÇOS</div><h2>O que a casa oferece</h2><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:14,marginTop:18}}>{(services||[]).map(s=><article key={s.id} style={{padding:18,border:"1px solid rgba(255,255,255,.08)",borderRadius:14}}><h3 style={{margin:0}}>{s.name}</h3>{s.description&&<p style={{opacity:.75,lineHeight:1.6}}>{s.description}</p>}{s.price_from!==null&&<strong>A partir de {brl(Number(s.price_from))}</strong>}</article>)}</div></section>}
   {(events||[]).length>0&&<section className="authCard"><div className="eyebrow">AGENDA</div><h2>Próximos eventos</h2><div style={{display:"grid",gap:14,marginTop:18}}>{(events||[]).map(e=>{const message=encodeURIComponent("Olá! Vi o evento "+e.title+" no Pecatho e gostaria de obter mais informações.");const whatsapp=v.phone?"https://wa.me/"+String(v.phone).replace(/\D/g,"")+"?text="+message:null;return <article key={e.id} style={{padding:18,border:"1px solid rgba(255,255,255,.08)",borderRadius:14}}><h3 style={{margin:"0 0 8px"}}>{e.title}</h3><div style={{opacity:.8}}>{dateTime(e.starts_at)}{e.ends_at?" · até "+new Intl.DateTimeFormat("pt-BR",{timeStyle:"short"}).format(new Date(e.ends_at)):""}</div>{e.description&&<p style={{opacity:.75,lineHeight:1.6}}>{e.description}</p>}{e.price_from!==null&&<strong>A partir de {brl(Number(e.price_from))}</strong>}{whatsapp&&<div style={{marginTop:14}}><a className="secondaryButton" href={whatsapp} target="_blank" rel="noreferrer">Quero informações</a></div>}</article>})}</div></section>}
+  <LeadForm venueId={v.id}/>
   <section className="authCard" style={{textAlign:"center"}}><div className="eyebrow">PECATHO</div><h2>Quer falar com a casa?</h2><p style={{opacity:.75}}>Use os canais oficiais acima para consultar reservas, serviços, eventos e outras informações.</p></section>
  </main>;
 }
