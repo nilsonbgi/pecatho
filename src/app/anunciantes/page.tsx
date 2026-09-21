@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/browser";
 
-type PricingPeriod = { minutes: number; price: number; period: string; starting_from?: boolean };\ntype Advertiser = { id: string; slug: string | null; title: string | null; display_name: string | null; summary: string | null; city_id: number | null; state_id: number | null; category_id: number | null; verification_status: string | null; pricing: Record<string, unknown> | null };
+type PricingPeriod = { minutes: number; price: number; period: string; starting_from?: boolean };
+type Advertiser = { id: string; slug: string | null; title: string | null; display_name: string | null; summary: string | null; city_id: number | null; state_id: number | null; category_id: number | null; verification_status: string | null; pricing: Record<string, unknown> | null };
 type Category = { id: number; name: string };
 type State = { id: number; uf: string; name: string };
 type City = { id: number; name: string; state_id: number };
