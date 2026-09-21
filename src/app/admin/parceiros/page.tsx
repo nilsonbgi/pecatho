@@ -2,11 +2,37 @@
 import {useEffect,useState} from "react";
 import Link from "next/link";
 import {createClient} from "@/lib/supabase/browser";
+
 const labels:Record<string,string>={nightclub:"Casa noturna",club:"Boate / clube",bar:"Bar",lounge:"Lounge",event_space:"Espaço para eventos",other:"Outro"};
+
 export default function AdminParceiros(){
- const [items,setItems]=useState<any[]>([]);const [loading,setLoading]=useState(true);const [error,setError]=useState("");
- async function load(){setLoading(true);const s=createClient();const {data:{user}}=await s.auth.getUser();if(!user){location.href="/login";return}const response=await s.from("partner_venues").select("id,name,slug,venue_type,description,phone,website_url,instagram_url,status,rejection_reason,created_at").in("status",["pending_review","published","rejected","paused"]).order("created_at",{ascending:false});const data=response.data;const e=response.errorif(e)setError(e.message);setItems(data||[]);setLoading(false)}
+ const [items,setItems]=useState<any[]>([]);
+ const [loading,setLoading]=useState(true);
+ const [error,setError]=useState("");
+
+ async function load(){
+  setLoading(true);
+  setError("");
+  const s=createClient();
+  const {data:{user}}=await s.auth.getUser();
+  if(!user){location.href="/login";return}
+  const response=await s.from("partner_venues").select("id,name,slug,venue_type,description,phone,website_url,instagram_url,status,rejection_reason,created_at").in("status",["pending_review","published","rejected","paused"]).order("created_at",{ascending:false});
+  const data=response.data;
+  const e=response.error;
+  if(e)setError(e.message);
+  setItems(data||[]);
+  setLoading(false);
+ }
+
  useEffect(()=>{void load()},[]);
- async function moderate(id:string,action:string){const reason=action==="reject"?window.prompt("Motivo da rejeição:"):"";if(action==="reject"&&!reason)return;const {error:e}=await createClient().rpc("admin_moderate_partner_venue",{p_venue_id:id,p_action:action,p_reason:reason||null});if(e){setError(e.message);return}await load()}
+
+ async function moderate(id:string,action:string){
+  const reason=action==="reject"?window.prompt("Motivo da rejeição:"):"";
+  if(action==="reject"&&!reason)return;
+  const {error:e}=await createClient().rpc("admin_moderate_partner_venue",{p_venue_id:id,p_action:action,p_reason:reason||null});
+  if(e){setError(e.message);return}
+  await load()
+ }
+
  return <main className="shell"><nav className="topbar"><Link className="brand" href="/admin"><span className="brandMark">P</span><span>Pecatho</span></Link><div className="navLinks"><Link href="/admin">Administração</Link><Link href="/parceiros">Vitrine</Link></div></nav><section className="hero"><div className="eyebrow">ADMINISTRAÇÃO · PARCEIROS</div><h1>Casas e <em>estabelecimentos.</em></h1><p className="heroCopy">Moderação dos perfis comerciais de casas noturnas, boates, bares, lounges e espaços parceiros.</p></section>{error&&<p className="formError">{error}</p>}{loading?<p>Carregando...</p>:<section className="partnerGrid">{items.map(v=><article className="card" key={v.id}><div className="eyebrow">{labels[v.venue_type]||"Parceiro"} · {v.status}</div><h2>{v.name}</h2><p>{v.description||"Sem descrição."}</p><p className="fieldNote">{v.phone||""}</p>{v.rejection_reason&&<p className="formError">Motivo: {v.rejection_reason}</p>}<div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:16}}>{v.status==="pending_review"&&<><button className="primaryButton" onClick={()=>moderate(v.id,"publish")}>Publicar</button><button className="secondaryButton" onClick={()=>moderate(v.id,"reject")}>Rejeitar</button></>}{v.status==="published"&&<button className="secondaryButton" onClick={()=>moderate(v.id,"pause")}>Pausar</button>}{v.status==="paused"&&<button className="primaryButton" onClick={()=>moderate(v.id,"publish")}>Publicar novamente</button>}</div></article>)}</section>}</main>
 }
