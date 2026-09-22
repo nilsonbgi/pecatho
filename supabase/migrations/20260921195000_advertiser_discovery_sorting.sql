@@ -1,0 +1,2 @@
+-- Advertiser discovery sorting
+-- The production RPC is defined by migration: advertiser_discovery_sorting.
