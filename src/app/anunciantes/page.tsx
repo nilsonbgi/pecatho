@@ -73,7 +73,8 @@ export default function AnunciantesPage() {
     if (ageMax) params.set("idadeMax", ageMax);
     if (priceMin) params.set("precoMin", priceMin);
     if (priceMax) params.set("precoMax", priceMax);
-    if (durationMinutes) params.set("duracao", durationMinutes);\n    if (sort !== "recent") params.set("ordem", sort);
+    if (durationMinutes) params.set("duracao", durationMinutes);
+    if (sort !== "recent") params.set("ordem", sort);
     if (serviceFilters.length) params.set("servicos", serviceFilters.join(","));
     if (Object.keys(attributeFilters).length) params.set("atributos", JSON.stringify(attributeFilters));
     const nextUrl = params.toString() ? `/anunciantes?${params.toString()}` : "/anunciantes";
