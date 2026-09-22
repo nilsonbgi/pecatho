@@ -23,7 +23,7 @@ export default function AnunciantesPage() {
   const [categoryId, setCategoryId] = useState(""); const [stateId, setStateId] = useState(""); const [cityId, setCityId] = useState(""); const [query, setQuery] = useState("");
   const [attributeFilters, setAttributeFilters] = useState<Record<string, string | boolean | string[]>>({}); const [serviceFilters, setServiceFilters] = useState<string[]>([]);
   const [ageMin, setAgeMin] = useState(""); const [ageMax, setAgeMax] = useState(""); const [priceMin, setPriceMin] = useState(""); const [priceMax, setPriceMax] = useState(""); const [durationMinutes, setDurationMinutes] = useState("");
-  const [advancedOpen, setAdvancedOpen] = useState(false); const [loading, setLoading] = useState(true); const [metaLoading, setMetaLoading] = useState(true); const [citiesLoading, setCitiesLoading] = useState(false); const [catalogLoading, setCatalogLoading] = useState(false); const [error, setError] = useState("");
+  const [advancedOpen, setAdvancedOpen] = useState(false); const [loading, setLoading] = useState(true); const [loadingMore, setLoadingMore] = useState(false); const [hasMore, setHasMore] = useState(false); const [metaLoading, setMetaLoading] = useState(true); const [citiesLoading, setCitiesLoading] = useState(false); const [catalogLoading, setCatalogLoading] = useState(false); const [error, setError] = useState("");
   const hydratedFromUrl = useRef(false);
   const [urlHydrated, setUrlHydrated] = useState(false);
 
@@ -80,7 +80,54 @@ export default function AnunciantesPage() {
     window.history.replaceState(null, "", nextUrl);
   }, [urlHydrated, query, categoryId, stateId, cityId, ageMin, ageMax, priceMin, priceMax, serviceFilters, attributeFilters, durationMinutes]);
 
-  useEffect(() => { let active = true; (async () => { setLoading(true); setError(""); try { const s = createClient(); const { data, error: e } = await s.rpc("search_public_advertisers", { p_category_id: categoryId ? Number(categoryId) : null, p_state_id: stateId ? Number(stateId) : null, p_city_id: cityId ? Number(cityId) : null, p_query: query.trim() || null, p_attribute_filters: attributeFilters, p_service_slugs: serviceFilters, p_age_min: ageMin ? Number(ageMin) : null, p_age_max: ageMax ? Number(ageMax) : null, p_price_min: priceMin ? Number(priceMin) : null, p_price_max: priceMax ? Number(priceMax) : null, p_duration_minutes: durationMinutes ? Number(durationMinutes) : null, p_limit: 48, p_offset: 0 }); if (e) throw e; const rows = (data ?? []) as Advertiser[]; let cards = rows.map((x) => ({ ...x, imageUrl: null as string | null })); if (rows.length) { const ids = rows.map((x) => x.id); const { data: mr } = await s.from("profile_media").select("profile_id,storage_bucket,storage_path,kind,is_primary,is_public").in("profile_id", ids).eq("is_public", true).eq("moderation_status", "approved").order("is_primary", { ascending: false }).order("sort_order"); const byProfile = new Map<string, Media>(); for (const m of (mr ?? []) as Media[]) if (!byProfile.has(m.profile_id) && m.kind === "image") byProfile.set(m.profile_id, m); cards = rows.map((x) => { const m = byProfile.get(x.id); if (!m) return { ...x, imageUrl: null }; return { ...x, imageUrl: s.storage.from(m.storage_bucket).getPublicUrl(m.storage_path).data.publicUrl || null }; }); } if (active) setAdvertisers(cards); } catch (e) { console.error(e); if (active) { setAdvertisers([]); setError("Não foi possível carregar os anunciantes publicados."); } } finally { if (active) setLoading(false); } })(); return () => { active = false; }; }, [categoryId, stateId, cityId, query, attributeFilters, serviceFilters, ageMin, ageMax, priceMin, priceMax, durationMinutes]);
+  useEffect(() => { let active = true; (async () => { setLoading(true); setError(""); setLoadingMore(false); setHasMore(false); try { const s = createClient(); const { data, error: e } = await s.rpc("search_public_advertisers", { p_category_id: categoryId ? Number(categoryId) : null, p_state_id: stateId ? Number(stateId) : null, p_city_id: cityId ? Number(cityId) : null, p_query: query.trim() || null, p_attribute_filters: attributeFilters, p_service_slugs: serviceFilters, p_age_min: ageMin ? Number(ageMin) : null, p_age_max: ageMax ? Number(ageMax) : null, p_price_min: priceMin ? Number(priceMin) : null, p_price_max: priceMax ? Number(priceMax) : null, p_duration_minutes: durationMinutes ? Number(durationMinutes) : null, p_limit: 48, p_offset: 0 }); if (e) throw e; const rows = (data ?? []) as Advertiser[]; setHasMore(rows.length === 48); let cards = rows.map((x) => ({ ...x, imageUrl: null as string | null })); if (rows.length) { const ids = rows.map((x) => x.id); const { data: mr } = await s.from("profile_media").select("profile_id,storage_bucket,storage_path,kind,is_primary,is_public").in("profile_id", ids).eq("is_public", true).eq("moderation_status", "approved").order("is_primary", { ascending: false }).order("sort_order"); const byProfile = new Map<string, Media>(); for (const m of (mr ?? []) as Media[]) if (!byProfile.has(m.profile_id) && m.kind === "image") byProfile.set(m.profile_id, m); cards = rows.map((x) => { const m = byProfile.get(x.id); if (!m) return { ...x, imageUrl: null }; return { ...x, imageUrl: s.storage.from(m.storage_bucket).getPublicUrl(m.storage_path).data.publicUrl || null }; }); } if (active) setAdvertisers(cards); } catch (e) { console.error(e); if (active) { setAdvertisers([]); setError("Não foi possível carregar os anunciantes publicados."); } } finally { if (active) setLoading(false); } })(); return () => { active = false; }; }, [categoryId, stateId, cityId, query, attributeFilters, serviceFilters, ageMin, ageMax, priceMin, priceMax, durationMinutes]);
+
+  async function loadMore() {
+    if (loadingMore || loading || !hasMore) return;
+    setLoadingMore(true);
+    setError("");
+    try {
+      const s = createClient();
+      const { data, error: e } = await s.rpc("search_public_advertisers", {
+        p_category_id: categoryId ? Number(categoryId) : null,
+        p_state_id: stateId ? Number(stateId) : null,
+        p_city_id: cityId ? Number(cityId) : null,
+        p_query: query.trim() || null,
+        p_attribute_filters: attributeFilters,
+        p_service_slugs: serviceFilters,
+        p_age_min: ageMin ? Number(ageMin) : null,
+        p_age_max: ageMax ? Number(ageMax) : null,
+        p_price_min: priceMin ? Number(priceMin) : null,
+        p_price_max: priceMax ? Number(priceMax) : null,
+        p_duration_minutes: durationMinutes ? Number(durationMinutes) : null,
+        p_limit: 48,
+        p_offset: advertisers.length
+      });
+      if (e) throw e;
+      const rows = (data ?? []) as Advertiser[];
+      if (!rows.length) {
+        setHasMore(false);
+        return;
+      }
+
+      const ids = rows.map((x) => x.id);
+      const { data: mr } = await s.from("profile_media").select("profile_id,storage_bucket,storage_path,kind,is_primary,is_public").in("profile_id", ids).eq("is_public", true).eq("moderation_status", "approved").order("is_primary", { ascending: false }).order("sort_order");
+      const byProfile = new Map<string, Media>();
+      for (const m of (mr ?? []) as Media[]) if (!byProfile.has(m.profile_id) && m.kind === "image") byProfile.set(m.profile_id, m);
+      const moreCards = rows.map((x) => {
+        const m = byProfile.get(x.id);
+        if (!m) return { ...x, imageUrl: null };
+        return { ...x, imageUrl: s.storage.from(m.storage_bucket).getPublicUrl(m.storage_path).data.publicUrl || null };
+      });
+      setAdvertisers((current) => [...current, ...moreCards.filter((item) => !current.some((existing) => existing.id === item.id))]);
+      setHasMore(rows.length === 48);
+    } catch (e) {
+      console.error(e);
+      setError("Não foi possível carregar mais anunciantes.");
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   const categoryName = useMemo(() => new Map(categories.map((x) => [x.id, x.name])), [categories]); const stateName = useMemo(() => new Map(states.map((x) => [x.id, x.uf])), [states]); const cityName = useMemo(() => new Map(cities.map((x) => [x.id, x.name])), [cities]);
   const activeFilterCount = Object.keys(attributeFilters).length + serviceFilters.length + [ageMin, ageMax, priceMin, priceMax, durationMinutes].filter(Boolean).length;
@@ -102,7 +149,7 @@ export default function AnunciantesPage() {
     <section className="discoveryResults"><div className="resultsHeader"><div><div className="eyebrow">PERFIS PUBLICADOS</div><h2>{loading ? "Encontrando perfis..." : `${advertisers.length} ${advertisers.length === 1 ? "perfil encontrado" : "perfis encontrados"}`}</h2>{(stateId || cityId) && <div className="resultsMeta">{cityId ? `${cityName.get(Number(cityId)) || ""}, ` : ""}{stateId ? stateName.get(Number(stateId)) || "" : ""}</div>}</div>{(categoryId || stateId || cityId || query || activeFilterCount) && <button type="button" className="secondaryButton" onClick={clearAll}>Limpar filtros</button>}</div>
       {error && <div className="emptyDiscovery"><h2>Não foi possível carregar</h2><p>{error}</p><button type="button" className="primaryButton" onClick={() => window.location.reload()}>Tentar novamente</button></div>}
       {!loading && !error && advertisers.length === 0 && <div className="emptyDiscovery"><h2>Nenhum perfil encontrado.</h2><p>Ajuste os filtros ou aguarde novos anúncios publicados.</p><Link href="/cadastro" className="primaryButton">Quero anunciar</Link></div>}
-      {!error && advertisers.length > 0 && <div className="advertiserGrid">{advertisers.map((item) => <article className="advertiserCard" key={item.id}><div className="advertiserVisual">{item.imageUrl ? <img src={item.imageUrl} alt={item.display_name || item.title || "Perfil Pecatho"} /> : <div className="visualPlaceholder"><span>✦</span><div>Pecatho</div><small>Mídia de apresentação</small></div>}{item.verification_status === "verified" && <span className="verifiedMark">✓ VERIFICADO</span>}</div><div className="advertiserBody"><div className="advertiserCategory">{item.category_id != null ? categoryName.get(item.category_id) || "ANUNCIANTE" : "ANUNCIANTE"}</div><h3>{item.title || item.display_name || "Perfil Pecatho"}</h3><p className="advertiserName">{item.display_name || "Anunciante"}</p><p className="advertiserLocation">⌖ {item.city_name || (item.city_id != null ? cityName.get(item.city_id) : null) || "Cidade não informada"}{item.state_uf || (item.state_id != null ? stateName.get(item.state_id) : null) ? ` · ${item.state_uf || stateName.get(item.state_id as number)}` : ""}</p><p className="advertiserSummary">{item.summary || "Perfil publicado no Pecatho."}</p>{(() => { const periods = Array.isArray(item.pricing?.periods) ? (item.pricing.periods as PricingPeriod[]) : []; const valid = periods.filter((row) => Number.isFinite(Number(row.price)) && Number(row.price) > 0 && Number.isFinite(Number(row.minutes))); const oneHour = valid.find((row) => Number(row.minutes) === 60); const display = oneHour || valid[0]; return display ? <div className="advertiserCardPrice"><span>{display.starting_from === true ? "A partir de " : ""}{display.period || (Number(display.minutes) === 60 ? "1 Hora" : `${display.minutes} min`)}</span><strong>{new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(display.price))}</strong></div> : null; })()}{item.slug && <Link className="primaryButton" href={`/anunciantes/${item.slug}`}>Ver perfil</Link>}</div></article>)}</div>}
+      {!error && advertisers.length > 0 && <><div className="advertiserGrid">{advertisers.map((item) => <article className="advertiserCard" key={item.id}><div className="advertiserVisual">{item.imageUrl ? <img src={item.imageUrl} alt={item.display_name || item.title || "Perfil Pecatho"} /> : <div className="visualPlaceholder"><span>✦</span><div>Pecatho</div><small>Mídia de apresentação</small></div>}{item.verification_status === "verified" && <span className="verifiedMark">✓ VERIFICADO</span>}</div><div className="advertiserBody"><div className="advertiserCategory">{item.category_id != null ? categoryName.get(item.category_id) || "ANUNCIANTE" : "ANUNCIANTE"}</div><h3>{item.title || item.display_name || "Perfil Pecatho"}</h3><p className="advertiserName">{item.display_name || "Anunciante"}</p><p className="advertiserLocation">⌖ {item.city_name || (item.city_id != null ? cityName.get(item.city_id) : null) || "Cidade não informada"}{item.state_uf || (item.state_id != null ? stateName.get(item.state_id) : null) ? ` · ${item.state_uf || stateName.get(item.state_id as number)}` : ""}</p><p className="advertiserSummary">{item.summary || "Perfil publicado no Pecatho."}</p>{(() => { const periods = Array.isArray(item.pricing?.periods) ? (item.pricing.periods as PricingPeriod[]) : []; const valid = periods.filter((row) => Number.isFinite(Number(row.price)) && Number(row.price) > 0 && Number.isFinite(Number(row.minutes))); const oneHour = valid.find((row) => Number(row.minutes) === 60); const display = oneHour || valid[0]; return display ? <div className="advertiserCardPrice"><span>{display.starting_from === true ? "A partir de " : ""}{display.period || (Number(display.minutes) === 60 ? "1 Hora" : `${display.minutes} min`)}</span><strong>{new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(display.price))}</strong></div> : null; })()}{item.slug && <Link className="primaryButton" href={`/anunciantes/${item.slug}`}>Ver perfil</Link>}</div></article>)}</div>{hasMore && <div className="discoveryLoadMore"><button type="button" className="secondaryButton" onClick={loadMore} disabled={loadingMore}>{loadingMore ? "Carregando mais perfis..." : "Carregar mais perfis"}</button></div>}</>}
     </section>
   </main>;
 }
