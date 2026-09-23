@@ -68,6 +68,43 @@ export default async function FansReceiptsPage() {
   const outstandingPayouts = Number(summary.outstanding_payouts);
   const available = Number(summary.available);
 
+  const { data: liveReconciliationData, error: liveReconciliationError } = await supabase
+    .rpc("fans_live_financial_reconciliation", { p_creator_id: creator.id });
+  if (liveReconciliationError) throw new Error(liveReconciliationError.message);
+
+  type LiveReconciliation = {
+    gross_live_sales: number | string;
+    live_refunds: number | string;
+    live_creator_holds: number | string;
+    live_hold_releases: number | string;
+    live_net_creator_impact: number | string;
+    live_completed_count: number | string;
+    live_refunded_count: number | string;
+    live_refund_pending_count: number | string;
+    available: number | string;
+  };
+
+  const liveReconciliation = ((liveReconciliationData ?? [])[0] ?? {
+    gross_live_sales: 0,
+    live_refunds: 0,
+    live_creator_holds: 0,
+    live_hold_releases: 0,
+    live_net_creator_impact: 0,
+    live_completed_count: 0,
+    live_refunded_count: 0,
+    live_refund_pending_count: 0,
+    available,
+  }) as LiveReconciliation;
+
+  const liveGrossSales = Number(liveReconciliation.gross_live_sales);
+  const liveRefunds = Number(liveReconciliation.live_refunds);
+  const liveCreatorHolds = Number(liveReconciliation.live_creator_holds);
+  const liveHoldReleases = Number(liveReconciliation.live_hold_releases);
+  const liveNetCreatorImpact = Number(liveReconciliation.live_net_creator_impact);
+  const liveCompletedCount = Number(liveReconciliation.live_completed_count);
+  const liveRefundedCount = Number(liveReconciliation.live_refunded_count);
+  const liveRefundPendingCount = Number(liveReconciliation.live_refund_pending_count);
+
   const { data: ledgerData, error: ledgerError } = await admin.from("fans_financial_ledger").select("id,entry_type,direction,amount,currency,status,provider,provider_reference,occurred_at,created_at").eq("creator_id", creator.id).order("occurred_at", { ascending: false }).limit(200);
   if (ledgerError) throw new Error(ledgerError.message);
   const ledger = (ledgerData ?? []) as LedgerRow[];
@@ -89,6 +126,44 @@ export default async function FansReceiptsPage() {
           <article className="card"><span className="metricLabel">SALDO DISPONÍVEL</span><strong>{money(available)}</strong><p>Saldo agregado e validado no banco</p></article>
         </div>
         <PayoutRequestForm creatorId={creator.id} available={available} />
+
+        <section className="card" style={{ marginTop: 20 }}>
+          <div className="eyebrow">CONCILIAÇÃO DAS CHAMADAS AO VIVO</div>
+          <h2>Resultado financeiro das chamadas</h2>
+          <p>
+            Esta visão separa as chamadas ao vivo do restante da operação e considera vendas, reembolsos,
+            reservas temporárias de saldo e liberações de reservas. O saldo disponível continua sendo
+            calculado pela mesma fonte financeira usada para os recebimentos.
+          </p>
+          <div className="fansMetrics" style={{ marginTop: 20 }}>
+            <article className="card">
+              <span className="metricLabel">VENDAS AO VIVO</span>
+              <strong>{money(liveGrossSales)}</strong>
+              <p>{liveCompletedCount} chamada(s) concluída(s)</p>
+            </article>
+            <article className="card">
+              <span className="metricLabel">REEMBOLSOS</span>
+              <strong>{money(liveRefunds)}</strong>
+              <p>{liveRefundedCount} chamada(s) com reembolso concluído</p>
+            </article>
+            <article className="card">
+              <span className="metricLabel">SALDO RESERVADO</span>
+              <strong>{money(liveCreatorHolds)}</strong>
+              <p>{liveRefundPendingCount} tratamento(s) ainda pendente(s)</p>
+            </article>
+            <article className="card">
+              <span className="metricLabel">IMPACTO LÍQUIDO</span>
+              <strong>{money(liveNetCreatorImpact)}</strong>
+              <p>{money(liveHoldReleases)} em reservas liberadas</p>
+            </article>
+          </div>
+          <p style={{ marginTop: 18, marginBottom: 0 }}>
+            O valor reservado não representa perda definitiva: enquanto o provedor processa um reembolso,
+            o crédito do criador permanece bloqueado. Se o reembolso falhar, a reserva é liberada de forma
+            idempotente; se for concluído, a reserva permanece como débito financeiro definitivo.
+          </p>
+        </section>
+
         <section className="card" style={{ marginTop: 20, overflowX: "auto" }}><div style={{ minWidth: 900 }}><div className="eyebrow">EXTRATO</div><h1>Extrato financeiro</h1><p>Os indicadores financeiros são calculados por agregação no banco. A tabela abaixo exibe os 200 movimentos mais recentes.</p><div style={{ marginTop: 24 }}>{posted.length === 0 ? <p>Nenhum movimento financeiro registrado ainda.</p> : <table style={{ width: "100%", borderCollapse: "collapse" }}><thead><tr><th align="left">Data</th><th align="left">Evento</th><th align="left">Direção</th><th align="right">Valor</th><th align="left">Provedor</th></tr></thead><tbody>{posted.map(e => <tr key={e.id} style={{ borderTop: "1px solid #e5e7eb" }}><td>{date(e.occurred_at)}</td><td>{entryLabel(e.entry_type)}</td><td>{e.direction === "credit" ? "Crédito" : "Débito"}</td><td align="right">{money(Number(e.amount))}</td><td>{e.provider || "—"}</td></tr>)}</tbody></table>}</div></div></section>
         <section className="card" style={{ marginTop: 20, overflowX: "auto" }}><div style={{ minWidth: 900 }}><div className="eyebrow">HISTÓRICO DE RECEBIMENTOS</div><h2>Solicitações de recebimento</h2><p>O saldo reservado considera todas as solicitações abertas, não apenas as exibidas nesta tabela. A tabela mostra as 50 solicitações mais recentes.</p><div style={{ marginTop: 20 }}>{payoutRows.length === 0 ? <p>Nenhuma solicitação registrada ainda.</p> : <table style={{ width: "100%", borderCollapse: "collapse" }}><thead><tr><th align="left">Solicitado</th><th align="right">Valor</th><th align="left">Status</th><th align="left">Processado</th><th align="left">Motivo</th></tr></thead><tbody>{payoutRows.map(p => <tr key={p.id} style={{ borderTop: "1px solid #e5e7eb" }}><td>{date(p.requested_at)}</td><td align="right">{money(Number(p.amount))}</td><td>{statusLabel(p.status)}</td><td>{date(p.processed_at)}</td><td>{p.rejection_reason || "—"}</td></tr>)}</tbody></table>}</div></div></section>
         <p style={{ marginTop: 20 }}>Para acompanhar vendas confirmadas, estornos e contestações, consulte <Link href="/fans/gerenciar/vendas">Vendas e monetização</Link>.</p>
