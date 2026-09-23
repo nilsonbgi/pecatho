@@ -377,3 +377,7 @@
     margin-top:12px;
   }
 }
+
+
+/* Pecatho — correção de overflow horizontal da descoberta pública */
+.discoveryHero{overflow-x:clip;}
