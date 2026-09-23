@@ -46,6 +46,9 @@ export default function FansLiveRoomPage() {
   const [remaining, setRemaining] = useState<number | null>(null);
   const [ending, setEnding] = useState(false);
   const [extending, setExtending] = useState(false);
+  const [extensionRequest, setExtensionRequest] = useState<{ extension_request_id: string; order_id: string; minutes: number; amount: number; currency: string; expires_at: string } | null>(null);
+  const [extensionLoading, setExtensionLoading] = useState(false);
+  const [extensionError, setExtensionError] = useState("");
   const [kicking, setKicking] = useState(false);
   const [tipAmount, setTipAmount] = useState(10);
   const [tipMessage, setTipMessage] = useState("");
@@ -322,17 +325,63 @@ export default function FansLiveRoomPage() {
   const extendSession = useCallback(async (minutes: number) => {
     if (accessRef.current?.role !== "creator" || extending) return;
     setExtending(true);
-    setError("");
-    const { data, error: extensionError } = await supabase.rpc("extend_fans_live_session", { p_session_id: sessionId, p_minutes: minutes });
-    if (extensionError) { setError(extensionError.message); setExtending(false); return; }
-    if (data && typeof data === "object") {
-      const result = data as { duration_minutes?: number; ends_at?: string };
-      setAccess((current) => current ? { ...current, duration_minutes: Number(result.duration_minutes ?? current.duration_minutes), ends_at: result.ends_at ?? current.ends_at } : current);
-      accessRef.current = accessRef.current ? { ...accessRef.current, duration_minutes: Number(result.duration_minutes ?? accessRef.current.duration_minutes), ends_at: result.ends_at ?? accessRef.current.ends_at } : accessRef.current;
-      setConnection(`Chamada estendida em ${minutes} minutos.`);
+    setExtensionError("");
+    const { error: requestError } = await supabase.rpc("request_fans_live_extension", {
+      p_session_id: sessionId,
+      p_minutes: minutes,
+    });
+    if (requestError) {
+      setExtensionError(requestError.message);
+      setExtending(false);
+      return;
     }
+    setConnection(`Solicitação de extensão de ${minutes} minutos enviada ao comprador.`);
     setExtending(false);
   }, [extending, sessionId, supabase]);
+
+  const loadExtensionRequest = useCallback(async () => {
+    if (accessRef.current?.role !== "buyer") return;
+    const { data, error: requestError } = await supabase.rpc("get_fans_live_extension_checkout", { p_session_id: sessionId });
+    if (requestError) return;
+    if (data && typeof data === "object" && (data as { pending?: boolean }).pending) {
+      const request = data as { pending: boolean; extension_request_id: string; order_id: string; minutes: number; amount: number; currency: string; expires_at: string };
+      setExtensionRequest(request);
+    } else {
+      setExtensionRequest(null);
+    }
+  }, [sessionId, supabase]);
+
+  const payExtension = useCallback(async () => {
+    if (!extensionRequest?.order_id || extensionLoading) return;
+    setExtensionLoading(true);
+    setExtensionError("");
+    try {
+      const response = await fetch("/api/fans/checkout/provider", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_id: extensionRequest.order_id }),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || typeof result?.checkout_url !== "string") {
+        throw new Error(result?.error ?? "Não foi possível abrir o pagamento da extensão.");
+      }
+      window.open(result.checkout_url, "_blank", "noopener,noreferrer");
+    } catch (paymentError) {
+      setExtensionError(paymentError instanceof Error ? paymentError.message : "Não foi possível iniciar o pagamento da extensão.");
+    } finally {
+      setExtensionLoading(false);
+    }
+  }, [extensionLoading, extensionRequest]);
+
+  const rejectExtension = useCallback(async () => {
+    if (!extensionRequest?.extension_request_id || extensionLoading) return;
+    setExtensionLoading(true);
+    setExtensionError("");
+    const { error: rejectError } = await supabase.rpc("reject_fans_live_extension", { p_request_id: extensionRequest.extension_request_id });
+    if (rejectError) setExtensionError(rejectError.message);
+    else setExtensionRequest(null);
+    setExtensionLoading(false);
+  }, [extensionLoading, extensionRequest, supabase]);
 
   const kickParticipant = useCallback(async () => {
     if (accessRef.current?.role !== "creator" || kicking) return;
@@ -438,6 +487,31 @@ export default function FansLiveRoomPage() {
           {
             event: "*",
             schema: "public",
+            table: "fans_live_extension_requests",
+            filter: `session_id=eq.${sessionId}`,
+          },
+          (payload) => {
+            const request = payload.new as { id?: string; order_id?: string | null; minutes?: number; amount?: number | string; currency?: string; status?: string; expires_at?: string };
+            if (accessRef.current?.role === "buyer" && request.status === "pending_payment" && request.id && request.order_id) {
+              setExtensionRequest({
+                extension_request_id: request.id,
+                order_id: request.order_id,
+                minutes: Number(request.minutes ?? 0),
+                amount: Number(request.amount ?? 0),
+                currency: request.currency ?? "BRL",
+                expires_at: request.expires_at ?? new Date().toISOString(),
+              });
+            }
+            if (["paid", "rejected", "expired", "cancelled", "refunded"].includes(request.status ?? "")) {
+              setExtensionRequest(null);
+            }
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
             table: "fans_tips",
             filter: `session_id=eq.${sessionId}`,
           },
@@ -492,6 +566,7 @@ export default function FansLiveRoomPage() {
 
       await touchSession();
       await loadPaidTips();
+      await loadExtensionRequest();
       await sendSignal("join");
       setLoading(false);
     }
@@ -507,7 +582,7 @@ export default function FansLiveRoomPage() {
       pcRef.current?.close();
       pcRef.current = null;
     };
-  }, [createPeer, handleSignal, loadPaidTips, router, sendSignal, sessionId, supabase, touchSession]);
+  }, [createPeer, handleSignal, loadExtensionRequest, loadPaidTips, router, sendSignal, sessionId, supabase, touchSession]);
 
   useEffect(() => {
     if (!access) return;
@@ -640,12 +715,25 @@ export default function FansLiveRoomPage() {
               <button onClick={() => toggleTrack("audio")} className="rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-semibold">{micEnabled ? "Microfone ativo" : "Microfone desligado"}</button>
               <button onClick={() => toggleTrack("video")} className="rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-semibold">{cameraEnabled ? "Câmera ativa" : "Câmera desligada"}</button>
               {access.role === "creator" && <>
-                <button onClick={() => void extendSession(15)} disabled={extending} className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm font-semibold text-emerald-100 disabled:opacity-60">{extending ? "Estendendo..." : "Estender +15 min"}</button>
-                <button onClick={() => void extendSession(30)} disabled={extending} className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm font-semibold text-emerald-100 disabled:opacity-60">Estender +30 min</button>
+                <button onClick={() => void extendSession(15)} disabled={extending} className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm font-semibold text-emerald-100 disabled:opacity-60">{extending ? "Solicitando..." : "Solicitar +15 min"}</button>
+                <button onClick={() => void extendSession(30)} disabled={extending} className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm font-semibold text-emerald-100 disabled:opacity-60">Solicitar +30 min</button>
                 <button onClick={() => void kickParticipant()} disabled={kicking || !access.other_joined} className="rounded-xl border border-orange-400/30 bg-orange-400/10 px-4 py-3 text-sm font-semibold text-orange-100 disabled:opacity-40">{kicking ? "Removendo..." : "Derrubar participante"}</button>
                 <button onClick={() => void endSession()} disabled={ending} className="rounded-xl bg-red-500 px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">{ending ? "Encerrando..." : "Encerrar chamada"}</button>
               </>}
-              {access.role === "buyer" && <button onClick={() => void endSession()} disabled={ending} className="rounded-xl bg-red-500 px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">{ending ? "Saindo..." : "Sair da chamada"}</button>}
+              {access.role === "buyer" && <>
+                {extensionRequest && (
+                  <div className="flex flex-col gap-2 rounded-xl border border-emerald-400/30 bg-emerald-400/10 p-3 text-left sm:min-w-80">
+                    <p className="text-sm font-bold text-emerald-100">Extensão solicitada: +{extensionRequest.minutes} min</p>
+                    <p className="text-xs text-emerald-200/80">R$ {extensionRequest.amount.toFixed(2).replace(".", ",")} · o tempo adicional só é liberado após a confirmação do pagamento.</p>
+                    <div className="flex gap-2">
+                      <button onClick={() => void payExtension()} disabled={extensionLoading} className="rounded-lg bg-emerald-300 px-3 py-2 text-xs font-bold text-slate-950 disabled:opacity-60">{extensionLoading ? "Abrindo..." : "Pagar extensão"}</button>
+                      <button onClick={() => void rejectExtension()} disabled={extensionLoading} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-300 disabled:opacity-60">Recusar</button>
+                    </div>
+                  </div>
+                )}
+                {extensionError && <span className="text-xs text-red-300">{extensionError}</span>}
+                <button onClick={() => void endSession()} disabled={ending} className="rounded-xl bg-red-500 px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">{ending ? "Saindo..." : "Sair da chamada"}</button>
+              </>}
             </div>
 
             <p className="mx-auto mt-5 max-w-2xl text-center text-xs leading-5 text-slate-500">
