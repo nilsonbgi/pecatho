@@ -38,8 +38,6 @@ function labelValue(value: unknown) {
   return String(value);
 }
 
-
-
 function safeExternalUrl(value: string | null | undefined) {
   const raw = String(value || "").trim();
   if (!raw) return null;
@@ -160,7 +158,9 @@ export default function PublicAdvertiserPage() {
       ? Object.entries(methods as Record<string, unknown>).filter(([, value]) => value === true).map(([key]) => key)
       : [];
   })();
-  const paymentLabels: Record<string, string> = { pix: "PIX", dinheiro: "Dinheiro", cartao_credito: "Cartão de crédito", cartao_debito: "Cartão de débito", transferencia: "Transferência bancária", outro: "Outro meio de pagamento" };\n  const whatsappContact = contactDigits(profile?.whatsapp);\n  const phoneContact = contactDigits(profile?.phone);
+  const paymentLabels: Record<string, string> = { pix: "PIX", dinheiro: "Dinheiro", cartao_credito: "Cartão de crédito", cartao_debito: "Cartão de débito", transferencia: "Transferência bancária", outro: "Outro meio de pagamento" };
+  const whatsappContact = contactDigits(profile?.whatsapp);
+  const phoneContact = contactDigits(profile?.phone);
   const age = calculateAge(profile?.birth_date || null);
   const visibleAttributeRows = attributes.map((attribute) => ({ attribute, value: attributeValues.find((entry) => entry.attribute_id === attribute.id)?.value })).filter(({ value }) => labelValue(value));
   const selectedServices = services.filter((service) => profileServices.some((entry) => entry.service_id === service.id && entry.selected));
