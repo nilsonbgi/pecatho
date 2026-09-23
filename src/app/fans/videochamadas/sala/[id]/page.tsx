@@ -200,7 +200,7 @@ export default function FansLiveRoomPage() {
         if (role === "creator") {
           window.setTimeout(() => {
             if (pcRef.current === pc && (pc.connectionState === "disconnected" || pc.connectionState === "failed")) {
-              void createOffer(true);
+              void restartIceOffer(pc);
             }
           }, 1200);
         }
@@ -210,7 +210,7 @@ export default function FansLiveRoomPage() {
         if (role === "creator") {
           window.setTimeout(() => {
             if (pcRef.current === pc && pc.connectionState === "failed") {
-              void createOffer(true);
+              void restartIceOffer(pc);
             }
           }, 1200);
         }
@@ -224,7 +224,20 @@ export default function FansLiveRoomPage() {
     }
 
     return pc;
-  }, [createOffer, sendSignal]);
+  }, [sendSignal]);
+
+  const restartIceOffer = useCallback(async (pc: RTCPeerConnection) => {
+    if (pcRef.current !== pc || accessRef.current?.role !== "creator") return;
+    try {
+      pc.restartIce();
+      const offer = await pc.createOffer({ iceRestart: true });
+      await pc.setLocalDescription(offer);
+      await sendSignal("offer", { sdp: offer.sdp, type: offer.type });
+      setConnection("Reconectando...");
+    } catch {
+      setError("Não foi possível restabelecer a conexão de vídeo.");
+    }
+  }, [sendSignal]);
 
   const createOffer = useCallback(async (restartIce = false) => {
     const pc = pcRef.current;
