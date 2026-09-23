@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
 import ApproximateLocationMap from "@/components/ApproximateLocationMap";
 
-type Profile = { id: string; user_id: string; title: string | null; display_name: string | null; summary: string | null; description: string | null; status: string; verification_status: string | null; city_id: number | null; state_id: number | null; category_id: number | null; birth_date: string | null; height_cm: number | null; weight_kg: number | null; availability: string | null; pricing: Record<string, unknown> | null; social_links: Record<string, string> | null };
+type Profile = { id: string; user_id: string; title: string | null; display_name: string | null; summary: string | null; description: string | null; status: string; verification_status: string | null; city_id: number | null; state_id: number | null; category_id: number | null; birth_date: string | null; height_cm: number | null; weight_kg: number | null; availability: string | null; pricing: Record<string, unknown> | null; payment_options: Record<string, unknown> | null; social_links: Record<string, string> | null };
 type Address = { public_latitude: number | null; public_longitude: number | null };
 type Media = { id: string; profile_id: string; storage_bucket: string; storage_path: string; preview_storage_bucket: string | null; preview_storage_path: string | null; kind: string; access_type: "public" | "paid"; price: number; currency: string; is_primary: boolean; sort_order: number; moderation_status: string };
 type Review = { id: string; rating: number | null; comment: string | null; created_at: string; experience_verified: boolean };
@@ -86,7 +86,7 @@ export default function PublicAdvertiserPage() {
     (async () => {
       const { data: p, error: profileError } = await supabase
         .from("advertiser_profiles")
-        .select("id,user_id,title,display_name,summary,description,status,verification_status,city_id,state_id,category_id,birth_date,height_cm,weight_kg,availability,pricing,social_links")
+        .select("id,user_id,title,display_name,summary,description,status,verification_status,city_id,state_id,category_id,birth_date,height_cm,weight_kg,availability,pricing,payment_options,social_links")
         .eq("slug", params.slug)
         .eq("status", "published")
         .maybeSingle();
@@ -133,6 +133,13 @@ export default function PublicAdvertiserPage() {
   const publicImages = media.filter((item) => item.kind === "image").length;
   const publicVideos = media.filter((item) => item.kind === "video").length;
   const socialLinks = Object.entries(profile?.social_links || {}).filter(([, value]) => Boolean(value));
+  const paymentMethods = (() => {
+    const methods = profile?.payment_options?.methods;
+    return methods && typeof methods === "object" && !Array.isArray(methods)
+      ? Object.entries(methods as Record<string, unknown>).filter(([, value]) => value === true).map(([key]) => key)
+      : [];
+  })();
+  const paymentLabels: Record<string, string> = { pix: "PIX", dinheiro: "Dinheiro", cartao_credito: "Cartão de crédito", cartao_debito: "Cartão de débito", transferencia: "Transferência bancária", outro: "Outro meio de pagamento" };
   const age = calculateAge(profile?.birth_date || null);
   const visibleAttributeRows = attributes.map((attribute) => ({ attribute, value: attributeValues.find((entry) => entry.attribute_id === attribute.id)?.value })).filter(({ value }) => labelValue(value));
   const selectedServices = services.filter((service) => profileServices.some((entry) => entry.service_id === service.id && entry.selected));
@@ -239,6 +246,8 @@ export default function PublicAdvertiserPage() {
       {selectedServices.length > 0 && <section className="profileServices card"><div className="eyebrow">SERVIÇOS</div><h2>Serviços e modalidades</h2><div className="serviceChips">{selectedServices.map((service) => <span key={service.id}>{service.name}</span>)}</div></section>}
 
       {validPrices.length > 0 && <section className="profilePricing card"><div className="eyebrow">VALORES</div><h2>Preços por período</h2><div className="priceGrid">{validPrices.map((row, index) => { const minutes = Number(row.minutes); const label = typeof row.period === "string" && row.period ? row.period : minutes === 60 ? "1 Hora" : minutes > 0 ? `${minutes} minutos` : "Período"; return <div key={`${String(row.minutes ?? row.period ?? index)}-${index}`}><span>{label}</span><strong>{row.starting_from === true ? "A partir de " : ""}{brl(Number(row.price))}</strong></div>; })}</div></section>}
+
+      {paymentMethods.length > 0 && <section className="profilePayment card"><div className="eyebrow">PAGAMENTO</div><h2>Formas de pagamento</h2><div className="paymentChips">{paymentMethods.map((key) => <span key={key}>✓ {paymentLabels[key] || key}</span>)}</div></section>}
 
       {profile.availability && <section className="profileAvailability card"><div className="eyebrow">DISPONIBILIDADE</div><h2>Horários de atendimento</h2><p>{profile.availability}</p></section>}
 
