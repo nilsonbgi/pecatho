@@ -45,6 +45,8 @@ export default function FansLiveRoomPage() {
   const [participantJoined, setParticipantJoined] = useState(false);
   const [remaining, setRemaining] = useState<number | null>(null);
   const [ending, setEnding] = useState(false);
+  const [extending, setExtending] = useState(false);
+  const [kicking, setKicking] = useState(false);
   const [tipAmount, setTipAmount] = useState(10);
   const [tipMessage, setTipMessage] = useState("");
   const [tipLoading, setTipLoading] = useState(false);
@@ -287,6 +289,35 @@ export default function FansLiveRoomPage() {
     }
   }, [createOffer, flushCandidates, sendSignal]);
 
+  const extendSession = useCallback(async (minutes: number) => {
+    if (accessRef.current?.role !== "creator" || extending) return;
+    setExtending(true);
+    setError("");
+    const { data, error: extensionError } = await supabase.rpc("extend_fans_live_session", { p_session_id: sessionId, p_minutes: minutes });
+    if (extensionError) { setError(extensionError.message); setExtending(false); return; }
+    if (data && typeof data === "object") {
+      const result = data as { duration_minutes?: number; ends_at?: string };
+      setAccess((current) => current ? { ...current, duration_minutes: Number(result.duration_minutes ?? current.duration_minutes), ends_at: result.ends_at ?? current.ends_at } : current);
+      accessRef.current = accessRef.current ? { ...accessRef.current, duration_minutes: Number(result.duration_minutes ?? accessRef.current.duration_minutes), ends_at: result.ends_at ?? accessRef.current.ends_at } : accessRef.current;
+      setConnection(`Chamada estendida em ${minutes} minutos.`);
+    }
+    setExtending(false);
+  }, [extending, sessionId, supabase]);
+
+  const kickParticipant = useCallback(async () => {
+    if (accessRef.current?.role !== "creator" || kicking) return;
+    if (!window.confirm("Encerrar a chamada e remover o participante desta sala?")) return;
+    setKicking(true);
+    setError("");
+    await sendSignal("leave");
+    const { error: kickError } = await supabase.rpc("kick_fans_live_participant", { p_session_id: sessionId });
+    if (kickError) { setError(kickError.message); setKicking(false); return; }
+    setConnection("Participante removido. Chamada encerrada.");
+    localStreamRef.current?.getTracks().forEach((track) => track.stop());
+    pcRef.current?.close();
+    router.push("/fans/gerenciar/videochamadas/sessoes");
+  }, [kicking, router, sendSignal, sessionId, supabase]);
+
   const endSession = useCallback(async (redirect = true) => {
     if (endedRef.current) return;
     endedRef.current = true;
@@ -396,8 +427,14 @@ export default function FansLiveRoomPage() {
             filter: `id=eq.${sessionId}`,
           },
           (payload) => {
-            if (payload.new.status === "completed") {
-              setConnection("Chamada encerrada.");
+            const session = payload.new as { status?: string; duration_minutes?: number; scheduled_for?: string; ended_reason?: string | null };
+            if (session.duration_minutes && session.scheduled_for) {
+              const nextEndsAt = new Date(new Date(session.scheduled_for).getTime() + Number(session.duration_minutes) * 60000).toISOString();
+              setAccess((current) => current ? { ...current, duration_minutes: Number(session.duration_minutes), ends_at: nextEndsAt } : current);
+              accessRef.current = accessRef.current ? { ...accessRef.current, duration_minutes: Number(session.duration_minutes), ends_at: nextEndsAt } : accessRef.current;
+            }
+            if (session.status === "completed") {
+              setConnection(session.ended_reason === "creator_removed_participant" ? "A chamada foi encerrada pelo criador." : "Chamada encerrada.");
               window.setTimeout(() => router.push(accessRef.current?.role === "creator" ? "/fans/gerenciar/videochamadas/sessoes" : "/fans/videochamadas"), 900);
             }
           }
@@ -572,7 +609,13 @@ export default function FansLiveRoomPage() {
             <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
               <button onClick={() => toggleTrack("audio")} className="rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-semibold">{micEnabled ? "Microfone ativo" : "Microfone desligado"}</button>
               <button onClick={() => toggleTrack("video")} className="rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-semibold">{cameraEnabled ? "Câmera ativa" : "Câmera desligada"}</button>
-              <button onClick={() => void endSession()} disabled={ending} className="rounded-xl bg-red-500 px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">{ending ? "Encerrando..." : "Encerrar chamada"}</button>
+              {access.role === "creator" && <>
+                <button onClick={() => void extendSession(15)} disabled={extending} className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm font-semibold text-emerald-100 disabled:opacity-60">{extending ? "Estendendo..." : "Estender +15 min"}</button>
+                <button onClick={() => void extendSession(30)} disabled={extending} className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm font-semibold text-emerald-100 disabled:opacity-60">Estender +30 min</button>
+                <button onClick={() => void kickParticipant()} disabled={kicking || !access.other_joined} className="rounded-xl border border-orange-400/30 bg-orange-400/10 px-4 py-3 text-sm font-semibold text-orange-100 disabled:opacity-40">{kicking ? "Removendo..." : "Derrubar participante"}</button>
+                <button onClick={() => void endSession()} disabled={ending} className="rounded-xl bg-red-500 px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">{ending ? "Encerrando..." : "Encerrar chamada"}</button>
+              </>}
+              {access.role === "buyer" && <button onClick={() => void endSession()} disabled={ending} className="rounded-xl bg-red-500 px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">{ending ? "Saindo..." : "Sair da chamada"}</button>}
             </div>
 
             <p className="mx-auto mt-5 max-w-2xl text-center text-xs leading-5 text-slate-500">
