@@ -39,6 +39,18 @@ function labelValue(value: unknown) {
 }
 
 
+
+function safeExternalUrl(value: string | null | undefined) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  try {
+    const url = new URL(raw);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 function contactDigits(value: string | null) {
   const digits = String(value || "").replace(/\\D/g, "");
   if (!digits) return "";
@@ -141,7 +153,7 @@ export default function PublicAdvertiserPage() {
   const averageRating = reviews.length ? reviews.reduce((sum, item) => sum + Number(item.rating || 0), 0) / reviews.length : 0;
   const publicImages = media.filter((item) => item.kind === "image").length;
   const publicVideos = media.filter((item) => item.kind === "video").length;
-  const socialLinks = Object.entries(profile?.social_links || {}).filter(([, value]) => Boolean(value));
+  const socialLinks = Object.entries(profile?.social_links || {}).map(([label, value]) => [label, safeExternalUrl(value)] as const).filter(([, url]): url is string => Boolean(url));
   const paymentMethods = (() => {
     const methods = profile?.payment_options?.methods;
     return methods && typeof methods === "object" && !Array.isArray(methods)
@@ -279,7 +291,7 @@ export default function PublicAdvertiserPage() {
       </section>
 
       <section className="profileContentGrid">
-        <article className="card profileAbout"><div className="eyebrow">SOBRE</div><h2>{profile.display_name || "Anunciante"}</h2><p>{profile.description || "A anunciante ainda não adicionou uma apresentação detalhada."}</p>{socialLinks.length > 0 && <div className="profileLinks"><strong>Redes e presença digital</strong>{socialLinks.map(([label, url]) => <a href={url} target="_blank" rel="noreferrer" key={label}>{label}</a>)}</div>}{fans && <div className="fansCta"><div><span>PECATHO FANS</span><strong>{fans.display_name}</strong><p>{fans.bio || "Conteúdo exclusivo diretamente no ecossistema Pecatho."}</p></div><Link href={`/fans/${fans.slug}`} className="primaryButton">Ver conteúdo exclusivo</Link></div>}</article>
+        <article className="card profileAbout"><div className="eyebrow">SOBRE</div><h2>{profile.display_name || "Anunciante"}</h2><p>{profile.description || "A anunciante ainda não adicionou uma apresentação detalhada."}</p>{socialLinks.length > 0 && <div className="profileLinks"><strong>Redes e presença digital</strong>{socialLinks.map(([label, url]) => <a href={url} target="_blank" rel="noopener noreferrer" key={label}>{label}</a>)}</div>}{fans && <div className="fansCta"><div><span>PECATHO FANS</span><strong>{fans.display_name}</strong><p>{fans.bio || "Conteúdo exclusivo diretamente no ecossistema Pecatho."}</p></div><Link href={`/fans/${fans.slug}`} className="primaryButton">Ver conteúdo exclusivo</Link></div>}</article>
         <ApproximateLocationMap latitude={address?.public_latitude ?? null} longitude={address?.public_longitude ?? null} label="Localização aproximada do anúncio" />
       </section>
 
