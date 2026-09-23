@@ -195,9 +195,25 @@ export default function FansLiveRoomPage() {
       } else if (pc.connectionState === "connecting") {
         setConnection("Conectando...");
       } else if (pc.connectionState === "disconnected") {
-        setConnection("Conexão interrompida");
+        setRemoteConnected(false);
+        setConnection("Conexão interrompida. Tentando reconectar...");
+        if (role === "creator") {
+          window.setTimeout(() => {
+            if (pcRef.current === pc && (pc.connectionState === "disconnected" || pc.connectionState === "failed")) {
+              void createOffer(true);
+            }
+          }, 1200);
+        }
       } else if (pc.connectionState === "failed") {
-        setConnection("Falha na conexão");
+        setRemoteConnected(false);
+        setConnection("Falha na conexão. Tentando reconectar...");
+        if (role === "creator") {
+          window.setTimeout(() => {
+            if (pcRef.current === pc && pc.connectionState === "failed") {
+              void createOffer(true);
+            }
+          }, 1200);
+        }
       }
     };
 
@@ -208,16 +224,17 @@ export default function FansLiveRoomPage() {
     }
 
     return pc;
-  }, [sendSignal]);
+  }, [createOffer, sendSignal]);
 
-  const createOffer = useCallback(async () => {
+  const createOffer = useCallback(async (restartIce = false) => {
     const pc = pcRef.current;
     if (!pc) return;
     try {
-      const offer = await pc.createOffer();
+      if (restartIce) pc.restartIce();
+      const offer = await pc.createOffer(restartIce ? { iceRestart: true } : undefined);
       await pc.setLocalDescription(offer);
       await sendSignal("offer", { sdp: offer.sdp, type: offer.type });
-      setConnection("Chamando...");
+      setConnection(restartIce ? "Reconectando..." : "Chamando...");
     } catch {
       setError("Não foi possível iniciar a conexão de vídeo.");
     }
