@@ -95,7 +95,7 @@ export default function PublicAdvertiserPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [conversationBusy, setConversationBusy] = useState(false);
   const [conversationNotice, setConversationNotice] = useState("");
-  const [ageVerified, setAgeVerified] = useState<boolean | null>(null);
+  const [ageVerified, setAgeVerified] = useState(false);
 
   useEffect(() => {
     setAgeVerified(window.localStorage.getItem("pecatho_age_verified") === "true");
