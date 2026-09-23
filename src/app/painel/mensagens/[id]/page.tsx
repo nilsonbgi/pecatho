@@ -9,7 +9,7 @@ type Message = { id: string; sender_id: string; body: string; status: string; cr
 type Profile = { id: string; title: string | null; display_name: string | null; slug: string | null };
 type FansConversation = { id: string; creator_id: string; buyer_user_id: string; source: string; source_id: string | null; status: string };
 type LiveOffer = { id: string; creator_id: string; title: string; description: string | null; duration_minutes: number; price: number; currency: string; status: string };
-type LiveSession = { id: string; offer_id: string; creator_id: string; buyer_user_id: string; conversation_id: string | null; order_id: string | null; title: string; duration_minutes: number; amount: number; currency: string; status: string; paid_at: string | null; scheduled_for: string | null; confirmed_at: string | null; rejection_reason: string | null; created_at: string };
+type LiveSession = { id: string; offer_id: string; creator_id: string; buyer_user_id: string; conversation_id: string | null; order_id: string | null; title: string; duration_minutes: number; amount: number; currency: string; status: string; paid_at: string | null; scheduled_for: string | null; confirmed_at: string | null; rejection_reason: string | null; created_at: string };\ntype LiveTip = { id: string; session_id: string | null; amount: number; creator_amount: number; currency: string; message: string | null; status: string; paid_at: string | null; created_at: string };
 
 export default function ConversationPage() {
   const params = useParams<{ id: string }>();
@@ -17,7 +17,7 @@ export default function ConversationPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [fansConversation, setFansConversation] = useState<FansConversation | null>(null);
   const [offers, setOffers] = useState<LiveOffer[]>([]);
-  const [sessions, setSessions] = useState<LiveSession[]>([]);
+  const [sessions, setSessions] = useState<LiveSession[]>([]);\n  const [tips, setTips] = useState<LiveTip[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [body, setBody] = useState("");
   const [loading, setLoading] = useState(true);
@@ -66,7 +66,7 @@ export default function ConversationPage() {
     }
 
     const fan = fanConversation as FansConversation;
-    const [offerResult, sessionResult] = await Promise.all([
+    const [offerResult, sessionResult, tipResult] = await Promise.all([
       supabase
         .from("fans_live_offers")
         .select("id,creator_id,title,description,duration_minutes,price,currency,status")
@@ -313,7 +313,7 @@ export default function ConversationPage() {
   const isCreator = Boolean(fansConversation && userId === fansConversation.creator_id);
   const activeSession = sessions.find((session) => session.status === "active");
   const pendingOrPaidSession = [...sessions].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).find((session) => ["pending_payment", "paid", "scheduled", "active"].includes(session.status));
-  const latestSession = [...sessions].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+  const latestSession = [...sessions].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];\n  const latestPaidTip = tips.find((tip) => tip.status === "paid");
 
   return (
     <main className="shell">
@@ -396,7 +396,7 @@ export default function ConversationPage() {
                 </div>
               )}
 
-              {activeSession && isBuyer && (
+              {tips.length > 0 && (\n                <div style={{ marginTop: 16, borderTop: "1px solid rgba(255,255,255,.1)", paddingTop: 16 }}>\n                  <div className="eyebrow">{isCreator ? "GORJETAS RECEBIDAS" : "GORJETAS DA SESSÃO"}</div>\n                  <div style={{ display: "grid", gap: 8, marginTop: 10 }}>\n                    {tips.slice(0, 5).map((tip) => (\n                      <div key={tip.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "10px 12px", borderRadius: 10, background: "rgba(255,255,255,.035)" }}>\n                        <div><strong>{money(Number(tip.amount), tip.currency)}</strong>{tip.message && <span className="fieldNote" style={{ display: "block", marginTop: 2 }}>{tip.message}</span>}</div>\n                        <span className="fieldNote">{tip.status === "paid" ? "Pagamento confirmado" : tip.status === "refunded" ? "Reembolsada" : "Pagamento pendente"}</span>\n                      </div>\n                    ))}\n                  </div>\n                </div>\n              )}\n\n              {activeSession && isBuyer && (
                 <div style={{ marginTop: 16, borderTop: "1px solid rgba(255,255,255,.1)", paddingTop: 16 }}>
                   <div className="eyebrow">DURANTE A CHAMADA</div>
                   <p className="fieldNote">Envie uma gorjeta usando o checkout seguro. O valor só será considerado pago após a confirmação oficial.</p>
