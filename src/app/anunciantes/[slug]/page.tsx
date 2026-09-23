@@ -19,7 +19,7 @@ type Service = { id: string; name: string; slug: string; description: string | n
 type ProfileService = { service_id: string; selected: boolean; notes: string | null };
 type FansCreator = { slug: string; display_name: string; bio: string | null; status: string };
 
-type GalleryItem = Media & { url: string | null; previewUrl: string | null; unlockedUrl?: string };
+type GalleryItem = Media & { url: string | null; previewUrl: string | null; unlockedUrl?: string | null };
 
 function brl(value: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -49,7 +49,7 @@ function safeExternalUrl(value: string | null | undefined) {
   }
 }
 
-function contactDigits(value: string | null) {
+function contactDigits(value: string | null | undefined) {
   const digits = String(value || "").replace(/\\D/g, "");
   if (!digits) return "";
   if (digits.startsWith("55")) return digits;
@@ -151,7 +151,7 @@ export default function PublicAdvertiserPage() {
   const averageRating = reviews.length ? reviews.reduce((sum, item) => sum + Number(item.rating || 0), 0) / reviews.length : 0;
   const publicImages = media.filter((item) => item.kind === "image").length;
   const publicVideos = media.filter((item) => item.kind === "video").length;
-  const socialLinks = Object.entries(profile?.social_links || {}).map(([label, value]) => [label, safeExternalUrl(value)] as const).filter(([, url]): url is string => Boolean(url));
+  const socialLinks = Object.entries(profile?.social_links || {}).map(([label, value]) => { const url = safeExternalUrl(value); return url ? [label, url] as const : null; }).filter((entry): entry is readonly [string, string] => entry !== null);
   const paymentMethods = (() => {
     const methods = profile?.payment_options?.methods;
     return methods && typeof methods === "object" && !Array.isArray(methods)
