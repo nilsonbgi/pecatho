@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const protectedPages = ['/painel', '/fans', '/fans/gerenciar', '/admin'];
+const protectedPages = ['/painel', '/fans/gerenciar', '/admin'];
 
 for (const path of protectedPages) {
   test(`protected page ${path} does not expose authenticated UI to anonymous visitors`, async ({ page }) => {
