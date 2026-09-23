@@ -30,6 +30,23 @@ const PRICING_OPTIONS: PricingPeriod[] = [
 
 const sections = ["Apresentação", "Mídias", "Localização", "Características", "Serviços", "Preços", "Contato", "Publicação"];
 
+const PAYMENT_METHODS = [
+  { key: "pix", label: "PIX" },
+  { key: "dinheiro", label: "Dinheiro" },
+  { key: "cartao_credito", label: "Cartão de crédito" },
+  { key: "cartao_debito", label: "Cartão de débito" },
+  { key: "transferencia", label: "Transferência bancária" },
+  { key: "outro", label: "Outro meio de pagamento" },
+] as const;
+
+const SOCIAL_FIELDS = [
+  { key: "instagram", label: "Instagram", placeholder: "https://instagram.com/..." },
+  { key: "tiktok", label: "TikTok", placeholder: "https://tiktok.com/@..." },
+  { key: "telegram", label: "Telegram", placeholder: "https://t.me/..." },
+  { key: "twitter", label: "X / Twitter", placeholder: "https://x.com/..." },
+  { key: "website", label: "Site", placeholder: "https://..." },
+] as const;
+
 function asObject(value: unknown): JsonObject { return value && typeof value === "object" && !Array.isArray(value) ? value as JsonObject : {}; }
 function optionPairs(value: unknown): { label: string; value: string }[] {
   if (!Array.isArray(value)) return [];
@@ -195,6 +212,46 @@ export default function AnuncioPage() {
   }, [categoryId]);
 
   function setAttribute(id: string, value: unknown) { setAttributeValues((current) => ({ ...current, [id]: value })); }
+  function readPaymentMethods() {
+    try {
+      const parsed = paymentOptionsText.trim() ? JSON.parse(paymentOptionsText) : {};
+      const methods = parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as JsonObject).methods : null;
+      return methods && typeof methods === "object" && !Array.isArray(methods) ? methods as Record<string, unknown> : {};
+    } catch {
+      return {};
+    }
+  }
+  function setPaymentMethod(key: string, checked: boolean) {
+    let parsed: JsonObject = {};
+    try {
+      const raw = paymentOptionsText.trim() ? JSON.parse(paymentOptionsText) : {};
+      if (raw && typeof raw === "object" && !Array.isArray(raw)) parsed = raw as JsonObject;
+    } catch {
+      parsed = {};
+    }
+    const existingMethods = parsed.methods && typeof parsed.methods === "object" && !Array.isArray(parsed.methods) ? parsed.methods as Record<string, unknown> : {};
+    setPaymentOptionsText(JSON.stringify({ ...parsed, methods: { ...existingMethods, [key]: checked } }, null, 2));
+  }
+  function readSocialLinks() {
+    try {
+      const parsed = socialLinksText.trim() ? JSON.parse(socialLinksText) : {};
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as Record<string, unknown> : {};
+    } catch {
+      return {};
+    }
+  }
+  function setSocialLink(key: string, value: string) {
+    let parsed: JsonObject = {};
+    try {
+      const raw = socialLinksText.trim() ? JSON.parse(socialLinksText) : {};
+      if (raw && typeof raw === "object" && !Array.isArray(raw)) parsed = raw as JsonObject;
+    } catch {
+      parsed = {};
+    }
+    if (value.trim()) parsed[key] = value.trim();
+    else delete parsed[key];
+    setSocialLinksText(JSON.stringify(parsed, null, 2));
+  }
   function toggleService(id: string, value: boolean) { setSelectedServices((current) => ({ ...current, [id]: value })); }
   function togglePublicLocation() {
     if (latitude == null || longitude == null) { setLocationMessage("Localize o endereço primeiro para definir uma localização pública aproximada."); return; }
@@ -324,7 +381,7 @@ export default function AnuncioPage() {
     {active === "Características" && <><h2>Características</h2><div className="identitySummary"><strong>Identidade cadastral recuperada</strong><span>CPF: {cpf ? cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4") : "não informado"}</span><small>O CPF pertence à conta autenticada e não é publicado no anúncio.</small></div><div className="formGrid"><label>Idade<input type="number" value={age} readOnly disabled aria-readonly="true" /><small className="fieldNote">Calculada automaticamente pela data de nascimento.</small></label><label>Data de nascimento<input type="date" value={birthDate} readOnly disabled aria-readonly="true" /><small className="fieldNote">Fonte oficial da idade: identidade cadastral da conta.</small></label><label>Altura (cm)<input type="number" min={100} max={250} value={height} onChange={(e) => setHeight(e.target.value)} /></label><label>Peso (kg)<input type="number" min={30} max={300} value={weight} onChange={(e) => setWeight(e.target.value)} /></label></div><label>Disponibilidade<textarea value={availability} onChange={(e) => setAvailability(e.target.value)} rows={3} placeholder="Dias e horários de atendimento" /></label>{catalogBusy ? <p className="fieldNote">Carregando características...</p> : attributes.length ? <div className="formGrid">{attributes.map(renderAttribute)}</div> : <p className="fieldNote">Esta categoria ainda não possui atributos configurados.</p>}</>}
     {active === "Serviços" && <><h2>Serviços</h2><p className="fieldNote">Selecione somente os serviços disponíveis no catálogo da categoria. Essas seleções ficam estruturadas no anúncio e podem ser usadas pelos filtros e pela busca pública.</p>{catalogBusy ? <p className="fieldNote">Carregando serviços...</p> : services.length ? <div className="serviceList">{services.map((s) => <label key={s.id} className="serviceCheck"><span><input type="checkbox" checked={selectedServices[s.id] === true} onChange={(e) => toggleService(s.id, e.target.checked)} /> <strong>{s.name}{s.required ? " *" : ""}</strong></span>{s.description && <small>{s.description}</small>}{selectedServices[s.id] && <textarea value={serviceNotes[s.id] || ""} onChange={(e) => setServiceNotes((current) => ({ ...current, [s.id]: e.target.value }))} placeholder="Observação específica (opcional)" rows={2} />}</label>)}</div> : <p className="fieldNote">Esta categoria ainda não possui serviços configurados.</p>}<div className="fieldNote"><strong>{Object.values(selectedServices).filter(Boolean).length}</strong> serviço(s) selecionado(s).</div></>}
     {active === "Preços" && <><h2>Preços e períodos de atendimento</h2><p className="fieldNote">Defina até 5 períodos de atendimento. O período de <strong>1 Hora</strong> é a referência obrigatória do anúncio e pode ser usado pela busca pública para comparação de valores. Esta estrutura também permite apresentar o preço como “a partir de”.</p><div className="pricingEditor">{PRICING_OPTIONS.map((option) => { const current = pricingPeriods.find((row) => row.period === option.period); const selected = Boolean(current); return <div className="pricingRow" key={option.period}><label className="checkRow"><input type="checkbox" checked={selected} disabled={option.minutes === 60} onChange={(e) => { if (e.target.checked) { if (pricingPeriods.length >= 5) { setError("Você pode cadastrar no máximo 5 períodos."); return; } setPricingPeriods((rows) => [...rows, { ...option }]); } else { setPricingPeriods((rows) => rows.filter((row) => row.period !== option.period)); } }} /><strong>{option.period}{option.minutes === 60 ? " *" : ""}</strong></label>{selected && <div className="pricingRowFields"><label>Valor (R$)<input value={String(current?.price ?? "")} onChange={(e) => { const raw = e.target.value.replace(/[^0-9,\.]/g, "").replace(",", "."); setPricingPeriods((rows) => rows.map((row) => row.period === option.period ? { ...row, price: raw === "" ? 0 : Number(raw) } : row)); }} inputMode="decimal" placeholder="0,00" /></label><label className="checkRow pricingStarting"><input type="checkbox" checked={current?.starting_from === true} onChange={(e) => setPricingPeriods((rows) => rows.map((row) => row.period === option.period ? { ...row, starting_from: e.target.checked } : row))} /> Exibir como “a partir de”</label></div>}</div>; })}</div><p className="fieldNote"><strong>{pricingPeriods.length}</strong> de 5 períodos selecionados.</p></>}
-    {active === "Contato" && <><h2>Contato e apresentação comercial</h2><div className="formGrid"><label>Telefone<input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" /></label><label>WhatsApp<input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} inputMode="tel" /></label><label>Telefone secundário<input value={phoneSecondary} onChange={(e) => setPhoneSecondary(e.target.value)} inputMode="tel" /></label><label>Posicionamento<input value={positioning} onChange={(e) => setPositioning(e.target.value)} /></label></div><label>Opções de pagamento (JSON)<textarea value={paymentOptionsText} onChange={(e) => setPaymentOptionsText(e.target.value)} rows={6} /></label><label>Redes sociais (JSON)<textarea value={socialLinksText} onChange={(e) => setSocialLinksText(e.target.value)} rows={6} /></label></>}
+    {active === "Contato" && <><h2>Contato e apresentação comercial</h2><div className="formGrid"><label>Telefone<input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" /></label><label>WhatsApp<input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} inputMode="tel" /></label><label>Telefone secundário<input value={phoneSecondary} onChange={(e) => setPhoneSecondary(e.target.value)} inputMode="tel" /></label><label>Posicionamento<input value={positioning} onChange={(e) => setPositioning(e.target.value)} /></label></div><div className="contactStructuredBlock"><div><div className="eyebrow">PAGAMENTO</div><h3>Formas aceitas</h3><p className="fieldNote">Selecione as formas de pagamento que deseja informar no anúncio. A estrutura anterior é preservada no banco.</p><div className="structuredChoiceGrid">{PAYMENT_METHODS.map((method) => { const methods = readPaymentMethods(); return <label className="structuredChoice" key={method.key}><input type="checkbox" checked={methods[method.key] === true} onChange={(e) => setPaymentMethod(method.key, e.target.checked)} /><span>{method.label}</span></label>; })}</div></div><div><div className="eyebrow">REDES SOCIAIS</div><h3>Presença digital</h3><p className="fieldNote">Informe somente links públicos. Eles serão exibidos como atalhos no perfil publicado.</p><div className="structuredSocialGrid">{SOCIAL_FIELDS.map((field) => { const links = readSocialLinks(); return <label key={field.key}>{field.label}<input value={typeof links[field.key] === "string" ? String(links[field.key]) : ""} onChange={(e) => setSocialLink(field.key, e.target.value)} placeholder={field.placeholder} inputMode="url" /></label>; })}</div></div></div><details className="legacyJsonDetails"><summary>Dados avançados preservados</summary><p className="fieldNote">Use somente se precisar manter alguma chave adicional do formato anterior.</p><textarea value={paymentOptionsText} onChange={(e) => setPaymentOptionsText(e.target.value)} rows={5} aria-label="Opções de pagamento avançadas" /><textarea value={socialLinksText} onChange={(e) => setSocialLinksText(e.target.value)} rows={5} aria-label="Redes sociais avançadas" /></details></>}
     {active === "Publicação" && <><h2>Publicação</h2><div className="publicationBox"><div className="publicationStatus"><span>STATUS DO ANÚNCIO</span><strong>{profileStatus === "pending_review" ? "Em análise" : profileStatus === "published" ? "Publicado" : profileStatus === "paused" ? "Pausado" : "Rascunho"}</strong><small>{verificationStatus === "verified" ? "Identidade verificada" : verificationStatus === "pending" ? "Verificação em análise" : "Verificação ainda não concluída"}</small></div><div className="publicationChecklist">{publicationReadiness.checks.map((check) => <div key={check.key}><span>{check.ready ? "✓" : "!"}</span><p><strong>{check.label}</strong><small>{check.detail}</small></p></div>)}</div><p>Categoria: <strong>{selectedCategory?.name || "não selecionada"}</strong></p><p>Localização pública: <strong>{locationVisibility === "approximate" ? "aproximada" : "privada"}</strong></p>{profileStatus === "pending_review" && <div className="publicationWaiting">Seu anúncio já está na fila de análise. Novos ajustes deverão ser feitos conforme o retorno da moderação.</div>}{profileStatus !== "pending_review" && profileStatus !== "published" && <><div className={publicationReadiness.ready ? "publicationReady" : "publicationBlocked"}>{publicationReadiness.ready ? "Seu anúncio está completo e pode ser enviado para análise." : "Conclua os itens marcados acima antes de solicitar a análise."}</div><button type="button" className="primaryButton publicationSubmit" onClick={() => void requestPublication()} disabled={!publicationReadiness.ready || publishBusy || busy || catalogBusy}>{publishBusy ? "Enviando para análise..." : "Salvar alterações e solicitar análise"}</button></>}</div></>}
     {error && <p className="formError">{error}</p>}{message && <p className="formSuccess">{message}</p>}<div className="editorSaveBar"><div><strong>{busy ? "Salvando alterações..." : "Tudo pronto para salvar"}</strong><span>As alterações ficam no rascunho até a publicação ser solicitada.</span></div><button className="primaryButton" disabled={busy || catalogBusy}>{busy ? "Salvando..." : "Salvar rascunho"}</button></div></form></div></section></main>;
 }
