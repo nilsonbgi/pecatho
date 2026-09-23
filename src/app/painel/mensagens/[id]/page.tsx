@@ -17,7 +17,7 @@ export default function ConversationPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [fansConversation, setFansConversation] = useState<FansConversation | null>(null);
   const [offers, setOffers] = useState<LiveOffer[]>([]);
-  const [sessions, setSessions] = useState<LiveSession[]>([]);\n  const [tips, setTips] = useState<LiveTip[]>([]);
+  const [sessions, setSessions] = useState<LiveSession[]>([]);\n  const [tips, setTips] = useState<LiveTip[]>([]);\n  const sessionIdsRef = useRef<Set<string>>(new Set());
   const [userId, setUserId] = useState<string | null>(null);
   const [body, setBody] = useState("");
   const [loading, setLoading] = useState(true);
