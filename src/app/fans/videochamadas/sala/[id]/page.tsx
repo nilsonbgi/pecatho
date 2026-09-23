@@ -389,9 +389,22 @@ export default function FansLiveRoomPage() {
     setKicking(true);
     setError("");
     await sendSignal("leave");
-    const { error: kickError } = await supabase.rpc("kick_fans_live_participant", { p_session_id: sessionId });
-    if (kickError) { setError(kickError.message); setKicking(false); return; }
-    setConnection("Participante removido. Chamada encerrada.");
+    const response = await fetch("/api/fans/live/close", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: sessionId, action: "kick" }),
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok && response.status !== 202) {
+      setError(result?.error ?? "Não foi possível encerrar a chamada.");
+      setKicking(false);
+      return;
+    }
+    setConnection(
+      result?.refund_status === "refunded"
+        ? "Participante removido. Chamada encerrada e reembolso integral processado."
+        : "Participante removido. Chamada encerrada; reembolso em processamento."
+    );
     localStreamRef.current?.getTracks().forEach((track) => track.stop());
     pcRef.current?.close();
     router.push("/fans/gerenciar/videochamadas/sessoes");
@@ -402,14 +415,19 @@ export default function FansLiveRoomPage() {
     endedRef.current = true;
     setEnding(true);
     await sendSignal("leave");
-    const { error: endError } = await supabase.rpc("end_fans_live_session", {
-      p_session_id: sessionId,
+    const response = await fetch("/api/fans/live/close", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: sessionId, action: "end" }),
     });
-    if (endError && !endError.message.includes("LIVE_SESSION_NOT_ACTIVE")) {
-      setError(endError.message);
-      endedRef.current = false;
-      setEnding(false);
-      return;
+    const result = await response.json().catch(() => null);
+    if (!response.ok && response.status !== 202) {
+      if (!String(result?.error ?? "").includes("LIVE_SESSION_NOT_ACTIVE")) {
+        setError(result?.error ?? "Não foi possível encerrar a chamada.");
+        endedRef.current = false;
+        setEnding(false);
+        return;
+      }
     }
     localStreamRef.current?.getTracks().forEach((track) => track.stop());
     pcRef.current?.close();
@@ -538,7 +556,13 @@ export default function FansLiveRoomPage() {
               accessRef.current = accessRef.current ? { ...accessRef.current, duration_minutes: Number(session.duration_minutes), ends_at: nextEndsAt } : accessRef.current;
             }
             if (session.status === "completed") {
-              setConnection(session.ended_reason === "creator_removed_participant" ? "A chamada foi encerrada pelo criador." : "Chamada encerrada.");
+              setConnection(
+                session.ended_reason === "creator_removed_participant"
+                  ? "A chamada foi encerrada pelo criador. O reembolso integral está sendo processado."
+                  : session.ended_reason === "creator_ended_early"
+                    ? "A chamada foi encerrada antes do término contratado. O reembolso integral está sendo processado."
+                    : "Chamada encerrada."
+              );
               window.setTimeout(() => router.push(accessRef.current?.role === "creator" ? "/fans/gerenciar/videochamadas/sessoes" : "/fans/videochamadas"), 900);
             }
           }
