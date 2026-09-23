@@ -15,6 +15,9 @@ type Access = {
   started_at: string;
   ends_at: string;
   status: "active";
+  buyer_joined_at: string | null;
+  creator_joined_at: string | null;
+  other_joined: boolean;
 };
 
 type Signal = {
@@ -39,6 +42,7 @@ export default function FansLiveRoomPage() {
   const [cameraEnabled, setCameraEnabled] = useState(false);
   const [micEnabled, setMicEnabled] = useState(false);
   const [remoteConnected, setRemoteConnected] = useState(false);
+  const [participantJoined, setParticipantJoined] = useState(false);
   const [remaining, setRemaining] = useState<number | null>(null);
   const [ending, setEnding] = useState(false);
   const [tipAmount, setTipAmount] = useState(10);
@@ -56,6 +60,36 @@ export default function FansLiveRoomPage() {
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
   const endedRef = useRef(false);
+
+  const touchSession = useCallback(async () => {
+    if (!sessionId) return;
+    const { data, error: touchError } = await supabase.rpc("touch_fans_live_session", {
+      p_session_id: sessionId,
+    });
+    if (touchError) {
+      if (touchError.message.includes("LIVE_SESSION_EXPIRED")) {
+        setConnection("Chamada encerrada por término da janela operacional.");
+        return;
+      }
+      return;
+    }
+    if (data && typeof data === "object") {
+      const presence = data as { other_joined?: boolean; buyer_joined_at?: string | null; creator_joined_at?: string | null };
+      setParticipantJoined(Boolean(presence.other_joined));
+      setAccess((current) => current ? {
+        ...current,
+        buyer_joined_at: presence.buyer_joined_at ?? current.buyer_joined_at,
+        creator_joined_at: presence.creator_joined_at ?? current.creator_joined_at,
+        other_joined: Boolean(presence.other_joined),
+      } : current);
+      accessRef.current = accessRef.current ? {
+        ...accessRef.current,
+        buyer_joined_at: presence.buyer_joined_at ?? accessRef.current.buyer_joined_at,
+        creator_joined_at: presence.creator_joined_at ?? accessRef.current.creator_joined_at,
+        other_joined: Boolean(presence.other_joined),
+      } : accessRef.current;
+    }
+  }, [sessionId, supabase]);
 
   const loadPaidTips = useCallback(async () => {
     const { data } = await supabase
@@ -307,6 +341,7 @@ export default function FansLiveRoomPage() {
       if (cancelled) return;
       accessRef.current = roomAccess;
       setAccess(roomAccess);
+      setParticipantJoined(Boolean(roomAccess.other_joined));
 
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -388,6 +423,7 @@ export default function FansLiveRoomPage() {
         pc.addTrack(track, localStreamRef.current as MediaStream);
       }
 
+      await touchSession();
       await loadPaidTips();
       await sendSignal("join");
       setLoading(false);
@@ -404,7 +440,15 @@ export default function FansLiveRoomPage() {
       pcRef.current?.close();
       pcRef.current = null;
     };
-  }, [createPeer, handleSignal, loadPaidTips, router, sendSignal, sessionId, supabase]);
+  }, [createPeer, handleSignal, loadPaidTips, router, sendSignal, sessionId, supabase, touchSession]);
+
+  useEffect(() => {
+    if (!access) return;
+    const heartbeat = window.setInterval(() => {
+      void touchSession();
+    }, 15000);
+    return () => window.clearInterval(heartbeat);
+  }, [access, touchSession]);
 
   useEffect(() => {
     if (!access) return;
@@ -454,6 +498,14 @@ export default function FansLiveRoomPage() {
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Sala privada · {access.role === "creator" ? "Criador" : "Cliente"}</p>
                 <h1 className="mt-2 text-2xl font-bold">{access.title}</h1>
                 <p className="mt-1 text-sm text-slate-400">{connection}</p>
+                <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold">
+                  <span className={access.other_joined ? "rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-emerald-200" : "rounded-full border border-white/10 bg-white/5 px-3 py-1 text-slate-400"}>
+                    {access.other_joined ? "Participante presente" : "Aguardando participante"}
+                  </span>
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-slate-400">
+                    Janela: 15 min antes do horário
+                  </span>
+                </div>
               </div>
               <span className="text-sm text-slate-400">{access.duration_minutes} minutos contratados</span>
             </header>
@@ -467,7 +519,10 @@ export default function FansLiveRoomPage() {
               </div>
               <div className="relative aspect-video overflow-hidden rounded-2xl border border-white/10 bg-black">
                 <video ref={remoteVideoRef} autoPlay playsInline className="h-full w-full object-cover" />
-                {!remoteConnected && <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-400">Aguardando a outra pessoa entrar...</div>}
+                {!remoteConnected && <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-5 text-center text-sm text-slate-400">
+                  <span>{participantJoined ? "Participante presente. Conectando vídeo..." : "Aguardando a outra pessoa entrar..."}</span>
+                  {!participantJoined && <span className="text-xs text-slate-600">A sala permanece aberta até o encerramento da janela autorizada.</span>}
+                </div>}
                 <span className="absolute bottom-3 left-3 rounded-full bg-black/60 px-3 py-1 text-xs">Participante</span>
               </div>
             </section>
