@@ -24,6 +24,18 @@ function getNotificationContext(item: Notification) {
   if (item.type === "fans_like") return { label: "CURTIDA", action: "Abrir atividade do Fans", href: route || "/fans/gerenciar" };
   if (item.type === "fans_comment") return { label: "COMENTÁRIO", action: "Abrir atividade do Fans", href: route || "/fans/gerenciar" };
   if (item.type === "message_received") return { label: "MENSAGEM", action: "Abrir conversa", href: route || "/painel/mensagens" };
+  if (item.type === "fans_live_payment_confirmed") return { label: "VIDEOCHAMADA · PAGAMENTO", action: "Abrir notificações", href: route || "/painel/notificacoes" };
+  if (item.type === "fans_live_schedule_requested") return { label: "VIDEOCHAMADA · HORÁRIO", action: "Abrir notificações", href: route || "/painel/notificacoes" };
+  if (item.type === "fans_live_schedule_confirmed") return { label: "VIDEOCHAMADA · CONFIRMADA", action: "Abrir notificações", href: route || "/painel/notificacoes" };
+  if (item.type === "fans_live_schedule_rejected") return { label: "VIDEOCHAMADA · RECUSADA", action: "Abrir notificações", href: route || "/painel/notificacoes" };
+  if (item.type === "fans_live_room_open") return { label: "VIDEOCHAMADA · SALA", action: "Abrir conversa", href: route || "/painel/notificacoes" };
+  if (item.type === "fans_live_session_completed") return { label: "VIDEOCHAMADA · ENCERRADA", action: "Abrir notificações", href: route || "/painel/notificacoes" };
+  if (item.type === "fans_live_session_cancelled") return { label: "VIDEOCHAMADA · CANCELADA", action: "Abrir notificações", href: route || "/painel/notificacoes" };
+  if (item.type === "fans_live_refunded") return { label: "VIDEOCHAMADA · REEMBOLSO", action: "Abrir notificações", href: route || "/painel/notificacoes" };
+  if (item.type === "fans_live_session_expired") return { label: "VIDEOCHAMADA · EXPIRADA", action: "Abrir notificações", href: route || "/painel/notificacoes" };
+  if (item.type === "fans_tip_paid" || item.type === "fans_tip_received") return { label: "GORJETA · CONFIRMADA", action: "Abrir atividade do Fans", href: route || "/fans/gerenciar" };
+  if (item.type === "fans_tip_refunded") return { label: "GORJETA · REEMBOLSO", action: "Abrir notificações", href: route || "/painel/notificacoes" };
+  if (item.type === "fans_tip_failed") return { label: "GORJETA · NÃO CONFIRMADA", action: "Abrir notificações", href: route || "/painel/notificacoes" };
   return { label: "ATIVIDADE", action: route ? "Abrir atividade" : null, href: route };
 }
 
