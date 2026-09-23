@@ -7,7 +7,8 @@ import { createClient } from "@/lib/supabase/browser";
 type Session = {
   id:string; title:string; duration_minutes:number; amount:number; currency:string;
   status:string; scheduled_for:string|null; confirmed_at:string|null; created_at:string;
-  creator_id:string; rejection_reason:string|null;
+  creator_id:string; rejection_reason:string|null; paid_at:string|null; started_at:string|null; ended_at:string|null;
+  ended_reason:string|null; commercial_outcome:string|null; refund_status:string|null; refund_amount:number|null; refund_reason:string|null; refund_requested_at:string|null; refund_processed_at:string|null;
 };
 
 const statusMap:Record<string,{label:string; tone:string}> = {
@@ -32,7 +33,7 @@ export default function MyFansCallsPage(){
   const s=createClient();
   const {data:{user}}=await s.auth.getUser();
   if(!user){window.location.href="/login?next=/fans/videochamadas";return;}
-  const {data,error}=await s.from("fans_live_sessions").select("id,title,duration_minutes,amount,currency,status,scheduled_for,confirmed_at,created_at,creator_id,rejection_reason").eq("buyer_user_id",user.id).order("created_at",{ascending:false});
+  const {data,error}=await s.from("fans_live_sessions").select("id,title,duration_minutes,amount,currency,status,scheduled_for,confirmed_at,created_at,creator_id,rejection_reason,paid_at,started_at,ended_at,ended_reason,commercial_outcome,refund_status,refund_amount,refund_reason,refund_requested_at,refund_processed_at").eq("buyer_user_id",user.id).order("created_at",{ascending:false});
   if(error)setError("Não foi possível carregar suas videochamadas.");
   else setSessions((data??[]) as Session[]);
   setLoading(false);
@@ -76,6 +77,14 @@ export default function MyFansCallsPage(){
 
  const money=(v:number,c:string)=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:c}).format(Number(v||0));
  const state=(s:Session)=>statusMap[s.status]??{label:s.status,tone:"bg-slate-100 text-slate-600 border-slate-200"};
+ const reason=(s:Session)=>{
+  const map:Record<string,string>={creator_removed_participant:"Participante removido pelo criador",creator_ended_early:"Criador encerrou antes do término contratado",creator_ended:"Encerrada pelo criador",buyer_left:"Participante saiu da chamada",system_expired:"Encerrada automaticamente pelo sistema"};
+  return map[s.ended_reason??""]??s.ended_reason??"—";
+ };
+ const duration=(s:Session)=>{
+  if(!s.started_at||!s.ended_at)return null;
+  return Math.max(0,Math.round((new Date(s.ended_at).getTime()-new Date(s.started_at).getTime())/60000));
+ };
  const active=sessions.filter(s=>["paid","scheduled","active"].includes(s.status)).length;
  const finished=sessions.filter(s=>["completed","refunded","cancelled","expired"].includes(s.status)).length;
 
@@ -103,7 +112,16 @@ export default function MyFansCallsPage(){
       {s.status==="scheduled"&&s.scheduled_for&&<div className={`rounded-2xl border p-4 ${s.confirmed_at?"border-emerald-100 bg-emerald-50":"border-blue-100 bg-blue-50"}`}><p className="text-xs font-bold uppercase tracking-wider text-slate-500">Horário solicitado</p><p className="mt-2 text-base font-bold">{new Intl.DateTimeFormat("pt-BR",{dateStyle:"full",timeStyle:"short"}).format(new Date(s.scheduled_for))}</p><p className="mt-1 text-sm text-slate-600">{s.confirmed_at?"✓ O criador confirmou este horário.":"Aguardando a confirmação do criador."}</p></div>}
       {s.status==="scheduled"&&s.confirmed_at&&<Link href={`/fans/videochamadas/sala/${s.id}`} className="mt-4 flex w-full items-center justify-center rounded-xl bg-slate-950 px-4 py-3 text-sm font-bold text-white">Entrar na sala privada →</Link>}
       {s.status==="active"&&<Link href={`/fans/videochamadas/sala/${s.id}`} className="mt-4 flex w-full items-center justify-center rounded-xl bg-violet-600 px-4 py-3 text-sm font-bold text-white">Entrar na chamada →</Link>}
-      {s.status==="completed"&&<div className="rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-500">Chamada concluída</div>}
+      {s.status==="completed"&&<div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+ <p className="text-sm font-black text-slate-900">Histórico da chamada</p>
+ <div className="mt-3 grid gap-3 text-xs sm:grid-cols-2">
+  <div><span className="text-slate-500">Encerramento</span><p className="mt-1 font-bold text-slate-800">{reason(s)}</p></div>
+  <div><span className="text-slate-500">Duração efetiva</span><p className="mt-1 font-bold text-slate-800">{duration(s)===null?"Não registrada":duration(s)+" min"}</p></div>
+  <div><span className="text-slate-500">Valor contratado</span><p className="mt-1 font-bold text-slate-800">{money(s.amount,s.currency)}</p></div>
+  <div><span className="text-slate-500">Tratamento financeiro</span><p className="mt-1 font-bold text-slate-800">{s.refund_status==="refunded"?"Reembolso integral processado":s.refund_status==="requested"?"Reembolso em processamento":s.refund_status==="failed"?"Reembolso pendente de tratamento":"Sem reembolso"}</p></div>
+ </div>
+ {s.refund_status&&s.refund_status!=="not_required"&&<p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">Reembolso: {money(Number(s.refund_amount??s.amount),s.currency)} · {s.refund_processed_at?"processado em "+new Intl.DateTimeFormat("pt-BR",{dateStyle:"short",timeStyle:"short"}).format(new Date(s.refund_processed_at)):"solicitado em "+new Intl.DateTimeFormat("pt-BR",{dateStyle:"short",timeStyle:"short"}).format(new Date(s.refund_requested_at??s.ended_at??s.created_at))}</p>}
+ </div>}
       {["refunded","cancelled","expired"].includes(s.status)&&<div className="rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-500">{st.label}</div>}
      </div>
     </article>})}</section>}
