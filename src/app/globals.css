@@ -386,3 +386,22 @@
 
 /* Pecatho — correção de overflow horizontal da descoberta pública */
 .discoveryHero{overflow-x:clip;}
+
+.advertiserAdEditor .contactStructuredBlock{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:18px}
+.advertiserAdEditor .contactStructuredBlock>div{padding:16px;border:1px solid rgba(255,255,255,.07);border-radius:14px;background:rgba(255,255,255,.018)}
+.advertiserAdEditor .contactStructuredBlock h3{margin:5px 0 2px;font-size:15px;color:#f3efe5}
+.advertiserAdEditor .structuredChoiceGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:12px}
+.advertiserAdEditor .structuredChoice{display:flex;align-items:center;gap:9px;min-height:42px;padding:10px 11px;border:1px solid rgba(255,255,255,.08);border-radius:10px;background:rgba(255,255,255,.025);font-size:12px;color:#d9d4c9}
+.advertiserAdEditor .structuredChoice input{accent-color:#E7C33F}
+.advertiserAdEditor .structuredSocialGrid{display:grid;gap:10px;margin-top:12px}
+.advertiserAdEditor .structuredSocialGrid label{margin:0}
+.advertiserAdEditor .legacyJsonDetails{margin-top:12px;border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:10px 12px}
+.advertiserAdEditor .legacyJsonDetails summary{cursor:pointer;color:#aaa398;font-size:11px}
+.advertiserAdEditor .legacyJsonDetails textarea{margin-top:10px}
+.publicProfile .profilePayment{margin-top:18px}
+.publicProfile .paymentChips{display:flex;flex-wrap:wrap;gap:9px;margin-top:14px}
+.publicProfile .paymentChips span{display:inline-flex;align-items:center;padding:9px 12px;border:1px solid rgba(231,195,63,.18);border-radius:999px;background:rgba(231,195,63,.05);color:#ddd4bc;font-size:12px}
+@media (max-width:760px){
+  .advertiserAdEditor .contactStructuredBlock{grid-template-columns:1fr}
+  .advertiserAdEditor .structuredChoiceGrid{grid-template-columns:1fr}
+}
