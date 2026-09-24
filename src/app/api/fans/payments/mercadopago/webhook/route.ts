@@ -82,7 +82,11 @@ export async function POST(request: Request) {
     : 0;
   const paymentMethod = typeof payment?.payment_method_id === "string" ? payment.payment_method_id : null;
 
-  const { data, error } = await admin.rpc("settle_fans_checkout", {
+  const settlementFunction = order.metadata?.product_type === "digital_content"
+    ? "settle_digital_content_checkout"
+    : "settle_fans_checkout";
+
+  const { data, error } = await admin.rpc(settlementFunction, {
     p_order_id: orderId,
     p_provider: "mercadopago",
     p_provider_payment_id: String(paymentId),
