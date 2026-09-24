@@ -4,7 +4,7 @@ type MercadoPagoPreferenceInput = {
   title: string;
   amount: number;
   buyerEmail: string;
-  creatorId: string;
+  creatorId?: string;
 };
 
 type MercadoPagoPreference = {
@@ -49,8 +49,8 @@ export async function createMercadoPagoPreference(input: MercadoPagoPreferenceIn
       metadata: {
         pecatho_order_id: input.orderId,
         pecatho_order_number: input.orderNumber,
-        creator_id: input.creatorId,
-        channel: "pecatho_fans",
+        ...(input.creatorId ? { creator_id: input.creatorId } : {}),
+        channel: input.creatorId ? "pecatho_fans" : "pecatho_digital_content",
       },
     }),
   });
