@@ -81,6 +81,20 @@ export async function GET(request: Request) {
         ends_at: null,
       };
     }
+  } else if (productType === "digital_content" && productId) {
+    const { data: sale } = await admin
+      .from("digital_content_sales")
+      .select("id,status,paid_at")
+      .eq("product_id", productId)
+      .eq("buyer_user_id", user.id)
+      .eq("status", "paid")
+      .not("paid_at", "is", null)
+      .order("paid_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (sale) {
+      entitlement = { entitled: true, subscription_id: null, purchase_id: sale.id, ends_at: null };
+    }
   }
 
   return NextResponse.json({
