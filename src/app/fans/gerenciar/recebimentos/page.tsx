@@ -105,6 +105,53 @@ export default async function FansReceiptsPage() {
   const liveRefundedCount = Number(liveReconciliation.live_refunded_count);
   const liveRefundPendingCount = Number(liveReconciliation.live_refund_pending_count);
 
+  type LiveStatementRow = {
+    session_id: string;
+    order_id: string | null;
+    payment_id: string | null;
+    title: string | null;
+    session_status: string;
+    commercial_outcome: string | null;
+    ended_reason: string | null;
+    amount: number | string;
+    currency: string;
+    paid_at: string | null;
+    started_at: string | null;
+    ended_at: string | null;
+    refund_status: string | null;
+    refund_amount: number | string | null;
+    refund_reason: string | null;
+    sale_gross: number | string;
+    provider_fees: number | string;
+    platform_fees: number | string;
+    creator_credit: number | string;
+    creator_debit: number | string;
+    creator_hold: number | string;
+    hold_release: number | string;
+    creator_net_impact: number | string;
+  };
+
+  const { data: liveStatementData, error: liveStatementError } = await supabase
+    .rpc("fans_live_financial_statement", { p_creator_id: creator.id });
+  if (liveStatementError) throw new Error(liveStatementError.message);
+  const liveStatement = (liveStatementData ?? []) as LiveStatementRow[];
+
+  const liveOutcomeLabel = (value: string | null) => ({
+    creator_removed_participant: "Participante removido pelo criador",
+    creator_ended_early: "Criador encerrou antes do término",
+    creator_completed: "Concluída pelo criador",
+    buyer_left: "Participante saiu",
+    system_expired: "Encerrada automaticamente",
+  } as Record<string, string>)[value ?? ""] ?? value ?? "—";
+
+  const liveRefundLabel = (value: string | null) => ({
+    not_required: "Não necessário",
+    required: "Reembolso necessário",
+    requested: "Reembolso em processamento",
+    refunded: "Reembolsado",
+    failed: "Falha no reembolso",
+  } as Record<string, string>)[value ?? ""] ?? value ?? "—";
+
   const { data: ledgerData, error: ledgerError } = await admin.from("fans_financial_ledger").select("id,entry_type,direction,amount,currency,status,provider,provider_reference,occurred_at,created_at").eq("creator_id", creator.id).order("occurred_at", { ascending: false }).limit(200);
   if (ledgerError) throw new Error(ledgerError.message);
   const ledger = (ledgerData ?? []) as LedgerRow[];
@@ -162,6 +209,38 @@ export default async function FansReceiptsPage() {
             o crédito do criador permanece bloqueado. Se o reembolso falhar, a reserva é liberada de forma
             idempotente; se for concluído, a reserva permanece como débito financeiro definitivo.
           </p>
+        </section>
+
+        <section className="card" style={{ marginTop: 20, overflowX: "auto" }}>
+          <div style={{ minWidth: 1120 }}>
+            <div className="eyebrow">CONCILIAÇÃO POR CHAMADA</div>
+            <h2>Histórico financeiro das chamadas ao vivo</h2>
+            <p>Cada chamada é reconciliada pelo <strong>order_id</strong> no ledger financeiro. A coluna “Impacto do criador” representa o crédito menos os débitos efetivamente registrados; o valor do reembolso ao comprador é exibido separadamente. Assim, uma mesma chamada não é contabilizada duas vezes entre pagamento, reembolso e saldo.</p>
+            <div style={{ marginTop: 24 }}>
+              {liveStatement.length === 0 ? <p>Nenhuma chamada ao vivo registrada ainda.</p> : (
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead><tr>
+                    <th align="left">Data</th><th align="left">Chamada</th><th align="left">Resultado</th>
+                    <th align="left">Reembolso</th><th align="right">Contratado</th><th align="right">Bruto</th>
+                    <th align="right">Taxas</th><th align="right">Reembolso</th><th align="right">Impacto</th>
+                  </tr></thead>
+                  <tbody>{liveStatement.map(s => (
+                    <tr key={s.session_id} style={{ borderTop: "1px solid #e5e7eb" }}>
+                      <td>{date(s.ended_at || s.started_at || s.paid_at)}</td>
+                      <td>{s.title || "Chamada ao vivo"}</td>
+                      <td>{liveOutcomeLabel(s.commercial_outcome)}</td>
+                      <td>{liveRefundLabel(s.refund_status)}</td>
+                      <td align="right">{money(Number(s.amount))}</td>
+                      <td align="right">{money(Number(s.sale_gross))}</td>
+                      <td align="right">{money(Number(s.provider_fees) + Number(s.platform_fees))}</td>
+                      <td align="right">{money(Number(s.refund_amount || 0))}</td>
+                      <td align="right"><strong>{money(Number(s.creator_net_impact))}</strong></td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              )}
+            </div>
+          </div>
         </section>
 
         <section className="card" style={{ marginTop: 20, overflowX: "auto" }}><div style={{ minWidth: 900 }}><div className="eyebrow">EXTRATO</div><h1>Extrato financeiro</h1><p>Os indicadores financeiros são calculados por agregação no banco. A tabela abaixo exibe os 200 movimentos mais recentes.</p><div style={{ marginTop: 24 }}>{posted.length === 0 ? <p>Nenhum movimento financeiro registrado ainda.</p> : <table style={{ width: "100%", borderCollapse: "collapse" }}><thead><tr><th align="left">Data</th><th align="left">Evento</th><th align="left">Direção</th><th align="right">Valor</th><th align="left">Provedor</th></tr></thead><tbody>{posted.map(e => <tr key={e.id} style={{ borderTop: "1px solid #e5e7eb" }}><td>{date(e.occurred_at)}</td><td>{entryLabel(e.entry_type)}</td><td>{e.direction === "credit" ? "Crédito" : "Débito"}</td><td align="right">{money(Number(e.amount))}</td><td>{e.provider || "—"}</td></tr>)}</tbody></table>}</div></div></section>
