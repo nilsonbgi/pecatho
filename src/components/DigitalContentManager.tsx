@@ -18,6 +18,7 @@ export default function DigitalContentManager({ ownerType }:{ ownerType: OwnerTy
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState("");
   const [error,setError]=useState("");
+  const [metrics,setMetrics]=useState({sales:0,gross:0,ownerAmount:0,last30Sales:0,last30Gross:0});
 
   async function load(){
     setError("");
@@ -30,7 +31,11 @@ export default function DigitalContentManager({ ownerType }:{ ownerType: OwnerTy
     const {data:list,error:listError}=await supabase.from("digital_content_products").select("id,title,description,product_type,price,status,created_at").eq("owner_user_id",user.id).eq("owner_type",ownerType).order("created_at",{ascending:false});
     if(listError) setError(listError.message); else setProducts((list??[]) as Product[]);
   }
-  useEffect(()=>{void load()},[]);
+  async function loadMetrics(){
+    const response=await fetch("/api/conteudos/sales",{cache:"no-store"});
+    if(response.ok){ const data=await response.json(); setMetrics({sales:Number(data.sales||0),gross:Number(data.gross||0),ownerAmount:Number(data.ownerAmount||0),last30Sales:Number(data.last30Sales||0),last30Gross:Number(data.last30Gross||0)}); }
+  }
+  useEffect(()=>{void load();void loadMetrics()},[]);
 
   async function createProduct(){
     setBusy(true);setError("");setMessage("");
@@ -76,6 +81,19 @@ export default function DigitalContentManager({ ownerType }:{ ownerType: OwnerTy
 
   return <main className="min-h-screen bg-[#f5f5f7] text-slate-950"><div className="mx-auto max-w-6xl px-4 py-7 sm:px-6">
     <div className="flex items-end justify-between gap-4"><div><div className="text-[10px] font-black tracking-[.2em] text-violet-600">PECATHO · {ownerType==="creator"?"FANS":"ANUNCIANTE"}</div><h1 className="mt-2 text-3xl font-black tracking-[-.05em]">Loja de conteúdo</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Crie vendas individuais de imagens e vídeos ou pacotes com vários arquivos. Você define o preço; o conteúdo original permanece em pasta privada e o comprador recebe links temporários somente após o pagamento.</p></div></div>
+    <section className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {[
+        ["Vendas confirmadas", String(metrics.sales), "compras pagas"],
+        ["Faturamento bruto", `R$ ${metrics.gross.toFixed(2).replace(".",",")}`, "antes da taxa da plataforma"],
+        ["A receber", `R$ ${metrics.ownerAmount.toFixed(2).replace(".",",")}`, "valor destinado ao vendedor"],
+        ["Últimos 30 dias", `${metrics.last30Sales} · R$ ${metrics.last30Gross.toFixed(2).replace(".",",")}`, "vendas e faturamento"],
+      ].map(([label,value,note])=><div key={label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="text-[10px] font-black uppercase tracking-[.14em] text-slate-400">{label}</div>
+        <div className="mt-2 text-xl font-black tracking-[-.04em]">{value}</div>
+        <div className="mt-1 text-[11px] text-slate-500">{note}</div>
+      </div>)}
+    </section>
+
     <section className="mt-7 grid gap-5 lg:grid-cols-[420px_1fr]">
       <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"><div className="text-xs font-black tracking-[.14em] text-slate-400">NOVO PRODUTO</div>
         <div className="mt-4 grid gap-3">
