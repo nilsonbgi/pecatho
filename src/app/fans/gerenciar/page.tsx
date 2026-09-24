@@ -24,6 +24,7 @@ export default async function FansManagePage(){
   ["/fans/gerenciar/perfil","Perfil do criador","Nome, apresentação, avatar e identidade pública.","◉"],
   ["/fans/gerenciar/planos","Planos","Crie e administre planos de assinatura.","R$"],
   ["/fans/gerenciar/publicacoes","Publicações","Produza conteúdos, organize mídia e envie para moderação.","✦"],
+  ["/fans/gerenciar/conteudos","Loja de conteúdo","Venda imagens, vídeos e pacotes com preço definido por você.","$"],
   ["/fans/gerenciar/assinantes","Assinantes","Acompanhe sua audiência e relacionamento.","♙"],
   ["/fans/gerenciar/vendas","Vendas","Acompanhe compras de conteúdo e resultados.","↗"],
   ["/fans/gerenciar/gorjetas","Gorjetas","Consulte gorjetas recebidas e histórico.","♥"],
