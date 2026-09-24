@@ -45,6 +45,18 @@ export async function GET(request: Request) {
   }
 
   const admin = createAdminClient();
+
+  const { data: reconciliation, error: reconciliationError } = await admin.rpc(
+    "reconcile_fans_live_commercial_state",
+    { p_session_id: null },
+  );
+
+  if (reconciliationError) {
+    return NextResponse.json(
+      { error: reconciliationError.message },
+      { status: 500 },
+    );
+  }
   const { data: sessions, error } = await admin
     .from("fans_live_sessions")
     .select("id, refund_status")
@@ -120,6 +132,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     ok: true,
+    reconciliation: reconciliation?.[0] ?? null,
     processed: results.length,
     results,
   });
