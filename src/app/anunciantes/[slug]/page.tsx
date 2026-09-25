@@ -234,14 +234,53 @@ export default function PublicAdvertiserPage() {
     setUnlocking(item.id); setNotice("");
     try {
       const supabase = createClient();
+      const { data: authData } = await supabase.auth.getUser();
+      if (!authData.user) {
+        window.location.href = `/login?redirect=/anunciantes/${params.slug}`;
+        return;
+      }
+
       const { data, error: fnError } = await supabase.functions.invoke("get-advertiser-media-access", { body: { media_id: item.id } });
-      if (fnError) throw fnError;
-      if (!data?.url) { setNotice(data?.error || "O conteúdo ainda não está disponível para este usuário."); return; }
-      setMedia((current) => current.map((entry) => entry.id === item.id ? { ...entry, unlockedUrl: data.url } : entry));
+      if (!fnError && data?.url) {
+        setMedia((current) => current.map((entry) => entry.id === item.id ? { ...entry, unlockedUrl: data.url } : entry));
+        return;
+      }
+
+      if (data?.code !== "MEDIA_PAYMENT_REQUIRED") {
+        setNotice(data?.error || "O conteúdo ainda não está disponível para este usuário.");
+        return;
+      }
+
+      const intentResponse = await fetch("/api/anunciantes/media/checkout/intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ media_id: item.id }),
+      });
+      const intent = await intentResponse.json().catch(() => ({}));
+      if (!intentResponse.ok) throw new Error(intent.error || "Não foi possível preparar a compra.");
+
+      if (intent.already_owned) {
+        const { data: retryData, error: retryError } = await supabase.functions.invoke("get-advertiser-media-access", { body: { media_id: item.id } });
+        if (retryError || !retryData?.url) throw new Error(retryData?.error || "O acesso ainda não foi liberado.");
+        setMedia((current) => current.map((entry) => entry.id === item.id ? { ...entry, unlockedUrl: retryData.url } : entry));
+        return;
+      }
+
+      const providerResponse = await fetch("/api/conteudos/checkout/provider", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_id: intent.order_id }),
+      });
+      const provider = await providerResponse.json().catch(() => ({}));
+      if (!providerResponse.ok || !provider.checkout_url) throw new Error(provider.error || "Não foi possível abrir o checkout.");
+
+      window.location.href = provider.checkout_url;
     } catch (err) {
       console.error(err);
-      setNotice("Este conteúdo é pago. O acesso só é liberado após a confirmação do pagamento.");
-    } finally { setUnlocking(null); }
+      setNotice(err instanceof Error ? err.message : "Não foi possível iniciar o pagamento deste conteúdo.");
+    } finally {
+      setUnlocking(null);
+    }
   }
 
   if (loading) return <main className="shell"><section className="hero"><p>Carregando anúncio...</p></section></main>;
