@@ -24,27 +24,44 @@ Deno.serve(async (req) => {
     if (userError || !userData.user) return new Response(JSON.stringify({ error: "Sessão inválida ou expirada." }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     const body = await req.json().catch(() => ({}));
-    const mediaId = typeof body.media_id === "string" ? body.media_id : "";
-    if (!mediaId) return new Response(JSON.stringify({ error: "Mídia não informada." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const body = await req.json().catch(() => ({}));
+    const requestedIds = Array.isArray(body.media_ids)
+      ? body.media_ids.filter((value) => typeof value === "string" && value.length > 0).slice(0, 100)
+      : [];
+    const singleId = typeof body.media_id === "string" ? body.media_id : "";
+    const mediaIds = requestedIds.length > 0 ? requestedIds : singleId ? [singleId] : [];
+    if (mediaIds.length === 0) return new Response(JSON.stringify({ error: "Mídia não informada." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const { data: media } = await supabaseAdmin.from("profile_media").select("id,profile_id,access_type,price,currency,storage_bucket,storage_path,moderation_status").eq("id", mediaId).maybeSingle();
-    if (!media) return new Response(JSON.stringify({ error: "Mídia não encontrada." }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const { data: mediaRows, error: mediaError } = await supabaseAdmin.from("profile_media").select("id,profile_id,access_type,price,currency,storage_bucket,storage_path,moderation_status").in("id", mediaIds);
+    if (mediaError) return new Response(JSON.stringify({ error: "Não foi possível consultar as mídias." }), { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const media = mediaRows ?? [];
+    if (media.length === 0) return new Response(JSON.stringify({ accesses: [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const { data: profile } = await supabaseAdmin.from("advertiser_profiles").select("id,status").eq("id", media.profile_id).maybeSingle();
-    if (!profile || profile.status !== "published" || media.moderation_status !== "approved") return new Response(JSON.stringify({ error: "Mídia indisponível." }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const profileIds = [...new Set(media.map((item) => item.profile_id))];
+    const { data: profiles } = await supabaseAdmin.from("advertiser_profiles").select("id,status").in("id", profileIds);
+    const publishedProfiles = new Set((profiles ?? []).filter((profile) => profile.status === "published").map((profile) => profile.id));
+    const paidIds = media.filter((item) => item.access_type === "paid" && publishedProfiles.has(item.profile_id) && item.moderation_status === "approved").map((item) => item.id);
+    const { data: purchases } = paidIds.length > 0
+      ? await supabaseAdmin.from("profile_media_purchases").select("media_id,status,expires_at,purchased_at").eq("buyer_user_id", userData.user.id).eq("status", "paid").in("media_id", paidIds).order("purchased_at", { ascending: false })
+      : { data: [] };
 
-    if (media.access_type === "public") {
-      const { data } = supabaseAdmin.storage.from(media.storage_bucket).getPublicUrl(media.storage_path);
-      return new Response(JSON.stringify({ access: "public", url: data.publicUrl }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const latestPurchase = new Map();
+    for (const purchase of purchases ?? []) if (!latestPurchase.has(purchase.media_id)) latestPurchase.set(purchase.media_id, purchase.expires_at);
+
+    const accesses = [];
+    for (const item of media) {
+      if (!publishedProfiles.has(item.profile_id) || item.moderation_status !== "approved") continue;
+      if (item.access_type === "public") {
+        const { data } = supabaseAdmin.storage.from(item.storage_bucket).getPublicUrl(item.storage_path);
+        accesses.push({ media_id: item.id, access: "public", url: data.publicUrl });
+        continue;
+      }
+      const expiresAt = latestPurchase.get(item.id);
+      if (expiresAt === undefined || (expiresAt && new Date(expiresAt).getTime() < Date.now())) continue;
+      const { data: signed, error: signedError } = await supabaseAdmin.storage.from(item.storage_bucket).createSignedUrl(item.storage_path, 300);
+      if (!signedError && signed?.signedUrl) accesses.push({ media_id: item.id, access: "paid", url: signed.signedUrl, expires_in: 300 });
     }
-
-    const { data: purchase } = await supabaseAdmin.from("profile_media_purchases").select("id,status,expires_at").eq("media_id", media.id).eq("buyer_user_id", userData.user.id).eq("status", "paid").order("purchased_at", { ascending: false }).limit(1).maybeSingle();
-    if (!purchase) return new Response(JSON.stringify({ error: "Conteúdo pago. Efetue o pagamento para visualizar esta mídia.", code: "MEDIA_PAYMENT_REQUIRED", price: media.price, currency: media.currency }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    if (purchase.expires_at && new Date(purchase.expires_at).getTime() < Date.now()) return new Response(JSON.stringify({ error: "O acesso a esta mídia expirou.", code: "MEDIA_ACCESS_EXPIRED" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-
-    const { data: signed, error: signedError } = await supabaseAdmin.storage.from(media.storage_bucket).createSignedUrl(media.storage_path, 300);
-    if (signedError || !signed?.signedUrl) return new Response(JSON.stringify({ error: "Não foi possível liberar a mídia neste momento." }), { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    return new Response(JSON.stringify({ access: "paid", url: signed.signedUrl, expires_in: 300 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ accesses }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
     console.error(error);
     return new Response(JSON.stringify({ error: "Erro interno ao liberar a mídia." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
