@@ -28,6 +28,28 @@ export default async function ConteudosPage({ searchParams }: Props) {
   const { data: products } = await query;
 
   const scoped = Boolean(ownerType && ownerId);
+  let sellerName = "";
+  let sellerProfileHref = "";
+
+  if (scoped && ownerType === "advertiser" && ownerId) {
+    const { data: owner } = await supabase
+      .from("advertiser_profiles")
+      .select("display_name,title,slug")
+      .eq("id", ownerId)
+      .eq("status", "published")
+      .maybeSingle();
+    sellerName = owner?.display_name || owner?.title || "Anunciante";
+    sellerProfileHref = owner?.slug ? `/anunciantes/${owner.slug}` : "";
+  } else if (scoped && ownerType === "creator" && ownerId) {
+    const { data: owner } = await supabase
+      .from("fans_creators")
+      .select("display_name,slug")
+      .eq("id", ownerId)
+      .eq("status", "active")
+      .maybeSingle();
+    sellerName = owner?.display_name || "Criador";
+    sellerProfileHref = owner?.slug ? `/fans/${owner.slug}` : "";
+  }
 
   return (
     <main className="min-h-screen bg-[#f5f5f7] px-4 py-8 text-slate-950">
@@ -41,6 +63,18 @@ export default async function ConteudosPage({ searchParams }: Props) {
               <h1 className="text-4xl font-black tracking-[-.06em]">
                 {scoped ? "Loja deste perfil" : "Conteúdo exclusivo"}
               </h1>
+              {scoped && sellerName ? (
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <span className="rounded-full border border-violet-300/20 bg-violet-400/10 px-3 py-1.5 text-[10px] font-black tracking-[.12em] text-violet-200">
+                    VENDEDOR · {sellerName.toUpperCase()}
+                  </span>
+                  {sellerProfileHref ? (
+                    <Link href={sellerProfileHref} className="text-xs font-black text-white underline decoration-violet-300/50 underline-offset-4">
+                      Voltar ao perfil →
+                    </Link>
+                  ) : null}
+                </div>
+              ) : null}
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
                 {scoped
                   ? "Conteúdos publicados diretamente por este anunciante ou criador. Cada item possui preço próprio e é liberado somente após a confirmação do pagamento."
