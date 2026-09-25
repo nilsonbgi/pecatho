@@ -13,6 +13,8 @@ type Product = {
   price: number | string;
   currency: string;
   cover_url?: string | null;
+  owner_name?: string | null;
+  owner_slug?: string | null;
 };
 
 const typeLabel: Record<Product["product_type"], string> = {
@@ -82,6 +84,11 @@ export default function DigitalContentShowcase({
               <span className="rounded-full border border-white/10 bg-white/[.04] px-3 py-1.5 text-[9px] font-bold tracking-[.12em] text-white/60">
                 VENDA DIRETA DO PERFIL
               </span>
+              {products[0]?.owner_name ? (
+                <span className="rounded-full border border-white/10 bg-white/[.04] px-3 py-1.5 text-[9px] font-bold tracking-[.12em] text-white/70">
+                  POR {products[0].owner_name.toUpperCase()}
+                </span>
+              ) : null}
             </div>
 
             <h2 className="mt-3 text-3xl font-black tracking-[-.06em] sm:text-4xl">
@@ -147,6 +154,10 @@ export default function DigitalContentShowcase({
                     </div>
 
                     <div>
+                      <div className="mb-2 flex items-center gap-2 text-[10px] font-bold tracking-[.1em] text-white/50">
+                        <span>VENDA PELO PERFIL</span>
+                        {product.owner_name ? <span className="text-violet-200">· {product.owner_name}</span> : null}
+                      </div>
                       <h3 className="line-clamp-2 text-xl font-black tracking-[-.035em]">
                         {product.title}
                       </h3>
