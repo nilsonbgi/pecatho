@@ -141,6 +141,19 @@ export default function PublicAdvertiserPage() {
 
       const { data: authData } = await supabase.auth.getUser();
       if (authData.user && authData.user.id !== typed.user_id) {
+        const paidMediaIds = gallery.filter((item) => item.access_type === "paid").map((item) => item.id);
+        if (paidMediaIds.length > 0) {
+          const { data: accessData } = await supabase.functions.invoke("get-advertiser-media-access", { body: { media_ids: paidMediaIds } });
+          const accesses = Array.isArray(accessData?.accesses) ? accessData.accesses as Array<{ media_id: string; url?: string }> : [];
+          if (active && accesses.length > 0) {
+            setMedia((current) => current.map((entry) => {
+              const access = accesses.find((item) => item.media_id === entry.id);
+              return access?.url ? { ...entry, unlockedUrl: access.url } : entry;
+            }));
+          }
+        }
+      }
+      if (authData.user && authData.user.id !== typed.user_id) {
         if (active) setCurrentUserId(authData.user.id);
         const { data: followRow } = await supabase.from("user_follows").select("profile_id").eq("follower_id", authData.user.id).eq("profile_id", typed.id).maybeSingle();
         if (active) setFollowing(Boolean(followRow));
