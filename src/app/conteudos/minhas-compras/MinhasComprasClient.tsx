@@ -73,6 +73,12 @@ export default function MinhasComprasClient() {
   const [loadingDownloads, setLoadingDownloads] = useState(false);
   const [error, setError] = useState("");
   const [downloadError, setDownloadError] = useState("");
+  const [mediaPurchases, setMediaPurchases] = useState<Array<{
+    id: string; media_id: string; amount: number; currency: string; purchased_at: string; expires_at: string | null;
+    kind: string; url: string; access_expires_in: number; profile: { slug: string; display_name: string | null };
+  }>>([]);
+  const [mediaLoading, setMediaLoading] = useState(true);
+  const [mediaError, setMediaError] = useState("");
 
   const selectedPurchase = useMemo(
     () => purchases.find((purchase) => purchase.id === selectedSale) ?? null,
@@ -105,6 +111,15 @@ export default function MinhasComprasClient() {
   }
 
   useEffect(() => {
+    fetch("/api/anunciantes/media/purchases", { cache: "no-store" })
+      .then(async (response) => {
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.error || "Não foi possível carregar sua galeria adquirida.");
+        setMediaPurchases(body.purchases ?? []);
+      })
+      .catch((failure) => setMediaError(failure instanceof Error ? failure.message : "Não foi possível carregar sua galeria adquirida."))
+      .finally(() => setMediaLoading(false));
+
     fetch("/api/conteudos/minhas-compras", { cache: "no-store" })
       .then(async (response) => {
         const body = await response.json();
@@ -308,6 +323,29 @@ export default function MinhasComprasClient() {
             </section>
           </div>
         )}
+
+        <section className="mt-8 rounded-3xl border border-white/10 bg-white/[0.05] p-6 sm:p-7">
+          <div>
+            <div className="text-[10px] font-black tracking-[0.2em] text-violet-300">GALERIA ADQUIRIDA</div>
+            <h2 className="mt-2 text-2xl font-black tracking-[-0.04em]">Fotos e vídeos comprados</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/45">Conteúdos pagos diretamente no perfil das anunciantes também ficam reunidos aqui. Os arquivos permanecem privados e cada visualização gera um link temporário.</p>
+          </div>
+          {mediaLoading ? <div className="mt-5 rounded-2xl bg-white/[0.04] p-4 text-sm text-white/55">Carregando sua galeria adquirida…</div>
+          : mediaError ? <div className="mt-5 rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm text-red-200">{mediaError}</div>
+          : mediaPurchases.length === 0 ? <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-5 text-sm text-white/45">Você ainda não comprou fotos ou vídeos exclusivos diretamente de uma anunciante.</div>
+          : <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{mediaPurchases.map((item) => (
+            <article key={item.id} className="overflow-hidden rounded-2xl border border-white/10 bg-black/25">
+              <div className="aspect-[4/5] bg-black">{item.kind === "video" ? <video src={item.url} controls playsInline preload="metadata" className="h-full w-full object-cover" /> : <img src={item.url} alt={item.profile.display_name ? `Conteúdo comprado de ${item.profile.display_name}` : "Conteúdo comprado"} className="h-full w-full object-cover" />}</div>
+              <div className="p-4">
+                <div className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-300">COMPRA CONFIRMADA</div>
+                <div className="mt-1 font-black">{item.profile.display_name || "Anunciante Pecatho"}</div>
+                <div className="mt-1 text-xs text-white/40">{item.kind === "video" ? "Vídeo exclusivo" : "Imagem exclusiva"} · {money(item.amount, item.currency)}</div>
+                <div className="mt-3 flex items-center justify-between gap-3"><Link href={`/anunciantes/${item.profile.slug}#galeria`} className="text-xs font-black text-violet-300 hover:text-violet-200">Ver perfil</Link><a href={item.url} target="_blank" rel="noreferrer" download className="rounded-xl bg-white px-3 py-2 text-xs font-black text-slate-950">Abrir / baixar</a></div>
+                <div className="mt-2 text-[10px] text-white/30">Link de acesso válido por {Math.round(item.access_expires_in / 60)} minutos.</div>
+              </div>
+            </article>
+          ))}</div>}
+        </section>
 
         <div className="mt-8">
           <Link href="/" className="text-sm font-bold text-violet-300 hover:text-violet-200">
