@@ -122,6 +122,7 @@ export async function GET(request: Request) {
       product_type: productType,
       product_id: productId,
       title: typeof order.metadata?.title === "string" ? order.metadata.title : null,
+      profile_slug: typeof order.metadata?.profile_slug === "string" ? order.metadata.profile_slug : null,
       updated_at: order.updated_at,
     },
     payment: payment ? {
