@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
 
 type Message = { id: string; sender_id: string; body: string; status: string; created_at: string };
@@ -14,6 +14,7 @@ type LiveTip = { id: string; session_id: string | null; amount: number; creator_
 
 export default function ConversationPage() {
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const [messages, setMessages] = useState<Message[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [fansConversation, setFansConversation] = useState<FansConversation | null>(null);
@@ -111,6 +112,8 @@ export default function ConversationPage() {
     }
     setUserId(authData.user.id);
     userIdRef.current = authData.user.id;
+    const contextualMessage = searchParams.get("context")?.trim() || "";
+    if (contextualMessage) setBody(contextualMessage);
 
     const { data: conversation, error: conversationError } = await supabase.from("conversations").select("id,profile_id").eq("id", params.id).maybeSingle();
     if (conversationError || !conversation) throw conversationError || new Error("Conversa não encontrada.");
