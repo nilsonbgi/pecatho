@@ -256,6 +256,14 @@ export default function PublicAdvertiserPage() {
       )}
       <nav className="topbar"><Link href="/" className="brand"><span className="brandMark">P</span><span>Pecatho</span></Link><Link href="/anunciantes" className="navCta">Ver anunciantes</Link></nav>
 
+      <nav aria-label="Navegação comercial do perfil" style={{ position: "sticky", top: 12, zIndex: 20, display: "flex", flexWrap: "wrap", gap: 8, margin: "12px 0 18px", padding: 8, border: "1px solid rgba(231,195,63,.22)", borderRadius: 16, background: "rgba(255,255,255,.92)", backdropFilter: "blur(14px)", boxShadow: "0 12px 30px rgba(15,23,42,.06)" }}>
+        <a href="#conteudo-exclusivo" className="secondaryButton" style={{ textDecoration: "none" }}>Conteúdo exclusivo</a>
+        {selectedServices.length > 0 && <a href="#servicos" className="secondaryButton" style={{ textDecoration: "none" }}>Serviços</a>}
+        {validPrices.length > 0 && <a href="#valores" className="secondaryButton" style={{ textDecoration: "none" }}>Valores</a>}
+        <a href="#galeria" className="secondaryButton" style={{ textDecoration: "none" }}>Galeria</a>
+        {fans && <Link href={`/fans/${fans.slug}`} className="primaryButton" style={{ textDecoration: "none" }}>Pecatho Fans →</Link>}
+      </nav>
+
       <section className="publicProfileHero">
         <div className="eyebrow">{category?.name || "ANUNCIANTE"}</div>
         <div className="profileTitleRow"><div><h1>{profile.title || profile.display_name || "Perfil Pecatho"}</h1><p className="heroCopy">{profile.summary || "Conheça este perfil no Pecatho."}</p></div><div className="profileTrust">{profile.verification_status === "verified" ? <span>✓ PERFIL VERIFICADO</span> : <span>PERFIL PUBLICADO</span>}{reviews.length > 0 && <strong>★ {averageRating.toFixed(1)} <small>({reviews.length} avaliações)</small></strong>}</div></div>
@@ -267,9 +275,9 @@ export default function PublicAdvertiserPage() {
 
       {(visibleAttributeRows.length > 0 || profile.height_cm || profile.weight_kg || age) && <section className="profileDetails card"><div className="sectionHeading"><div><div className="eyebrow">CARACTERÍSTICAS</div><h2>Perfil e características</h2><p>Informações públicas configuradas pela anunciante e liberadas pela política do catálogo.</p></div></div><div className="detailGrid">{age && <div><span>Idade</span><strong>{age} anos</strong></div>}{profile.height_cm && <div><span>Altura</span><strong>{Number(profile.height_cm)} cm</strong></div>}{profile.weight_kg && <div><span>Peso</span><strong>{Number(profile.weight_kg)} kg</strong></div>}{visibleAttributeRows.map(({ attribute, value }) => <div key={attribute.id}><span>{attribute.name}</span><strong>{labelValue(value)}</strong></div>)}</div></section>}
 
-      {selectedServices.length > 0 && <section className="profileServices card"><div className="eyebrow">SERVIÇOS</div><h2>Serviços e modalidades</h2><div className="serviceChips">{selectedServices.map((service) => <span key={service.id}>{service.name}</span>)}</div></section>}
+      {selectedServices.length > 0 && <section id="servicos" className="profileServices card"><div className="eyebrow">SERVIÇOS</div><h2>Serviços e modalidades</h2><div className="serviceChips">{selectedServices.map((service) => <span key={service.id}>{service.name}</span>)}</div></section>}
 
-      {validPrices.length > 0 && <section className="profilePricing card"><div className="eyebrow">VALORES</div><h2>Preços por período</h2><div className="priceGrid">{validPrices.map((row, index) => { const minutes = Number(row.minutes); const label = typeof row.period === "string" && row.period ? row.period : minutes === 60 ? "1 Hora" : minutes > 0 ? `${minutes} minutos` : "Período"; return <div key={`${String(row.minutes ?? row.period ?? index)}-${index}`}><span>{label}</span><strong>{row.starting_from === true ? "A partir de " : ""}{brl(Number(row.price))}</strong></div>; })}</div></section>}
+      {validPrices.length > 0 && <section id="valores" className="profilePricing card"><div className="eyebrow">VALORES</div><h2>Preços por período</h2><div className="priceGrid">{validPrices.map((row, index) => { const minutes = Number(row.minutes); const label = typeof row.period === "string" && row.period ? row.period : minutes === 60 ? "1 Hora" : minutes > 0 ? `${minutes} minutos` : "Período"; return <div key={`${String(row.minutes ?? row.period ?? index)}-${index}`}><span>{label}</span><strong>{row.starting_from === true ? "A partir de " : ""}{brl(Number(row.price))}</strong></div>; })}</div></section>}
 
       {paymentMethods.length > 0 && <section className="profilePayment card"><div className="eyebrow">PAGAMENTO</div><h2>Formas de pagamento</h2><div className="paymentChips">{paymentMethods.map((key) => <span key={key}>✓ {paymentLabels[key] || key}</span>)}</div></section>}
 
@@ -277,7 +285,7 @@ export default function PublicAdvertiserPage() {
 
       {profile.availability && <section className="profileAvailability card"><div className="eyebrow">DISPONIBILIDADE</div><h2>Horários de atendimento</h2><p>{profile.availability}</p></section>}
 
-      <section className="profileMediaSection">
+      <section id="galeria" className="profileMediaSection">
         <div className="sectionHeading"><div><div className="eyebrow">GALERIA</div><h2>Fotos e vídeos</h2><p>Conteúdo público e conteúdo exclusivo com acesso pago definido pela própria anunciante.</p></div><div className="mediaTabs"><button className={mediaTab === "all" ? "active" : ""} onClick={() => setMediaTab("all")}>Tudo</button><button className={mediaTab === "image" ? "active" : ""} onClick={() => setMediaTab("image")}>Fotos</button><button className={mediaTab === "video" ? "active" : ""} onClick={() => setMediaTab("video")}>Vídeos</button></div></div>
         {notice && <div className="mediaNotice">{notice}</div>}
         {filteredMedia.length === 0 ? <div className="emptyDiscovery"><h2>Galeria em preparação</h2><p>Esta anunciante ainda não publicou mídia aprovada nesta categoria.</p></div> : <div className="profileGallery">{filteredMedia.map((item) => {
