@@ -97,6 +97,23 @@ export async function GET(request: Request) {
     }
   }
 
+  } else if (productType === "profile_media" && productId) {
+    const { data: purchase } = await admin
+      .from("profile_media_purchases")
+      .select("id,status,purchased_at")
+      .eq("order_id", order.id)
+      .eq("media_id", productId)
+      .eq("buyer_user_id", user.id)
+      .eq("status", "paid")
+      .not("purchased_at", "is", null)
+      .order("purchased_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (purchase) {
+      entitlement = { entitled: true, subscription_id: null, purchase_id: purchase.id, ends_at: null };
+    }
+  }
+
   return NextResponse.json({
     order: {
       id: order.id,
