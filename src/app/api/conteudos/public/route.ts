@@ -14,24 +14,31 @@ export async function GET(request: Request) {
 
   const admin = createAdminClient();
 
+  let ownerName = "";
+  let ownerSlug = "";
+
   if (ownerType === "advertiser") {
     const { data: owner } = await admin
       .from("advertiser_profiles")
-      .select("id,status")
+      .select("id,status,display_name,title,slug")
       .eq("id", ownerId)
       .eq("status", "published")
       .maybeSingle();
 
     if (!owner) return NextResponse.json({ products: [] });
+    ownerName = owner.display_name || owner.title || "Anunciante";
+    ownerSlug = owner.slug || "";
   } else {
     const { data: owner } = await admin
       .from("fans_creators")
-      .select("id,status")
+      .select("id,status,display_name,slug")
       .eq("id", ownerId)
       .eq("status", "active")
       .maybeSingle();
 
     if (!owner) return NextResponse.json({ products: [] });
+    ownerName = owner.display_name || "Criador";
+    ownerSlug = owner.slug || "";
   }
 
   const { data, error } = await admin
@@ -71,6 +78,8 @@ export async function GET(request: Request) {
         price: product.price,
         currency: product.currency,
         cover_url,
+        owner_name: ownerName,
+        owner_slug: ownerSlug,
       };
     }),
   );
