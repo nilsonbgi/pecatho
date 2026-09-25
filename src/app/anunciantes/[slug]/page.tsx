@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
 import ApproximateLocationMap from "@/components/ApproximateLocationMap";
 import DigitalContentShowcase from "@/components/DigitalContentShowcase";
+import ProfileCommerceHub from "@/components/ProfileCommerceHub";
 
 type Profile = { id: string; user_id: string; title: string | null; display_name: string | null; summary: string | null; description: string | null; status: string; verification_status: string | null; city_id: number | null; state_id: number | null; category_id: number | null; birth_date: string | null; height_cm: number | null; weight_kg: number | null; availability: string | null; phone: string | null; whatsapp: string | null; phone_secondary: string | null; positioning: string | null; pricing: Record<string, unknown> | null; payment_options: Record<string, unknown> | null; social_links: Record<string, string> | null };
 type Address = { public_latitude: number | null; public_longitude: number | null };
@@ -272,6 +273,15 @@ export default function PublicAdvertiserPage() {
       </section>
 
       <DigitalContentShowcase ownerType="advertiser" ownerId={profile.id} compact />
+
+      <ProfileCommerceHub
+        ownerType="advertiser"
+        ownerId={profile.id}
+        fansSlug={fans?.slug ?? null}
+        serviceCount={selectedServices.length}
+        priceCount={validPrices.length}
+        galleryCount={media.length}
+      />
 
       {(visibleAttributeRows.length > 0 || profile.height_cm || profile.weight_kg || age) && <section className="profileDetails card"><div className="sectionHeading"><div><div className="eyebrow">CARACTERÍSTICAS</div><h2>Perfil e características</h2><p>Informações públicas configuradas pela anunciante e liberadas pela política do catálogo.</p></div></div><div className="detailGrid">{age && <div><span>Idade</span><strong>{age} anos</strong></div>}{profile.height_cm && <div><span>Altura</span><strong>{Number(profile.height_cm)} cm</strong></div>}{profile.weight_kg && <div><span>Peso</span><strong>{Number(profile.weight_kg)} kg</strong></div>}{visibleAttributeRows.map(({ attribute, value }) => <div key={attribute.id}><span>{attribute.name}</span><strong>{labelValue(value)}</strong></div>)}</div></section>}
 
