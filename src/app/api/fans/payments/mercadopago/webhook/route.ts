@@ -84,7 +84,9 @@ export async function POST(request: Request) {
 
   const settlementFunction = order.metadata?.product_type === "digital_content"
     ? "settle_digital_content_checkout"
-    : "settle_fans_checkout";
+    : order.metadata?.product_type === "profile_media"
+      ? "settle_profile_media_checkout"
+      : "settle_fans_checkout";
 
   const { data, error } = await admin.rpc(settlementFunction, {
     p_order_id: orderId,
