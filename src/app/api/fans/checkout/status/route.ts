@@ -95,8 +95,6 @@ export async function GET(request: Request) {
     if (sale) {
       entitlement = { entitled: true, subscription_id: null, purchase_id: sale.id, ends_at: null };
     }
-  }
-
   } else if (productType === "profile_media" && productId) {
     const { data: purchase } = await admin
       .from("profile_media_purchases")
