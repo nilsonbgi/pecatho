@@ -5,6 +5,7 @@ type MercadoPagoPreferenceInput = {
   amount: number;
   buyerEmail: string;
   creatorId?: string;
+  productType?: "digital_content" | "profile_media";
 };
 
 type MercadoPagoPreference = {
@@ -21,6 +22,8 @@ export async function createMercadoPagoPreference(input: MercadoPagoPreferenceIn
   if (!baseUrl) throw new Error("NEXT_PUBLIC_APP_URL não configurado.");
 
   const notificationUrl = new URL("/api/fans/payments/mercadopago/webhook", baseUrl).toString();
+  const productType = input.productType ?? "digital_content";
+  const channel = productType === "profile_media" ? "pecatho_profile_media" : input.creatorId ? "pecatho_fans" : "pecatho_digital_content";
 
   const response = await fetch("https://api.mercadopago.com/checkout/preferences", {
     method: "POST",
@@ -49,8 +52,9 @@ export async function createMercadoPagoPreference(input: MercadoPagoPreferenceIn
       metadata: {
         pecatho_order_id: input.orderId,
         pecatho_order_number: input.orderNumber,
+        product_type: productType,
+        channel,
         ...(input.creatorId ? { creator_id: input.creatorId } : {}),
-        channel: input.creatorId ? "pecatho_fans" : "pecatho_digital_content",
       },
     }),
   });
