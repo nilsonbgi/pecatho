@@ -204,7 +204,7 @@ export default function PublicAdvertiserPage() {
     } finally { setFollowBusy(false); }
   }
 
-  async function startConversation() {
+  async function startConversation(context?: string) {
     if (!profile || conversationBusy) return;
     setConversationBusy(true); setConversationNotice("");
     try {
@@ -221,7 +221,8 @@ export default function PublicAdvertiserPage() {
       const { data, error: rpcError } = await supabase.rpc("start_advertiser_conversation", { p_profile_id: profile.id });
       if (rpcError) throw rpcError;
       if (!data) throw new Error("A conversa não foi criada.");
-      window.location.href = `/painel/mensagens/${data}`;
+      const destination = context ? `/painel/mensagens/${data}?context=${encodeURIComponent(context)}` : `/painel/mensagens/${data}`;
+      window.location.href = destination;
     } catch (err) {
       console.error(err);
       setConversationNotice("Não foi possível iniciar a conversa agora.");
@@ -297,7 +298,7 @@ export default function PublicAdvertiserPage() {
             <h2>Serviços e modalidades</h2>
             <p>Veja o que esta anunciante disponibiliza e inicie o atendimento diretamente pelo Pecatho.</p>
           </div>
-          <button type="button" className="primaryButton" onClick={startConversation} disabled={conversationBusy}>
+          <button type="button" className="primaryButton" onClick={() => void startConversation("Olá! Gostaria de conhecer os serviços disponíveis e alinhar o atendimento.")} disabled={conversationBusy}>
             {conversationBusy ? "Abrindo atendimento..." : "Solicitar atendimento"}
           </button>
         </div>
@@ -313,7 +314,7 @@ export default function PublicAdvertiserPage() {
         {conversationNotice && <div className="followNotice" style={{ marginTop: 14 }}>{conversationNotice}</div>}
       </section>}
 
-      {validPrices.length > 0 && <section id="valores" className="profilePricing card"><div className="eyebrow">VALORES</div><h2>Preços por período</h2><div className="priceGrid">{validPrices.map((row, index) => { const minutes = Number(row.minutes); const label = typeof row.period === "string" && row.period ? row.period : minutes === 60 ? "1 Hora" : minutes > 0 ? `${minutes} minutos` : "Período"; return <div key={`${String(row.minutes ?? row.period ?? index)}-${index}`}><span>{label}</span><strong>{row.starting_from === true ? "A partir de " : ""}{brl(Number(row.price))}</strong></div>; })}</div></section>}
+      {validPrices.length > 0 && <section id="valores" className="profilePricing card"><div className="eyebrow">VALORES</div><h2>Preços por período</h2><div className="priceGrid">{validPrices.map((row, index) => { const minutes = Number(row.minutes); const label = typeof row.period === "string" && row.period ? row.period : minutes === 60 ? "1 Hora" : minutes > 0 ? `${minutes} minutos` : "Período"; const amount = brl(Number(row.price)); const context = `Olá! Tenho interesse no período ${label}, anunciado por ${row.starting_from === true ? "a partir de " : ""}${amount}. Gostaria de confirmar disponibilidade e condições.`; return <div key={`${String(row.minutes ?? row.period ?? index)}-${index}`} style={{ display: "grid", gap: 10, padding: 16, border: "1px solid rgba(15,23,42,.08)", borderRadius: 16, background: "#fff" }}><div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}><span>{label}</span><strong>{row.starting_from === true ? "A partir de " : ""}{amount}</strong></div><button type="button" className="secondaryButton" onClick={() => void startConversation(context)} disabled={conversationBusy}>{conversationBusy ? "Abrindo atendimento..." : "Solicitar este período"}</button></div>; })}</div></section>}
 
       {paymentMethods.length > 0 && <section className="profilePayment card"><div className="eyebrow">PAGAMENTO</div><h2>Formas de pagamento</h2><div className="paymentChips">{paymentMethods.map((key) => <span key={key}>✓ {paymentLabels[key] || key}</span>)}</div></section>}
 
