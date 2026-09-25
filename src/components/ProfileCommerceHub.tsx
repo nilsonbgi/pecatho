@@ -14,6 +14,7 @@ type Props =
   | {
       ownerType: "creator";
       creatorSlug: string;
+      creatorId: string;
       publicationCount: number;
       planCount: number;
       liveOfferCount: number;
