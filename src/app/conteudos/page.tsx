@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,7 @@ export default async function ConteudosPage({ searchParams }: Props) {
       : null;
 
   const supabase = await createClient();
+  const admin = createAdminClient();
 
   let query = supabase
     .from("digital_content_products")
@@ -53,7 +55,7 @@ export default async function ConteudosPage({ searchParams }: Props) {
       let coverUrl: string | null = null;
 
       if (product.cover_bucket && product.cover_path) {
-        const { data: signed } = await supabase.storage
+        const { data: signed } = await admin.storage
           .from(product.cover_bucket)
           .createSignedUrl(product.cover_path, 300);
         coverUrl = signed?.signedUrl ?? null;
