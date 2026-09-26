@@ -29,6 +29,7 @@ create policy content_seller_reviews_public_select
   to anon, authenticated
   using (status = 'approved' and verified_purchase = true);
 
-revoke insert, update, delete on public.content_seller_reviews from anon, authenticated;
+revoke insert, update, delete, truncate, references, trigger on public.content_seller_reviews from public;
+revoke insert, update, delete, truncate, references, trigger on public.content_seller_reviews from anon, authenticated;
 
 grant select on public.content_seller_reviews to anon, authenticated;
