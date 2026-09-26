@@ -280,7 +280,6 @@ export default function DigitalContentShowcase({
                 </article>
               ))}
             </div>
-            </div>
           </div>
         ) : null}
 
