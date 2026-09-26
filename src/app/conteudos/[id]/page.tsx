@@ -180,6 +180,23 @@ export default function DigitalContentProductPage() {
           </div>
 
           <div className="p-7 sm:p-10">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <Link
+                href={product.owner_type === "advertiser" ? `/anunciantes/${product.owner_slug}` : `/fans/${product.owner_slug}`}
+                className="text-xs font-black text-white/60 no-underline transition hover:text-violet-200"
+              >
+                ← Voltar ao perfil
+              </Link>
+              <Link
+                href={product.owner_type === "advertiser"
+                  ? `/conteudos?owner_type=advertiser&owner_id=${encodeURIComponent(product.owner_id)}`
+                  : `/conteudos?owner_type=creator&owner_id=${encodeURIComponent(product.owner_id)}`}
+                className="text-xs font-black text-violet-200 no-underline transition hover:text-white"
+              >
+                Ver loja do vendedor →
+              </Link>
+            </div>
+
             <div className="mb-4 flex flex-wrap items-center gap-2">
               <span className="rounded-full border border-violet-300/20 bg-violet-400/10 px-3 py-1.5 text-[10px] font-black tracking-[.12em] text-violet-200">
                 VENDEDOR · {product.owner_name}
@@ -266,6 +283,16 @@ export default function DigitalContentProductPage() {
 
             <div className="mt-7 rounded-2xl border border-violet-300/10 bg-violet-400/[.04] p-4 text-xs leading-5 text-slate-400">
               <strong className="text-white">Compra vinculada ao vendedor.</strong> Este conteúdo foi publicado por {product.owner_name} e o acesso adquirido fica associado à sua conta Pecatho.
+              <div className="mt-3">
+                <Link
+                  href={product.owner_type === "advertiser"
+                    ? `/conteudos?owner_type=advertiser&owner_id=${encodeURIComponent(product.owner_id)}`
+                    : `/conteudos?owner_type=creator&owner_id=${encodeURIComponent(product.owner_id)}`}
+                  className="font-black text-violet-200 no-underline hover:text-white"
+                >
+                  Explorar outros conteúdos de {product.owner_name} →
+                </Link>
+              </div>
             </div>
 
             <p className="mt-6 text-center text-xs leading-5 text-slate-500">
