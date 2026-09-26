@@ -383,6 +383,11 @@ export default function PublicAdvertiserPage() {
           return <article className={`profileMediaCard ${item.access_type === "paid" ? "paid" : "public"}`} key={item.id}>
             <div className="profileMediaVisual">{src ? (isVideo && unlocked ? <video src={src} controls playsInline preload="metadata" /> : <img src={src} alt={item.access_type === "paid" ? "Prévia de conteúdo exclusivo" : "Foto do perfil"} />) : <div className="lockedMedia"><span>{isVideo ? "▶" : "✦"}</span><strong>Conteúdo exclusivo</strong><small>Prévia não publicada</small></div>}
               {item.access_type === "paid" && !unlocked && <div className="paidOverlay"><span>🔒 EXCLUSIVO</span><strong>{brl(Number(item.price))}</strong><button type="button" onClick={() => unlock(item)} disabled={unlocking === item.id}>{unlocking === item.id ? "Preparando compra..." : `Comprar conteúdo · ${brl(Number(item.price))}`}</button></div>}
+              {item.access_type === "paid" && unlocked && (
+                <div className="mediaBadge" style={{ background: "rgba(16,185,129,.92)", color: "#fff", right: 12, left: "auto" }}>
+                  ✓ ACESSO LIBERADO
+                </div>
+              )}
               {item.access_type === "public" && <span className="mediaBadge">PÚBLICO</span>}
             </div>
           </article>;
