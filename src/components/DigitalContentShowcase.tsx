@@ -17,6 +17,13 @@ type Product = {
   owner_slug?: string | null;
 };
 
+type SellerReputation = {
+  average_rating: number | null;
+  review_count: number;
+  verified_sales_count: number;
+  trust_badge: boolean;
+};
+
 const typeLabel: Record<Product["product_type"], string> = {
   single_image: "IMAGEM EXCLUSIVA",
   single_video: "VÍDEO EXCLUSIVO",
@@ -33,7 +40,9 @@ export default function DigitalContentShowcase({
   compact?: boolean;
 }) {
   const [products, setProducts] = useState<Product[]>([]);
+  const [reputation, setReputation] = useState<SellerReputation | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reputationLoading, setReputationLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
@@ -54,6 +63,24 @@ export default function DigitalContentShowcase({
       })
       .finally(() => {
         if (active) setLoading(false);
+      });
+
+    fetch(
+      `/api/conteudos/seller-reputation?owner_type=${encodeURIComponent(ownerType)}&owner_id=${encodeURIComponent(ownerId)}`,
+      { cache: "no-store" },
+    )
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Não foi possível carregar a reputação.");
+        return response.json() as Promise<{ reputation?: SellerReputation | null }>;
+      })
+      .then((data) => {
+        if (active) setReputation(data.reputation ?? null);
+      })
+      .catch(() => {
+        if (active) setReputation(null);
+      })
+      .finally(() => {
+        if (active) setReputationLoading(false);
       });
 
     return () => {
@@ -91,6 +118,22 @@ export default function DigitalContentShowcase({
               ) : null}
             </div>
 
+            {!reputationLoading && reputation?.trust_badge ? (
+              <div className="mt-4 inline-flex flex-wrap items-center gap-2 rounded-2xl border border-emerald-300/20 bg-emerald-400/[.08] px-3 py-2 text-xs text-white shadow-[0_12px_30px_rgba(16,185,129,.08)]">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-400/15 text-sm text-emerald-300">✓</span>
+                <span className="font-black tracking-[.08em] text-emerald-200">VENDEDOR DE CONTEÚDO VERIFICADO</span>
+                {reputation.average_rating !== null ? (
+                  <span className="rounded-full bg-white/[.08] px-2.5 py-1 font-black text-white">
+                    ★ {reputation.average_rating.toFixed(1)} · {reputation.review_count} {reputation.review_count === 1 ? "avaliação" : "avaliações"}
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-white/[.08] px-2.5 py-1 font-bold text-white/70">
+                    Ainda sem avaliações
+                  </span>
+                )}
+              </div>
+            ) : null}
+
             <h2 className="mt-3 text-3xl font-black tracking-[-.06em] sm:text-4xl">
               Conteúdo exclusivo
             </h2>
@@ -99,6 +142,12 @@ export default function DigitalContentShowcase({
               Materiais exclusivos disponibilizados diretamente por este {sellerLabel}.
               Cada item possui preço próprio e é liberado somente após a confirmação do pagamento.
             </p>
+
+            {!reputationLoading && reputation && reputation.verified_sales_count > 0 ? (
+              <p className="mt-3 text-[11px] font-bold tracking-[.08em] text-white/45">
+                {reputation.verified_sales_count} {reputation.verified_sales_count === 1 ? "venda confirmada" : "vendas confirmadas"} no ecossistema de conteúdo do Pecatho
+              </p>
+            ) : null}
           </div>
 
           {!loading && products.length > 0 ? (
@@ -190,6 +239,21 @@ export default function DigitalContentShowcase({
             >
               Ver todos os conteúdos deste perfil · {products.length} disponíveis
             </Link>
+          </div>
+        ) : null}
+
+        {reputation && reputation.review_count > 0 ? (
+          <div className="mt-6 rounded-2xl border border-white/10 bg-white/[.035] p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-[10px] font-black tracking-[.14em] text-violet-300">REPUTAÇÃO DO VENDEDOR</p>
+                <p className="mt-1 text-xs leading-5 text-white/55">Rating atribuído por compradores com compra de conteúdo verificada.</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <strong className="text-2xl font-black text-white">★ {reputation.average_rating?.toFixed(1)}</strong>
+                <span className="text-xs font-bold text-white/50">{reputation.review_count} {reputation.review_count === 1 ? "avaliação" : "avaliações"}</span>
+              </div>
+            </div>
           </div>
         ) : null}
 
