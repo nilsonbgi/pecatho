@@ -89,6 +89,56 @@ export default async function ConteudosPage({ searchParams }: Props) {
     sellerProfileHref = owner?.slug ? `/fans/${owner.slug}` : "";
   }
 
+  const sellerMap = new Map<string, { name: string; href: string }>();
+
+  if (!scoped && productsWithCovers.length > 0) {
+    const advertiserIds = [
+      ...new Set(
+        productsWithCovers
+          .filter((product) => product.owner_type === "advertiser")
+          .map((product) => product.owner_id),
+      ),
+    ];
+    const creatorIds = [
+      ...new Set(
+        productsWithCovers
+          .filter((product) => product.owner_type === "creator")
+          .map((product) => product.owner_id),
+      ),
+    ];
+
+    const [{ data: advertisers }, { data: creators }] = await Promise.all([
+      advertiserIds.length
+        ? admin
+            .from("advertiser_profiles")
+            .select("id,display_name,title,slug")
+            .in("id", advertiserIds)
+            .eq("status", "published")
+        : Promise.resolve({ data: [] as Array<{ id: string; display_name: string | null; title: string | null; slug: string | null }> }),
+      creatorIds.length
+        ? admin
+            .from("fans_creators")
+            .select("id,display_name,slug")
+            .in("id", creatorIds)
+            .eq("status", "active")
+        : Promise.resolve({ data: [] as Array<{ id: string; display_name: string | null; slug: string | null }> }),
+    ]);
+
+    for (const advertiser of advertisers ?? []) {
+      sellerMap.set(advertiser.id, {
+        name: advertiser.display_name || advertiser.title || "Anunciante",
+        href: advertiser.slug ? `/anunciantes/${advertiser.slug}` : "",
+      });
+    }
+
+    for (const creator of creators ?? []) {
+      sellerMap.set(creator.id, {
+        name: creator.display_name || "Criador",
+        href: creator.slug ? `/fans/${creator.slug}` : "",
+      });
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#f5f5f7] px-4 py-8 text-slate-950">
       <section className="mx-auto max-w-7xl">
@@ -147,12 +197,14 @@ export default async function ConteudosPage({ searchParams }: Props) {
         </div>
 
         <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {productsWithCovers.map((p) => (
-            <Link
-              key={p.id}
-              href={`/conteudos/${p.id}`}
-              className="group overflow-hidden rounded-3xl border border-slate-200 bg-white no-underline shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-xl"
-            >
+          {productsWithCovers.map((p) => {
+            const seller = sellerMap.get(p.owner_id);
+            return (
+              <article
+                key={p.id}
+                className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-xl"
+              >
+              <Link href={`/conteudos/${p.id}`} className="block no-underline">
               <div className="relative aspect-[4/3] overflow-hidden bg-slate-950">
                 {p.coverUrl ? (
                   <img
@@ -180,7 +232,30 @@ export default async function ConteudosPage({ searchParams }: Props) {
                 </div>
               </div>
 
+              </div>
+              </Link>
+
               <div className="p-5">
+                {!scoped && seller ? (
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    {seller.href ? (
+                      <Link
+                        href={seller.href}
+                        className="min-w-0 truncate text-[10px] font-black uppercase tracking-[.12em] text-slate-500 no-underline hover:text-violet-700"
+                      >
+                        {seller.name}
+                      </Link>
+                    ) : (
+                      <span className="min-w-0 truncate text-[10px] font-black uppercase tracking-[.12em] text-slate-500">
+                        {seller.name}
+                      </span>
+                    )}
+                    <span className="shrink-0 text-[9px] font-bold text-slate-400">
+                      {p.owner_type === "creator" ? "CRIADOR" : "ANUNCIANTE"}
+                    </span>
+                  </div>
+                ) : null}
+
                 <h2 className="line-clamp-2 text-lg font-black tracking-tight text-slate-950">
                   {p.title}
                 </h2>
@@ -201,8 +276,9 @@ export default async function ConteudosPage({ searchParams }: Props) {
                   </span>
                 </div>
               </div>
-            </Link>
-          ))}
+            </article>
+            );
+          })}
         </div>
 
         {productsWithCovers.length === 0 && (
