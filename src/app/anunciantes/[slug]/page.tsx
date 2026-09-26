@@ -374,7 +374,7 @@ export default function PublicAdvertiserPage() {
       {profile.availability && <section className="profileAvailability card"><div className="eyebrow">DISPONIBILIDADE</div><h2>Horários de atendimento</h2><p>{profile.availability}</p></section>}
 
       <section id="galeria" className="profileMediaSection">
-        <div className="sectionHeading"><div><div className="eyebrow">GALERIA</div><h2>Fotos e vídeos</h2><p>Conteúdo público e conteúdo exclusivo com acesso pago definido pela própria anunciante.</p></div><div className="mediaTabs"><button className={mediaTab === "all" ? "active" : ""} onClick={() => setMediaTab("all")}>Tudo</button><button className={mediaTab === "image" ? "active" : ""} onClick={() => setMediaTab("image")}>Fotos</button><button className={mediaTab === "video" ? "active" : ""} onClick={() => setMediaTab("video")}>Vídeos</button></div></div>
+        <div className="sectionHeading"><div><div className="eyebrow">GALERIA</div><h2>Fotos e vídeos</h2><p>Conteúdo público e conteúdo exclusivo com acesso pago definido pela própria anunciante.</p></div><div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", justifyContent: "flex-end" }}><Link href="/conteudos/minhas-compras" className="secondaryButton" style={{ textDecoration: "none" }}>Minhas compras</Link><div className="mediaTabs"><button className={mediaTab === "all" ? "active" : ""} onClick={() => setMediaTab("all")}>Tudo</button><button className={mediaTab === "image" ? "active" : ""} onClick={() => setMediaTab("image")}>Fotos</button><button className={mediaTab === "video" ? "active" : ""} onClick={() => setMediaTab("video")}>Vídeos</button></div></div></div>
         {notice && <div className="mediaNotice">{notice}</div>}
         {filteredMedia.length === 0 ? <div className="emptyDiscovery"><h2>Galeria em preparação</h2><p>Esta anunciante ainda não publicou mídia aprovada nesta categoria.</p></div> : <div className="profileGallery">{filteredMedia.map((item) => {
           const unlocked = Boolean(item.unlockedUrl);
@@ -390,6 +390,12 @@ export default function PublicAdvertiserPage() {
               )}
               {item.access_type === "public" && <span className="mediaBadge">PÚBLICO</span>}
             </div>
+            {item.access_type === "paid" && unlocked && item.unlockedUrl && (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: 10, borderTop: "1px solid rgba(15,23,42,.08)", background: "#fff" }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: "#059669" }}>✓ Conteúdo adquirido</span>
+                <a href={item.unlockedUrl} target="_blank" rel="noreferrer" download className="secondaryButton" style={{ textDecoration: "none", padding: "8px 11px", fontSize: 11 }}>Abrir / baixar</a>
+              </div>
+            )}
           </article>;
         })}</div>}
       </section>
