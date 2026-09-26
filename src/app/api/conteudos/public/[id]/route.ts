@@ -39,6 +39,17 @@ export async function GET(
     );
   }
 
+  let owner_name = product.owner_type === "creator" ? "Criador" : "Anunciante";
+  let owner_slug = "";
+
+  if (product.owner_type === "advertiser") {
+    const { data: owner } = await admin.from("advertiser_profiles").select("display_name,title,slug").eq("id", product.owner_id).eq("status", "published").maybeSingle();
+    if (owner) { owner_name = owner.display_name || owner.title || owner_name; owner_slug = owner.slug || ""; }
+  } else {
+    const { data: owner } = await admin.from("fans_creators").select("display_name,slug").eq("id", product.owner_id).eq("status", "active").maybeSingle();
+    if (owner) { owner_name = owner.display_name || owner_name; owner_slug = owner.slug || ""; }
+  }
+
   let cover_url: string | null = null;
 
   if (product.cover_bucket && product.cover_path) {
@@ -78,6 +89,8 @@ export async function GET(
         currency: product.currency,
         owner_type: product.owner_type,
         owner_id: product.owner_id,
+        owner_name,
+        owner_slug,
         cover_url,
         file_count: items?.length ?? 0,
         media_types: mediaTypes,
