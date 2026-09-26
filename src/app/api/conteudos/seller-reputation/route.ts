@@ -73,6 +73,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Não foi possível carregar a reputação." }, { status: 500 });
   }
 
+  const verifiedSalesCount = (digitalSales.count ?? 0) + (mediaSales.count ?? 0);
   const ratingValues = (reviews ?? []).map((review) => Number(review.rating)).filter((value) => Number.isFinite(value));
   const reviewCount = ratingValues.length;
   const averageRating = reviewCount > 0
@@ -83,8 +84,8 @@ export async function GET(request: Request) {
     reputation: {
       average_rating: averageRating,
       review_count: reviewCount,
-      verified_sales_count: (digitalSales.count ?? 0) + (mediaSales.count ?? 0),
-      trust_badge: true,
+      verified_sales_count: verifiedSalesCount,
+      trust_badge: verifiedSalesCount > 0,
       reviews: reviews ?? [],
     },
   }, {
