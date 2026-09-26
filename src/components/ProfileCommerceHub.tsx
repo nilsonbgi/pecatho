@@ -129,13 +129,13 @@ export default function ProfileCommerceHub(props: Props) {
         </div>
 
         <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5 lg:grid-cols-4">
-          {cards.map((card) => {
+          {cards.map((card, index) => {
             const internal = card.href.startsWith("/");
             return internal ? (
               <Link
                 key={card.key}
                 href={card.href}
-                className="group rounded-2xl border border-slate-200 bg-slate-50 p-4 no-underline transition hover:-translate-y-0.5 hover:border-violet-200 hover:bg-white hover:shadow-md"
+                className={`group rounded-2xl border border-slate-200 p-4 no-underline transition hover:-translate-y-0.5 hover:border-violet-200 hover:bg-white hover:shadow-md ${index === 0 ? "bg-violet-50/70 ring-1 ring-violet-200" : "bg-slate-50"}`}
               >
                 <CardContent card={card} />
               </Link>
