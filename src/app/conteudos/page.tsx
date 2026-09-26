@@ -231,8 +231,6 @@ export default async function ConteudosPage({ searchParams }: Props) {
                   {formatPrice(p.price)}
                 </div>
               </div>
-
-              </div>
               </Link>
 
               <div className="p-5">
