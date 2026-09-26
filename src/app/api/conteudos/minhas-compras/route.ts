@@ -24,7 +24,7 @@ export async function GET() {
 
   const { data: products, error: productsError } = await admin
     .from("digital_content_products")
-    .select("id,title,description,product_type,price,currency")
+    .select("id,title,description,product_type,price,currency,owner_type,owner_id")
     .in("id", productIds);
 
   if (productsError) return NextResponse.json({ error: productsError.message }, { status: 500 });
@@ -36,6 +36,32 @@ export async function GET() {
     .order("sort_order", { ascending: true });
 
   if (itemsError) return NextResponse.json({ error: itemsError.message }, { status: 500 });
+
+  const advertiserIds = [...new Set((products ?? []).filter((product) => product.owner_type === "advertiser").map((product) => product.owner_id))];
+  const creatorIds = [...new Set((products ?? []).filter((product) => product.owner_type === "creator").map((product) => product.owner_id))];
+
+  const [{ data: advertisers }, { data: creators }] = await Promise.all([
+    advertiserIds.length
+      ? admin.from("advertiser_profiles").select("id,display_name,title,slug").in("id", advertiserIds).eq("status", "published")
+      : Promise.resolve({ data: [] }),
+    creatorIds.length
+      ? admin.from("fans_creators").select("id,display_name,slug").in("id", creatorIds).eq("status", "active")
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const sellerMap = new Map<string, { name: string; href: string }>();
+  for (const seller of advertisers ?? []) {
+    sellerMap.set(seller.id, {
+      name: seller.display_name || seller.title || "Anunciante",
+      href: seller.slug ? `/anunciantes/${seller.slug}` : "",
+    });
+  }
+  for (const seller of creators ?? []) {
+    sellerMap.set(seller.id, {
+      name: seller.display_name || "Criador",
+      href: seller.slug ? `/fans/${seller.slug}` : "",
+    });
+  }
 
   const productMap = new Map((products ?? []).map((product) => [product.id, product]));
   const itemMap = new Map<string, { count: number; mediaTypes: string[] }>();
@@ -53,7 +79,12 @@ export async function GET() {
     currency: sale.currency,
     paid_at: sale.paid_at,
     created_at: sale.created_at,
-    product: productMap.get(sale.product_id) ?? null,
+    product: productMap.get(sale.product_id)
+      ? {
+          ...productMap.get(sale.product_id),
+          seller: sellerMap.get(productMap.get(sale.product_id)?.owner_id ?? "") ?? null,
+        }
+      : null,
     files: itemMap.get(sale.product_id) ?? { count: 0, mediaTypes: [] },
   })).filter((purchase) => purchase.product !== null);
 
