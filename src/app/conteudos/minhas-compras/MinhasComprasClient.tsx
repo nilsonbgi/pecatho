@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import ContentSellerReview from "@/components/ContentSellerReview";
 
 type Purchase = {
   id: string;
@@ -264,6 +265,13 @@ export default function MinhasComprasClient() {
                   <div className="mt-5 rounded-2xl border border-violet-400/10 bg-violet-500/[0.06] p-4 text-xs leading-5 text-white/50">
                     Compra vinculada ao vendedor. Seu acesso permanece associado à sua conta Pecatho.
                   </div>
+                  {selectedPurchase.product.seller ? (
+                    <ContentSellerReview
+                      sourceType="digital_content"
+                      sourceId={selectedPurchase.id}
+                      sellerName={selectedPurchase.product.seller.name}
+                    />
+                  ) : null}
 
                   {selectedPurchase.product.description ? (
                     <p className="mt-4 text-sm leading-6 text-white/55">
@@ -362,6 +370,11 @@ export default function MinhasComprasClient() {
                 <div className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-300">COMPRA CONFIRMADA</div>
                 <div className="mt-1 font-black">{item.profile.display_name || "Anunciante Pecatho"}</div>
                 <div className="mt-1 text-xs text-white/40">{item.kind === "video" ? "Vídeo exclusivo" : "Imagem exclusiva"} · {money(item.amount, item.currency)}</div>
+                <ContentSellerReview
+                  sourceType="profile_media"
+                  sourceId={item.id}
+                  sellerName={item.profile.display_name}
+                />
                 <div className="mt-3 flex items-center justify-between gap-3"><Link href={`/anunciantes/${item.profile.slug}#galeria`} className="text-xs font-black text-violet-300 hover:text-violet-200">Ver perfil</Link><a href={item.url} target="_blank" rel="noreferrer" download className="rounded-xl bg-white px-3 py-2 text-xs font-black text-slate-950">Abrir / baixar</a></div>
                 <div className="mt-2 text-[10px] text-white/30">Link de acesso válido por {Math.round(item.access_expires_in / 60)} minutos.</div>
               </div>
