@@ -34,46 +34,76 @@ export async function GET(request: Request) {
     if (!owner) return NextResponse.json({ reputation: null });
   }
 
-  const [{ data: reviews, error: reviewError }, digitalSales, mediaSales] = await Promise.all([
-    admin
-      .from("content_seller_reviews")
-      .select("id,rating,comment,created_at,verified_purchase")
-      .eq("owner_type", ownerType)
-      .eq("owner_id", ownerId)
-      .eq("status", "approved")
-      .eq("verified_purchase", true)
-      .order("created_at", { ascending: false })
-      .limit(8),
-    admin
-      .from("digital_content_sales")
-      .select("id", { count: "exact", head: true })
-      .eq("owner_type", ownerType)
-      .eq("owner_id", ownerId)
-      .eq("status", "paid"),
-    ownerType === "advertiser"
-      ? admin
-          .from("profile_media_purchases")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "paid")
-          .in(
-            "media_id",
-            (
-              await admin
-                .from("profile_media")
-                .select("id")
-                .eq("profile_id", ownerId)
-                .then(({ data }) => (data ?? []).map((row) => row.id)),
-            ),
-          )
-      : Promise.resolve({ count: 0, error: null }),
-  ]);
+  let mediaSalesCount = 0;
+
+  if (ownerType === "advertiser") {
+    const { data: mediaRows, error: mediaRowsError } = await admin
+      .from("profile_media")
+      .select("id")
+      .eq("profile_id", ownerId);
+
+    if (mediaRowsError) {
+      console.error(mediaRowsError);
+      return NextResponse.json(
+        { error: "Não foi possível carregar a reputação." },
+        { status: 500 },
+      );
+    }
+
+    const mediaIds = (mediaRows ?? []).map((row) => row.id);
+
+    if (mediaIds.length > 0) {
+      const { count, error: mediaSalesError } = await admin
+        .from("profile_media_purchases")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "paid")
+        .in("media_id", mediaIds);
+
+      if (mediaSalesError) {
+        console.error(mediaSalesError);
+        return NextResponse.json(
+          { error: "Não foi possível carregar a reputação." },
+          { status: 500 },
+        );
+      }
+
+      mediaSalesCount = count ?? 0;
+    }
+  }
+
+  const [{ data: reviews, error: reviewError }, { count: digitalSalesCount, error: digitalSalesError }] =
+    await Promise.all([
+      admin
+        .from("content_seller_reviews")
+        .select("id,rating,comment,created_at,verified_purchase")
+        .eq("owner_type", ownerType)
+        .eq("owner_id", ownerId)
+        .eq("status", "approved")
+        .eq("verified_purchase", true)
+        .order("created_at", { ascending: false })
+        .limit(8),
+      admin
+        .from("digital_content_sales")
+        .select("id", { count: "exact", head: true })
+        .eq("owner_type", ownerType)
+        .eq("owner_id", ownerId)
+        .eq("status", "paid"),
+    ]);
+
+  if (reviewError || digitalSalesError) {
+    console.error(reviewError ?? digitalSalesError);
+    return NextResponse.json(
+      { error: "Não foi possível carregar a reputação." },
+      { status: 500 },
+    );
+  }
 
   if (reviewError) {
     console.error(reviewError);
     return NextResponse.json({ error: "Não foi possível carregar a reputação." }, { status: 500 });
   }
 
-  const verifiedSalesCount = (digitalSales.count ?? 0) + (mediaSales.count ?? 0);
+  const verifiedSalesCount = (digitalSalesCount ?? 0) + mediaSalesCount;
   const ratingValues = (reviews ?? []).map((review) => Number(review.rating)).filter((value) => Number.isFinite(value));
   const reviewCount = ratingValues.length;
   const averageRating = reviewCount > 0
