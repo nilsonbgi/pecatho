@@ -22,6 +22,13 @@ type SellerReputation = {
   review_count: number;
   verified_sales_count: number;
   trust_badge: boolean;
+  reviews: Array<{
+    id: string;
+    rating: number;
+    comment: string | null;
+    created_at: string;
+    verified_purchase: boolean;
+  }>;
 };
 
 const typeLabel: Record<Product["product_type"], string> = {
@@ -253,6 +260,26 @@ export default function DigitalContentShowcase({
                 <strong className="text-2xl font-black text-white">★ {reputation.average_rating?.toFixed(1)}</strong>
                 <span className="text-xs font-bold text-white/50">{reputation.review_count} {reputation.review_count === 1 ? "avaliação" : "avaliações"}</span>
               </div>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {reputation.reviews.slice(0, 4).map((review) => (
+                <article key={review.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-black tracking-wide text-amber-300">
+                      {"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}
+                    </span>
+                    <span className="rounded-full border border-emerald-300/15 bg-emerald-400/[.05] px-2 py-1 text-[9px] font-black tracking-[.1em] text-emerald-300">
+                      COMPRA VERIFICADA
+                    </span>
+                  </div>
+                  {review.comment ? (
+                    <p className="mt-3 text-xs leading-5 text-white/60">“{review.comment}”</p>
+                  ) : (
+                    <p className="mt-3 text-xs italic leading-5 text-white/35">Avaliação sem comentário.</p>
+                  )}
+                </article>
+              ))}
+            </div>
             </div>
           </div>
         ) : null}
