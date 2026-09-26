@@ -92,6 +92,17 @@ export default async function ConteudosPage({ searchParams }: Props) {
           </div>
         </div>
 
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div className="text-xs font-bold text-slate-500">
+            {scoped ? `${(products ?? []).length} conteúdo(s) deste vendedor` : `${(products ?? []).length} conteúdo(s) disponíveis`}
+          </div>
+          {!scoped ? (
+            <div className="text-xs text-slate-400">
+              A loja global é uma vitrine complementar. Os perfis dos vendedores concentram a experiência principal.
+            </div>
+          ) : null}
+        </div>
+
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {(products ?? []).map((p) => (
             <Link
@@ -110,6 +121,9 @@ export default async function ConteudosPage({ searchParams }: Props) {
               <p className="mt-2 line-clamp-3 text-xs leading-5 text-slate-500">
                 {p.description || "Conteúdo digital exclusivo."}
               </p>
+              <div className="mt-3 text-[10px] font-black uppercase tracking-[.12em] text-violet-600">
+                {scoped ? "Venda direta deste perfil" : p.owner_type === "creator" ? "Criador" : "Anunciante"}
+              </div>
               <div className="mt-5 flex items-center justify-between">
                 <strong className="text-lg">
                   R$ {Number(p.price).toFixed(2).replace(".", ",")}
