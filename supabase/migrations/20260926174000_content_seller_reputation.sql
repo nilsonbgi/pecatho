@@ -29,23 +29,6 @@ create policy content_seller_reviews_public_select
   to anon, authenticated
   using (status = 'approved' and verified_purchase = true);
 
-drop policy if exists content_seller_reviews_buyer_insert on public.content_seller_reviews;
-create policy content_seller_reviews_buyer_insert
-  on public.content_seller_reviews
-  for insert
-  to authenticated
-  with check (
-    buyer_user_id = (select auth.uid())
-    and verified_purchase = true
-  );
-
-drop policy if exists content_seller_reviews_buyer_update on public.content_seller_reviews;
-create policy content_seller_reviews_buyer_update
-  on public.content_seller_reviews
-  for update
-  to authenticated
-  using (buyer_user_id = (select auth.uid()))
-  with check (buyer_user_id = (select auth.uid()));
+revoke insert, update, delete on public.content_seller_reviews from anon, authenticated;
 
 grant select on public.content_seller_reviews to anon, authenticated;
-grant insert, update on public.content_seller_reviews to authenticated;
