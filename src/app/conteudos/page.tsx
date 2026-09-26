@@ -7,16 +7,37 @@ type Props = {
   searchParams: Promise<{ owner_type?: string; owner_id?: string }>;
 };
 
+function formatPrice(value: number | string | null | undefined) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(Number(value ?? 0));
+}
+
+function productLabel(productType: string) {
+  if (productType === "package") return "PACOTE";
+  if (productType === "single_video") return "VÍDEO";
+  return "IMAGEM";
+}
+
 export default async function ConteudosPage({ searchParams }: Props) {
   const params = await searchParams;
-  const ownerType = params.owner_type === "advertiser" || params.owner_type === "creator" ? params.owner_type : null;
-  const ownerId = typeof params.owner_id === "string" && /^[0-9a-f-]{36}$/i.test(params.owner_id) ? params.owner_id : null;
+  const ownerType =
+    params.owner_type === "advertiser" || params.owner_type === "creator"
+      ? params.owner_type
+      : null;
+  const ownerId =
+    typeof params.owner_id === "string" && /^[0-9a-f-]{36}$/i.test(params.owner_id)
+      ? params.owner_id
+      : null;
 
   const supabase = await createClient();
 
   let query = supabase
     .from("digital_content_products")
-    .select("id,title,description,product_type,price,currency,owner_type,owner_id")
+    .select(
+      "id,title,description,product_type,price,currency,owner_type,owner_id,cover_bucket,cover_path",
+    )
     .eq("status", "published")
     .order("created_at", { ascending: false })
     .limit(60);
@@ -26,6 +47,21 @@ export default async function ConteudosPage({ searchParams }: Props) {
   }
 
   const { data: products } = await query;
+
+  const productsWithCovers = await Promise.all(
+    (products ?? []).map(async (product) => {
+      let coverUrl: string | null = null;
+
+      if (product.cover_bucket && product.cover_path) {
+        const { data: signed } = await supabase.storage
+          .from(product.cover_bucket)
+          .createSignedUrl(product.cover_path, 300);
+        coverUrl = signed?.signedUrl ?? null;
+      }
+
+      return { ...product, coverUrl };
+    }),
+  );
 
   const scoped = Boolean(ownerType && ownerId);
   let sellerName = "";
@@ -69,7 +105,10 @@ export default async function ConteudosPage({ searchParams }: Props) {
                     VENDEDOR · {sellerName.toUpperCase()}
                   </span>
                   {sellerProfileHref ? (
-                    <Link href={sellerProfileHref} className="text-xs font-black text-white underline decoration-violet-300/50 underline-offset-4">
+                    <Link
+                      href={sellerProfileHref}
+                      className="text-xs font-black text-white underline decoration-violet-300/50 underline-offset-4"
+                    >
                       Voltar ao perfil →
                     </Link>
                   ) : null}
@@ -94,7 +133,9 @@ export default async function ConteudosPage({ searchParams }: Props) {
 
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div className="text-xs font-bold text-slate-500">
-            {scoped ? `${(products ?? []).length} conteúdo(s) deste vendedor` : `${(products ?? []).length} conteúdo(s) disponíveis`}
+            {scoped
+              ? `${productsWithCovers.length} conteúdo(s) deste vendedor`
+              : `${productsWithCovers.length} conteúdo(s) disponíveis`}
           </div>
           {!scoped ? (
             <div className="text-xs text-slate-400">
@@ -103,43 +144,71 @@ export default async function ConteudosPage({ searchParams }: Props) {
           ) : null}
         </div>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {(products ?? []).map((p) => (
+        <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {productsWithCovers.map((p) => (
             <Link
               key={p.id}
               href={`/conteudos/${p.id}`}
-              className="rounded-3xl border border-slate-200 bg-white p-5 no-underline shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+              className="group overflow-hidden rounded-3xl border border-slate-200 bg-white no-underline shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-xl"
             >
-              <div className="text-[10px] font-black tracking-[.14em] text-violet-600">
-                {p.product_type === "package"
-                  ? "PACOTE"
-                  : p.product_type === "single_video"
-                    ? "VÍDEO"
-                    : "IMAGEM"}
+              <div className="relative aspect-[4/3] overflow-hidden bg-slate-950">
+                {p.coverUrl ? (
+                  <img
+                    src={p.coverUrl}
+                    alt=""
+                    className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center bg-gradient-to-br from-slate-950 via-violet-950/80 to-slate-900 px-6 text-center">
+                    <div>
+                      <div className="text-[10px] font-black tracking-[.22em] text-violet-300">
+                        PECATHO · EXCLUSIVO
+                      </div>
+                      <div className="mt-2 text-2xl font-black text-white">
+                        {productLabel(p.product_type)}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div className="absolute left-3 top-3 rounded-full bg-black/65 px-3 py-1.5 text-[9px] font-black tracking-[.14em] text-white backdrop-blur">
+                  {productLabel(p.product_type)}
+                </div>
+                <div className="absolute bottom-3 right-3 rounded-full bg-white/95 px-3 py-1.5 text-xs font-black text-slate-950 shadow-lg">
+                  {formatPrice(p.price)}
+                </div>
               </div>
-              <h2 className="mt-2 text-lg font-black text-slate-950">{p.title}</h2>
-              <p className="mt-2 line-clamp-3 text-xs leading-5 text-slate-500">
-                {p.description || "Conteúdo digital exclusivo."}
-              </p>
-              <div className="mt-3 text-[10px] font-black uppercase tracking-[.12em] text-violet-600">
-                {scoped ? "Venda direta deste perfil" : p.owner_type === "creator" ? "Criador" : "Anunciante"}
-              </div>
-              <div className="mt-5 flex items-center justify-between">
-                <strong className="text-lg">
-                  R$ {Number(p.price).toFixed(2).replace(".", ",")}
-                </strong>
-                <span className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-black text-white">
-                  Ver conteúdo
-                </span>
+
+              <div className="p-5">
+                <h2 className="line-clamp-2 text-lg font-black tracking-tight text-slate-950">
+                  {p.title}
+                </h2>
+                <p className="mt-2 line-clamp-3 text-xs leading-5 text-slate-500">
+                  {p.description || "Conteúdo digital exclusivo."}
+                </p>
+
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <span className="text-[10px] font-black uppercase tracking-[.12em] text-violet-600">
+                    {scoped
+                      ? "Venda direta deste perfil"
+                      : p.owner_type === "creator"
+                        ? "Criador"
+                        : "Anunciante"}
+                  </span>
+                  <span className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-black text-white transition group-hover:bg-violet-700">
+                    Ver conteúdo
+                  </span>
+                </div>
               </div>
             </Link>
           ))}
         </div>
 
-        {(products ?? []).length === 0 && (
+        {productsWithCovers.length === 0 && (
           <div className="mt-6 rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center">
             <h2 className="text-lg font-black text-slate-900">
-              {scoped ? "Esta loja ainda não tem conteúdos publicados." : "Ainda não há conteúdos publicados para venda."}
+              {scoped
+                ? "Esta loja ainda não tem conteúdos publicados."
+                : "Ainda não há conteúdos publicados para venda."}
             </h2>
             <p className="mt-2 text-sm text-slate-500">
               {scoped
