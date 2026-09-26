@@ -17,6 +17,9 @@ type Purchase = {
     product_type: string;
     price: number;
     currency: string;
+    owner_type: string;
+    owner_id: string;
+    seller: { name: string; href: string } | null;
   };
   files: {
     count: number;
@@ -211,6 +214,11 @@ export default function MinhasComprasClient() {
                           {typeLabel(purchase.product.product_type)}
                         </span>
                         <h2 className="mt-1 truncate text-base font-black">{purchase.product.title}</h2>
+                        {purchase.product.seller ? (
+                          <span className="mt-1 block truncate text-[10px] font-black uppercase tracking-[.12em] text-violet-300">
+                            {purchase.product.seller.name}
+                          </span>
+                        ) : null}
                       </div>
                       <span className="shrink-0 text-sm font-black">
                         {money(purchase.amount, purchase.currency)}
@@ -237,10 +245,24 @@ export default function MinhasComprasClient() {
                       <h2 className="mt-2 text-2xl font-black tracking-[-0.04em]">
                         {selectedPurchase.product.title}
                       </h2>
+                      {selectedPurchase.product.seller ? (
+                        <div className="mt-2">
+                          <Link
+                            href={selectedPurchase.product.seller.href}
+                            className="text-xs font-black text-violet-300 hover:text-violet-200"
+                          >
+                            Ver perfil de {selectedPurchase.product.seller.name} →
+                          </Link>
+                        </div>
+                      ) : null}
                     </div>
                     <div className="rounded-full bg-emerald-400/10 px-3 py-1 text-[10px] font-black text-emerald-300">
                       PAGO
                     </div>
+                  </div>
+
+                  <div className="mt-5 rounded-2xl border border-violet-400/10 bg-violet-500/[0.06] p-4 text-xs leading-5 text-white/50">
+                    Compra vinculada ao vendedor. Seu acesso permanece associado à sua conta Pecatho.
                   </div>
 
                   {selectedPurchase.product.description ? (
