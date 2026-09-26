@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 
 type Product = {
   id: string;
@@ -15,6 +16,8 @@ type Product = {
   cover_url: string | null;
   file_count: number;
   media_types: string[];
+  owner_name: string;
+  owner_slug: string;
 };
 
 function formatPrice(value: number | string, currency: string) {
@@ -177,6 +180,17 @@ export default function DigitalContentProductPage() {
           </div>
 
           <div className="p-7 sm:p-10">
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-violet-300/20 bg-violet-400/10 px-3 py-1.5 text-[10px] font-black tracking-[.12em] text-violet-200">
+                VENDEDOR · {product.owner_name}
+              </span>
+              {product.owner_slug ? (
+                <Link href={product.owner_type === "advertiser" ? `/anunciantes/${product.owner_slug}` : `/fans/${product.owner_slug}`} className="text-xs font-black text-violet-200 underline underline-offset-4">
+                  Ver perfil →
+                </Link>
+              ) : null}
+            </div>
+
             <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
               <span>
                 {product.owner_type === "creator"
@@ -248,6 +262,10 @@ export default function DigitalContentProductPage() {
                   Os arquivos originais não ficam expostos por URL pública.
                 </p>
               </div>
+            </div>
+
+            <div className="mt-7 rounded-2xl border border-violet-300/10 bg-violet-400/[.04] p-4 text-xs leading-5 text-slate-400">
+              <strong className="text-white">Compra vinculada ao vendedor.</strong> Este conteúdo foi publicado por {product.owner_name} e o acesso adquirido fica associado à sua conta Pecatho.
             </div>
 
             <p className="mt-6 text-center text-xs leading-5 text-slate-500">
