@@ -71,27 +71,37 @@ export async function GET(request: Request) {
     }
   }
 
-  const [{ data: reviews, error: reviewError }, { count: digitalSalesCount, error: digitalSalesError }] =
-    await Promise.all([
-      admin
-        .from("content_seller_reviews")
-        .select("id,rating,comment,created_at,verified_purchase")
-        .eq("owner_type", ownerType)
-        .eq("owner_id", ownerId)
-        .eq("status", "approved")
-        .eq("verified_purchase", true)
-        .order("created_at", { ascending: false })
-        .limit(8),
-      admin
-        .from("digital_content_sales")
-        .select("id", { count: "exact", head: true })
-        .eq("owner_type", ownerType)
-        .eq("owner_id", ownerId)
-        .eq("status", "paid"),
-    ]);
+  const [
+    { data: reviews, error: reviewError },
+    { data: ratingRows, error: ratingError },
+    { count: digitalSalesCount, error: digitalSalesError },
+  ] = await Promise.all([
+    admin
+      .from("content_seller_reviews")
+      .select("id,rating,comment,created_at,verified_purchase")
+      .eq("owner_type", ownerType)
+      .eq("owner_id", ownerId)
+      .eq("status", "approved")
+      .eq("verified_purchase", true)
+      .order("created_at", { ascending: false })
+      .limit(8),
+    admin
+      .from("content_seller_reviews")
+      .select("rating")
+      .eq("owner_type", ownerType)
+      .eq("owner_id", ownerId)
+      .eq("status", "approved")
+      .eq("verified_purchase", true),
+    admin
+      .from("digital_content_sales")
+      .select("id", { count: "exact", head: true })
+      .eq("owner_type", ownerType)
+      .eq("owner_id", ownerId)
+      .eq("status", "paid"),
+  ]);
 
-  if (reviewError || digitalSalesError) {
-    console.error(reviewError ?? digitalSalesError);
+  if (reviewError || ratingError || digitalSalesError) {
+    console.error(reviewError ?? ratingError ?? digitalSalesError);
     return NextResponse.json(
       { error: "Não foi possível carregar a reputação." },
       { status: 500 },
@@ -104,7 +114,7 @@ export async function GET(request: Request) {
   }
 
   const verifiedSalesCount = (digitalSalesCount ?? 0) + mediaSalesCount;
-  const ratingValues = (reviews ?? []).map((review) => Number(review.rating)).filter((value) => Number.isFinite(value));
+  const ratingValues = (ratingRows ?? []).map((review) => Number(review.rating)).filter((value) => Number.isFinite(value));
   const reviewCount = ratingValues.length;
   const averageRating = reviewCount > 0
     ? Number((ratingValues.reduce((sum, value) => sum + value, 0) / reviewCount).toFixed(1))
