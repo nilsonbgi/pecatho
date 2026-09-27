@@ -326,7 +326,7 @@ export default function PublicAdvertiserPage() {
       </nav>
 
       <section className="publicProfileHero" style={{padding:0,overflow:"hidden"}}>
-        <div style={{display:"grid",gridTemplateColumns:"minmax(0,1.35fr) minmax(320px,.65fr)",gap:0,minHeight:390}}>
+        <div className="advertiserHeroGrid">
           <div style={{position:"relative",minHeight:360,background:"#0b0b12"}}>
             {primaryMedia?.url || primaryMedia?.previewUrl ? (
               primaryMedia.kind === "video" ? <video src={primaryMedia.url || primaryMedia.previewUrl || undefined} muted playsInline controls style={{width:"100%",height:"100%",minHeight:360,objectFit:"cover"}} /> :
