@@ -89,6 +89,135 @@ export default async function ConteudosPage({ searchParams }: Props) {
     sellerProfileHref = owner?.slug ? `/fans/${owner.slug}` : "";
   }
 
+  type SellerReputation = {
+    average_rating: number | null;
+    review_count: number;
+    verified_sales_count: number;
+    trust_badge: boolean;
+  };
+
+  const reputationMap = new Map<string, SellerReputation>();
+
+  if (productsWithCovers.length > 0) {
+    const ownerKeys = [
+      ...new Set(productsWithCovers.map((product) => product.owner_type + ":" + product.owner_id)),
+    ];
+    const advertiserIds = [
+      ...new Set(
+        productsWithCovers
+          .filter((product) => product.owner_type === "advertiser")
+          .map((product) => product.owner_id),
+      ),
+    ];
+    const creatorIds = [
+      ...new Set(
+        productsWithCovers
+          .filter((product) => product.owner_type === "creator")
+          .map((product) => product.owner_id),
+      ),
+    ];
+
+    const [
+      { data: advertiserReviews },
+      { data: creatorReviews },
+      { data: advertiserSales },
+      { data: creatorSales },
+      { data: mediaRows },
+    ] = await Promise.all([
+      advertiserIds.length
+        ? admin
+            .from("content_seller_reviews")
+            .select("owner_type,owner_id,rating")
+            .eq("owner_type", "advertiser")
+            .eq("status", "approved")
+            .eq("verified_purchase", true)
+            .in("owner_id", advertiserIds)
+        : Promise.resolve({ data: [] as Array<{ owner_type: string; owner_id: string; rating: number }> }),
+      creatorIds.length
+        ? admin
+            .from("content_seller_reviews")
+            .select("owner_type,owner_id,rating")
+            .eq("owner_type", "creator")
+            .eq("status", "approved")
+            .eq("verified_purchase", true)
+            .in("owner_id", creatorIds)
+        : Promise.resolve({ data: [] as Array<{ owner_type: string; owner_id: string; rating: number }> }),
+      advertiserIds.length
+        ? admin
+            .from("digital_content_sales")
+            .select("owner_type,owner_id")
+            .eq("owner_type", "advertiser")
+            .eq("status", "paid")
+            .in("owner_id", advertiserIds)
+        : Promise.resolve({ data: [] as Array<{ owner_type: string; owner_id: string }> }),
+      creatorIds.length
+        ? admin
+            .from("digital_content_sales")
+            .select("owner_type,owner_id")
+            .eq("owner_type", "creator")
+            .eq("status", "paid")
+            .in("owner_id", creatorIds)
+        : Promise.resolve({ data: [] as Array<{ owner_type: string; owner_id: string }> }),
+      advertiserIds.length
+        ? admin
+            .from("profile_media")
+            .select("id,profile_id")
+            .in("profile_id", advertiserIds)
+        : Promise.resolve({ data: [] as Array<{ id: string; profile_id: string }> }),
+    ]);
+
+    const reviewStats = new Map<string, number[]>();
+    for (const review of [...(advertiserReviews ?? []), ...(creatorReviews ?? [])]) {
+      const key = review.owner_type + ":" + review.owner_id;
+      const values = reviewStats.get(key) ?? [];
+      values.push(Number(review.rating));
+      reviewStats.set(key, values);
+    }
+
+    const salesCounts = new Map<string, number>();
+    for (const sale of [...(advertiserSales ?? []), ...(creatorSales ?? [])]) {
+      const key = sale.owner_type + ":" + sale.owner_id;
+      salesCounts.set(key, (salesCounts.get(key) ?? 0) + 1);
+    }
+
+    const mediaOwnerMap = new Map<string, string>();
+    for (const media of mediaRows ?? []) {
+      mediaOwnerMap.set(media.id, media.profile_id);
+    }
+
+    if (mediaOwnerMap.size > 0) {
+      const { data: mediaPurchases } = await admin
+        .from("profile_media_purchases")
+        .select("media_id")
+        .eq("status", "paid")
+        .in("media_id", [...mediaOwnerMap.keys()]);
+
+      for (const purchase of mediaPurchases ?? []) {
+        const profileId = mediaOwnerMap.get(purchase.media_id);
+        if (!profileId) continue;
+        const key = "advertiser:" + profileId;
+        salesCounts.set(key, (salesCounts.get(key) ?? 0) + 1);
+      }
+    }
+
+    for (const key of ownerKeys) {
+      const ratings = reviewStats.get(key) ?? [];
+      const reviewCount = ratings.length;
+      const averageRating =
+        reviewCount > 0
+          ? Number((ratings.reduce((sum, value) => sum + value, 0) / reviewCount).toFixed(1))
+          : null;
+      const verifiedSalesCount = salesCounts.get(key) ?? 0;
+
+      reputationMap.set(key, {
+        average_rating: averageRating,
+        review_count: reviewCount,
+        verified_sales_count: verifiedSalesCount,
+        trust_badge: verifiedSalesCount > 0,
+      });
+    }
+  }
+
   const sellerMap = new Map<string, { name: string; href: string }>();
 
   if (!scoped && productsWithCovers.length > 0) {
@@ -235,22 +364,44 @@ export default async function ConteudosPage({ searchParams }: Props) {
 
               <div className="p-5">
                 {!scoped && seller ? (
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    {seller.href ? (
-                      <Link
-                        href={seller.href}
-                        className="min-w-0 truncate text-[10px] font-black uppercase tracking-[.12em] text-slate-500 no-underline hover:text-violet-700"
-                      >
-                        {seller.name}
-                      </Link>
-                    ) : (
-                      <span className="min-w-0 truncate text-[10px] font-black uppercase tracking-[.12em] text-slate-500">
-                        {seller.name}
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between gap-3">
+                      {seller.href ? (
+                        <Link
+                          href={seller.href}
+                          className="min-w-0 truncate text-[10px] font-black uppercase tracking-[.12em] text-slate-500 no-underline hover:text-violet-700"
+                        >
+                          {seller.name}
+                        </Link>
+                      ) : (
+                        <span className="min-w-0 truncate text-[10px] font-black uppercase tracking-[.12em] text-slate-500">
+                          {seller.name}
+                        </span>
+                      )}
+                      <span className="shrink-0 text-[9px] font-bold text-slate-400">
+                        {p.owner_type === "creator" ? "CRIADOR" : "ANUNCIANTE"}
                       </span>
-                    )}
-                    <span className="shrink-0 text-[9px] font-bold text-slate-400">
-                      {p.owner_type === "creator" ? "CRIADOR" : "ANUNCIANTE"}
-                    </span>
+                    </div>
+                    {(() => {
+                      const reputation = reputationMap.get(p.owner_type + ":" + p.owner_id);
+                      if (!reputation?.trust_badge) return null;
+                      return (
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-black uppercase tracking-[.08em] text-emerald-700">
+                            ✓ Vendedor verificado
+                          </span>
+                          {reputation.average_rating !== null ? (
+                            <span className="text-[10px] font-black text-slate-500">
+                              ★ {reputation.average_rating.toFixed(1)} · {reputation.review_count} avaliações
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-slate-400">
+                              {reputation.verified_sales_count} vendas confirmadas
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 ) : null}
 
