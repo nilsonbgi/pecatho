@@ -47,10 +47,10 @@ export async function GET() {
   const [{ data: reviews, error: reviewsError }, { data: digitalSales, error: digitalSalesError }] = await Promise.all([
     profileIds.length
       ? admin.from("content_seller_reviews").select("owner_id,rating").eq("owner_type", "advertiser").eq("status", "approved").eq("verified_purchase", true).in("owner_id", profileIds)
-      : Promise.resolve({ data: [] }),
+      : Promise.resolve({ data: [], error: null }),
     profileIds.length
       ? admin.from("digital_content_sales").select("owner_id").eq("owner_type", "advertiser").eq("status", "paid").in("owner_id", profileIds)
-      : Promise.resolve({ data: [] }),
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
   if (reviewsError) return NextResponse.json({ error: reviewsError.message }, { status: 500 });
