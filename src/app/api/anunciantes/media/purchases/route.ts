@@ -64,6 +64,7 @@ export async function GET() {
       url: signed.signedUrl,
       access_expires_in: 300,
       profile: {
+        id: profile.id,
         slug: profile.slug,
         display_name: profile.display_name,
       },
