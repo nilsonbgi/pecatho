@@ -21,6 +21,12 @@ type Purchase = {
     owner_type: string;
     owner_id: string;
     seller: { name: string; href: string } | null;
+    seller_reputation: {
+      average_rating: number | null;
+      review_count: number;
+      verified_sales_count: number;
+      trust_badge: boolean;
+    } | null;
   };
   files: {
     count: number;
@@ -249,6 +255,11 @@ export default function MinhasComprasClient() {
                       {selectedPurchase.product.seller ? (
                         <div className="mt-2">
                           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                            {selectedPurchase.product.seller_reputation?.trust_badge ? (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-emerald-300">
+                                ✓ Vendedor verificado
+                              </span>
+                            ) : null}
                             <Link
                               href={selectedPurchase.product.seller.href}
                               className="text-xs font-black text-violet-300 hover:text-violet-200"
@@ -262,6 +273,18 @@ export default function MinhasComprasClient() {
                               Ver loja do vendedor →
                             </Link>
                           </div>
+                          {selectedPurchase.product.seller_reputation ? (
+                            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-black uppercase tracking-[0.1em] text-white/40">
+                              {selectedPurchase.product.seller_reputation.average_rating !== null ? (
+                                <span className="text-amber-300">
+                                  ★ {selectedPurchase.product.seller_reputation.average_rating.toFixed(1)} · {selectedPurchase.product.seller_reputation.review_count} avaliação{selectedPurchase.product.seller_reputation.review_count === 1 ? "" : "ões"}
+                                </span>
+                              ) : null}
+                              <span>
+                                {selectedPurchase.product.seller_reputation.verified_sales_count} venda{selectedPurchase.product.seller_reputation.verified_sales_count === 1 ? "" : "s"} confirmada{selectedPurchase.product.seller_reputation.verified_sales_count === 1 ? "" : "s"}
+                              </span>
+                            </div>
+                          ) : null}
                         </div>
                       ) : null}
                     </div>
@@ -376,7 +399,24 @@ export default function MinhasComprasClient() {
               <div className="aspect-[4/5] bg-black">{item.kind === "video" ? <video src={item.url} controls playsInline preload="metadata" className="h-full w-full object-cover" /> : <img src={item.url} alt={item.profile.display_name ? `Conteúdo comprado de ${item.profile.display_name}` : "Conteúdo comprado"} className="h-full w-full object-cover" />}</div>
               <div className="p-4">
                 <div className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-300">COMPRA CONFIRMADA</div>
-                <div className="mt-1 font-black">{item.profile.display_name || "Anunciante Pecatho"}</div>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <div className="font-black">{item.profile.display_name || "Anunciante Pecatho"}</div>
+                  {item.profile.seller_reputation?.trust_badge ? (
+                    <span className="inline-flex items-center rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.1em] text-emerald-300">
+                      ✓ Verificado
+                    </span>
+                  ) : null}
+                </div>
+                {item.profile.seller_reputation ? (
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[9px] font-black uppercase tracking-[0.08em] text-white/35">
+                    {item.profile.seller_reputation.average_rating !== null ? (
+                      <span className="text-amber-300">
+                        ★ {item.profile.seller_reputation.average_rating.toFixed(1)} · {item.profile.seller_reputation.review_count} avaliação{item.profile.seller_reputation.review_count === 1 ? "" : "ões"}
+                      </span>
+                    ) : null}
+                    <span>{item.profile.seller_reputation.verified_sales_count} venda{item.profile.seller_reputation.verified_sales_count === 1 ? "" : "s"} confirmada{item.profile.seller_reputation.verified_sales_count === 1 ? "" : "s"}</span>
+                  </div>
+                ) : null}
                 <div className="mt-1 text-xs text-white/40">{item.kind === "video" ? "Vídeo exclusivo" : "Imagem exclusiva"} · {money(item.amount, item.currency)}</div>
                 <ContentSellerReview
                   sourceType="profile_media"
