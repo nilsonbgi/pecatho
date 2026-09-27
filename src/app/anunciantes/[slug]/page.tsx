@@ -163,6 +163,7 @@ export default function PublicAdvertiserPage() {
   }, [params.slug]);
 
   const filteredMedia = useMemo(() => media.filter((item) => mediaTab === "all" || item.kind === mediaTab), [media, mediaTab]);
+  const primaryMedia = media.find((item) => item.is_primary) || media[0] || null;
   const averageRating = reviews.length ? reviews.reduce((sum, item) => sum + Number(item.rating || 0), 0) / reviews.length : 0;
   const publicImages = media.filter((item) => item.kind === "image").length;
   const publicVideos = media.filter((item) => item.kind === "video").length;
@@ -324,11 +325,45 @@ export default function PublicAdvertiserPage() {
         {fans && <Link href={`/fans/${fans.slug}`} className="primaryButton" style={{ textDecoration: "none" }}>Pecatho Fans →</Link>}
       </nav>
 
-      <section className="publicProfileHero">
-        <div className="eyebrow">{category?.name || "ANUNCIANTE"}</div>
-        <div className="profileTitleRow"><div><h1>{profile.title || profile.display_name || "Perfil Pecatho"}</h1><p className="heroCopy">{profile.summary || "Conheça este perfil no Pecatho."}</p></div><div className="profileTrust">{profile.verification_status === "verified" ? <span>✓ PERFIL VERIFICADO</span> : <span>PERFIL PUBLICADO</span>}{reviews.length > 0 && <strong>★ {averageRating.toFixed(1)} <small>({reviews.length} avaliações)</small></strong>}</div></div>
-        <div className="profileStats"><span>📷 {publicImages} fotos</span><span>▶ {publicVideos} vídeos</span><span>★ {reviews.length} avaliações verificadas</span>{age && <span>◷ {age} anos</span>}{city?.name && <span>⌖ {city.name}{state?.uf ? ` · ${state.uf}` : ""}</span>}</div>
-        <div className="profileEngagement"><button type="button" className="primaryButton" onClick={() => void startConversation("Olá! Encontrei seu perfil no Pecatho e gostaria de conversar sobre os serviços anunciados. Este contato ocorreu por intermédio do Pecatho.")} disabled={conversationBusy}>{conversationBusy ? "Abrindo conversa..." : "✉ Enviar mensagem"}</button><button type="button" className={`followButton ${following ? "active" : ""}`} onClick={toggleFollow} disabled={followBusy}>{followBusy ? "Atualizando..." : following ? "✓ Acompanhando" : "＋ Acompanhar perfil"}</button>{conversationNotice && <span className="followNotice">{conversationNotice}</span>}{currentUserId && <span>Você receberá este perfil na sua área de acompanhamento.</span>}{followNotice && <span className="followNotice">{followNotice}</span>}</div>
+      <section className="publicProfileHero" style={{padding:0,overflow:"hidden"}}>
+        <div style={{display:"grid",gridTemplateColumns:"minmax(0,1.35fr) minmax(320px,.65fr)",gap:0,minHeight:390}}>
+          <div style={{position:"relative",minHeight:360,background:"#0b0b12"}}>
+            {primaryMedia?.url || primaryMedia?.previewUrl ? (
+              primaryMedia.kind === "video" ? <video src={primaryMedia.url || primaryMedia.previewUrl || undefined} muted playsInline controls style={{width:"100%",height:"100%",minHeight:360,objectFit:"cover"}} /> :
+              <img src={primaryMedia.url || primaryMedia.previewUrl || undefined} alt={profile.title || profile.display_name || "Perfil Pecatho"} style={{width:"100%",height:"100%",minHeight:360,objectFit:"cover"}} />
+            ) : (
+              <div style={{height:"100%",minHeight:360,display:"grid",placeItems:"center",padding:32,color:"#fff",background:"radial-gradient(circle at 70% 20%,rgba(124,58,237,.38),transparent 35%),linear-gradient(135deg,#09090f,#21153d)"}}>
+                <div style={{textAlign:"center"}}><div style={{fontSize:12,fontWeight:900,letterSpacing:".2em",color:"#c4b5fd"}}>{category?.name || "ANUNCIANTE"}</div><div style={{fontSize:"clamp(2rem,5vw,4rem)",fontWeight:950,marginTop:10}}>{profile.display_name || "Perfil Pecatho"}</div></div>
+              </div>
+            )}
+            <div style={{position:"absolute",left:18,top:18,display:"flex",flexWrap:"wrap",gap:8}}>
+              <span style={{padding:"7px 10px",borderRadius:999,background:"rgba(0,0,0,.68)",color:"#fff",fontSize:10,fontWeight:900,letterSpacing:".12em"}}>{category?.name || "ANUNCIANTE"}</span>
+              {profile.verification_status === "verified" && <span style={{padding:"7px 10px",borderRadius:999,background:"rgba(16,185,129,.94)",color:"#fff",fontSize:10,fontWeight:900}}>✓ PERFIL VERIFICADO</span>}
+            </div>
+            <div style={{position:"absolute",left:18,right:18,bottom:18,display:"flex",flexWrap:"wrap",gap:8}}>
+              <span style={{padding:"8px 11px",borderRadius:999,background:"rgba(0,0,0,.68)",color:"#fff",fontSize:11,fontWeight:800}}>📷 {publicImages} fotos</span>
+              <span style={{padding:"8px 11px",borderRadius:999,background:"rgba(0,0,0,.68)",color:"#fff",fontSize:11,fontWeight:800}}>▶ {publicVideos} vídeos</span>
+              <span style={{padding:"8px 11px",borderRadius:999,background:"rgba(0,0,0,.68)",color:"#fff",fontSize:11,fontWeight:800}}>★ {reviews.length} avaliações</span>
+            </div>
+          </div>
+          <div style={{padding:"30px 28px",display:"flex",flexDirection:"column",justifyContent:"center",background:"linear-gradient(160deg,#11111a,#21183a)",color:"#fff"}}>
+            <div className="eyebrow" style={{color:"#c4b5fd"}}>{category?.name || "ANUNCIANTE"}</div>
+            <h1 style={{fontSize:"clamp(2rem,4vw,3.5rem)",lineHeight:1,margin:"10px 0",letterSpacing:"-.05em"}}>{profile.title || profile.display_name || "Perfil Pecatho"}</h1>
+            {age && <div style={{fontSize:14,fontWeight:800,color:"#ddd6fe"}}>{age} anos{city?.name ? ` · ${city.name}` : ""}{state?.uf ? ` · ${state.uf}` : ""}</div>}
+            <p className="heroCopy" style={{marginTop:16}}>{profile.summary || "Conheça este perfil no Pecatho."}</p>
+            <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:16}}>
+              {age && <span style={{padding:"7px 10px",borderRadius:999,background:"rgba(255,255,255,.07)",fontSize:10,fontWeight:800}}>◷ {age} anos</span>}
+              {city?.name && <span style={{padding:"7px 10px",borderRadius:999,background:"rgba(255,255,255,.07)",fontSize:10,fontWeight:800}}>⌖ {city.name}{state?.uf ? ` · ${state.uf}` : ""}</span>}
+              {profile.verification_status === "verified" && <span style={{padding:"7px 10px",borderRadius:999,background:"rgba(16,185,129,.15)",color:"#6ee7b7",fontSize:10,fontWeight:900}}>Documentos verificados</span>}
+            </div>
+            {reviews.length > 0 && <div style={{marginTop:18,padding:"12px 14px",borderRadius:14,border:"1px solid rgba(255,255,255,.09)",background:"rgba(255,255,255,.045)"}}><strong style={{fontSize:22}}>★ {averageRating.toFixed(1)}</strong><span style={{marginLeft:8,fontSize:12,color:"#cbd5e1"}}>{reviews.length} avaliações verificadas</span></div>}
+            <div style={{display:"flex",flexWrap:"wrap",gap:9,marginTop:20}}>
+              <button type="button" className="primaryButton" onClick={() => void startConversation("Olá! Encontrei seu perfil no Pecatho e gostaria de conversar sobre os serviços anunciados. Este contato ocorreu por intermédio do Pecatho.")} disabled={conversationBusy}>{conversationBusy ? "Abrindo conversa..." : "✉ Enviar mensagem"}</button>
+              <button type="button" className={`followButton ${following ? "active" : ""}`} onClick={toggleFollow} disabled={followBusy}>{followBusy ? "Atualizando..." : following ? "✓ Acompanhando" : "＋ Acompanhar perfil"}</button>
+            </div>
+            {conversationNotice && <span className="followNotice" style={{marginTop:10}}>{conversationNotice}</span>}
+          </div>
+        </div>
       </section>
 
       <DigitalContentShowcase ownerType="advertiser" ownerId={profile.id} compact />
