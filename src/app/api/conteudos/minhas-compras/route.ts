@@ -4,6 +4,13 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
+type SellerReputation = {
+  average_rating: number | null;
+  review_count: number;
+  verified_sales_count: number;
+  trust_badge: boolean;
+};
+
 export async function GET() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -63,6 +70,93 @@ export async function GET() {
     });
   }
 
+  const ownerKeys = [
+    ...advertiserIds.map((id) => `advertiser:${id}`),
+    ...creatorIds.map((id) => `creator:${id}`),
+  ];
+
+  const [{ data: reviews, error: reviewsError }, { data: sellerSales, error: sellerSalesError }] = await Promise.all([
+    ownerKeys.length
+      ? admin.from("content_seller_reviews").select("owner_type,owner_id,rating").eq("status", "approved").eq("verified_purchase", true)
+        .or(ownerKeys.map((key) => {
+          const [owner_type, owner_id] = key.split(":");
+          return `and(owner_type.eq.${owner_type},owner_id.eq.${owner_id})`;
+        }).join(","))
+      : Promise.resolve({ data: [] }),
+    ownerKeys.length
+      ? admin.from("digital_content_sales").select("owner_type,owner_id").eq("status", "paid")
+        .or(ownerKeys.map((key) => {
+          const [owner_type, owner_id] = key.split(":");
+          return `and(owner_type.eq.${owner_type},owner_id.eq.${owner_id})`;
+        }).join(","))
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  if (reviewsError) return NextResponse.json({ error: reviewsError.message }, { status: 500 });
+  if (sellerSalesError) return NextResponse.json({ error: sellerSalesError.message }, { status: 500 });
+
+  const mediaByAdvertiser = new Map<string, string[]>();
+  if (advertiserIds.length) {
+    const { data: media, error: mediaError } = await admin
+      .from("profile_media")
+      .select("id,profile_id")
+      .in("profile_id", advertiserIds);
+    if (mediaError) return NextResponse.json({ error: mediaError.message }, { status: 500 });
+    for (const item of media ?? []) {
+      const current = mediaByAdvertiser.get(item.profile_id) ?? [];
+      current.push(item.id);
+      mediaByAdvertiser.set(item.profile_id, current);
+    }
+  }
+
+  const allMediaIds = [...mediaByAdvertiser.values()].flat();
+  const mediaSalesByAdvertiser = new Map<string, number>();
+  if (allMediaIds.length) {
+    const { data: mediaSales, error: mediaSalesError } = await admin
+      .from("profile_media_purchases")
+      .select("media_id")
+      .in("media_id", allMediaIds)
+      .eq("status", "paid");
+    if (mediaSalesError) return NextResponse.json({ error: mediaSalesError.message }, { status: 500 });
+
+    const mediaOwnerMap = new Map<string, string>();
+    for (const [profileId, ids] of mediaByAdvertiser) {
+      for (const id of ids) mediaOwnerMap.set(id, profileId);
+    }
+    for (const sale of mediaSales ?? []) {
+      const ownerId = mediaOwnerMap.get(sale.media_id);
+      if (ownerId) mediaSalesByAdvertiser.set(ownerId, (mediaSalesByAdvertiser.get(ownerId) ?? 0) + 1);
+    }
+  }
+
+  const ratingsMap = new Map<string, { total: number; count: number }>();
+  for (const review of reviews ?? []) {
+    const key = `${review.owner_type}:${review.owner_id}`;
+    const current = ratingsMap.get(key) ?? { total: 0, count: 0 };
+    current.total += Number(review.rating);
+    current.count += 1;
+    ratingsMap.set(key, current);
+  }
+
+  const salesMap = new Map<string, number>();
+  for (const sale of sellerSales ?? []) {
+    const key = `${sale.owner_type}:${sale.owner_id}`;
+    salesMap.set(key, (salesMap.get(key) ?? 0) + 1);
+  }
+
+  const reputationMap = new Map<string, SellerReputation>();
+  for (const key of ownerKeys) {
+    const rating = ratingsMap.get(key);
+    const [ownerType, ownerId] = key.split(":");
+    const verifiedSales = (salesMap.get(key) ?? 0) + (ownerType === "advertiser" ? (mediaSalesByAdvertiser.get(ownerId) ?? 0) : 0);
+    reputationMap.set(key, {
+      average_rating: rating ? Number((rating.total / rating.count).toFixed(1)) : null,
+      review_count: rating?.count ?? 0,
+      verified_sales_count: verifiedSales,
+      trust_badge: verifiedSales > 0,
+    });
+  }
+
   const productMap = new Map((products ?? []).map((product) => [product.id, product]));
   const itemMap = new Map<string, { count: number; mediaTypes: string[] }>();
 
@@ -73,20 +167,25 @@ export async function GET() {
     itemMap.set(item.product_id, current);
   }
 
-  const purchases = (sales ?? []).map((sale) => ({
-    id: sale.id,
-    amount: sale.amount,
-    currency: sale.currency,
-    paid_at: sale.paid_at,
-    created_at: sale.created_at,
-    product: productMap.get(sale.product_id)
-      ? {
-          ...productMap.get(sale.product_id),
-          seller: sellerMap.get(productMap.get(sale.product_id)?.owner_id ?? "") ?? null,
-        }
-      : null,
-    files: itemMap.get(sale.product_id) ?? { count: 0, mediaTypes: [] },
-  })).filter((purchase) => purchase.product !== null);
+  const purchases = (sales ?? []).map((sale) => {
+    const product = productMap.get(sale.product_id);
+    const seller = product ? sellerMap.get(product.owner_id) ?? null : null;
+    return {
+      id: sale.id,
+      amount: sale.amount,
+      currency: sale.currency,
+      paid_at: sale.paid_at,
+      created_at: sale.created_at,
+      product: product
+        ? {
+            ...product,
+            seller,
+            seller_reputation: reputationMap.get(`${product.owner_type}:${product.owner_id}`) ?? null,
+          }
+        : null,
+      files: itemMap.get(sale.product_id) ?? { count: 0, mediaTypes: [] },
+    };
+  }).filter((purchase) => purchase.product !== null);
 
   return NextResponse.json({ purchases }, {
     headers: { "Cache-Control": "no-store" },
