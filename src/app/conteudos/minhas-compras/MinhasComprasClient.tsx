@@ -248,12 +248,20 @@ export default function MinhasComprasClient() {
                       </h2>
                       {selectedPurchase.product.seller ? (
                         <div className="mt-2">
-                          <Link
-                            href={selectedPurchase.product.seller.href}
-                            className="text-xs font-black text-violet-300 hover:text-violet-200"
-                          >
-                            Ver perfil de {selectedPurchase.product.seller.name} →
-                          </Link>
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                            <Link
+                              href={selectedPurchase.product.seller.href}
+                              className="text-xs font-black text-violet-300 hover:text-violet-200"
+                            >
+                              Ver perfil de {selectedPurchase.product.seller.name} →
+                            </Link>
+                            <Link
+                              href={`/conteudos?owner_type=${selectedPurchase.product.owner_type}&owner_id=${selectedPurchase.product.owner_id}`}
+                              className="text-xs font-black text-white/60 hover:text-white"
+                            >
+                              Ver loja do vendedor →
+                            </Link>
+                          </div>
                         </div>
                       ) : null}
                     </div>
