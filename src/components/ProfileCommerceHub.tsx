@@ -33,6 +33,7 @@ export default function ProfileCommerceHub(props: Props) {
           meta: "Compra individual",
           href: "#conteudo-exclusivo",
           count: null,
+          featured: true,
         },
         {
           key: "services",
@@ -42,6 +43,7 @@ export default function ProfileCommerceHub(props: Props) {
           meta: props.serviceCount ? `${props.serviceCount} serviço(s)` : "Consulte o perfil",
           href: "#servicos",
           count: props.serviceCount,
+          featured: false,
         },
         {
           key: "gallery",
@@ -51,6 +53,7 @@ export default function ProfileCommerceHub(props: Props) {
           meta: `${props.galleryCount} item(ns) publicado(s)`,
           href: "#galeria",
           count: props.galleryCount,
+          featured: false,
         },
         ...(props.fansSlug
           ? [
@@ -62,6 +65,7 @@ export default function ProfileCommerceHub(props: Props) {
                 meta: "Conteúdo + experiências privadas",
                 href: `/fans/${props.fansSlug}`,
                 count: null,
+                featured: false,
               },
             ]
           : []),
@@ -75,6 +79,7 @@ export default function ProfileCommerceHub(props: Props) {
           meta: "Compra individual",
           href: "#conteudo-exclusivo",
           count: null,
+          featured: true,
         },
         {
           key: "plans",
@@ -84,6 +89,7 @@ export default function ProfileCommerceHub(props: Props) {
           meta: props.planCount ? `${props.planCount} plano(s) ativo(s)` : "Nenhum plano ativo",
           href: "#assinatura",
           count: props.planCount,
+          featured: false,
         },
         {
           key: "live",
@@ -93,6 +99,7 @@ export default function ProfileCommerceHub(props: Props) {
           meta: props.liveOfferCount ? `${props.liveOfferCount} oferta(s)` : "Nenhuma oferta ativa",
           href: "#videochamadas",
           count: props.liveOfferCount,
+          featured: false,
         },
         {
           key: "posts",
@@ -102,17 +109,18 @@ export default function ProfileCommerceHub(props: Props) {
           meta: `${props.publicationCount} publicação(ões)`,
           href: "#publicacoes",
           count: props.publicationCount,
+          featured: false,
         },
       ];
 
   return (
     <section className="mx-auto mt-7 max-w-7xl px-4 sm:mt-8">
       <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_55px_rgba(15,23,42,.06)]">
-        <div className="border-b border-slate-100 bg-gradient-to-r from-slate-950 via-slate-900 to-violet-950 px-5 py-6 text-white sm:px-7">
+        <div className="border-b border-slate-100 bg-gradient-to-r from-slate-950 via-slate-900 to-violet-950 px-5 py-6 text-white sm:px-7 sm:py-7">
           <div className="text-[10px] font-black tracking-[.2em] text-violet-300">
             EXPERIÊNCIA COMERCIAL · PECATHO
           </div>
-          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div className="mt-2 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h2 className="text-2xl font-black tracking-[-.045em] sm:text-3xl">
                 Escolha como interagir com este perfil
@@ -122,29 +130,31 @@ export default function ProfileCommerceHub(props: Props) {
                 Escolha uma opção abaixo para continuar.
               </p>
             </div>
-            <span className="shrink-0 rounded-full border border-white/10 bg-white/[.06] px-3 py-1.5 text-[9px] font-black tracking-[.12em] text-white/60">
-              PERFIL MONETIZADO
-            </span>
+            <a
+              href="#conteudo-exclusivo"
+              className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl border border-violet-300/30 bg-violet-500 px-5 py-3 text-xs font-black tracking-[.08em] text-white shadow-lg shadow-violet-950/30 transition hover:-translate-y-0.5 hover:bg-violet-400 lg:w-auto"
+            >
+              {isAdvertiser ? "COMPRAR CONTEÚDO" : "EXPLORAR CONTEÚDO"}
+              <span aria-hidden="true">→</span>
+            </a>
           </div>
         </div>
 
         <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5 lg:grid-cols-4">
-          {cards.map((card, index) => {
+          {cards.map((card) => {
             const internal = card.href.startsWith("/");
+            const className = `group rounded-2xl border p-4 no-underline transition hover:-translate-y-0.5 hover:shadow-md ${
+              card.featured
+                ? "border-violet-200 bg-violet-50/70 ring-1 ring-violet-200 hover:border-violet-300 hover:bg-white"
+                : "border-slate-200 bg-slate-50 hover:border-violet-200 hover:bg-white"
+            }`;
+
             return internal ? (
-              <Link
-                key={card.key}
-                href={card.href}
-                className={`group rounded-2xl border border-slate-200 p-4 no-underline transition hover:-translate-y-0.5 hover:border-violet-200 hover:bg-white hover:shadow-md ${index === 0 ? "bg-violet-50/70 ring-1 ring-violet-200" : "bg-slate-50"}`}
-              >
+              <Link key={card.key} href={card.href} className={className}>
                 <CardContent card={card} />
               </Link>
             ) : (
-              <a
-                key={card.key}
-                href={card.href}
-                className="group rounded-2xl border border-slate-200 bg-slate-50 p-4 no-underline transition hover:-translate-y-0.5 hover:border-violet-200 hover:bg-white hover:shadow-md"
-              >
+              <a key={card.key} href={card.href} className={className}>
                 <CardContent card={card} />
               </a>
             );
@@ -164,6 +174,7 @@ function CardContent({
     text: string;
     meta: string;
     count: number | null;
+    featured?: boolean;
   };
 }) {
   return (
