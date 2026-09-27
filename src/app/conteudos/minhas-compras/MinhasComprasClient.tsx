@@ -85,7 +85,17 @@ export default function MinhasComprasClient() {
   const [downloadError, setDownloadError] = useState("");
   const [mediaPurchases, setMediaPurchases] = useState<Array<{
     id: string; media_id: string; amount: number; currency: string; purchased_at: string; expires_at: string | null;
-    kind: string; url: string; access_expires_in: number; profile: { id: string; slug: string; display_name: string | null };
+    kind: string; url: string; access_expires_in: number; profile: {
+      id: string;
+      slug: string;
+      display_name: string | null;
+      seller_reputation: {
+        average_rating: number | null;
+        review_count: number;
+        verified_sales_count: number;
+        trust_badge: boolean;
+      } | null;
+    };
   }>>([]);
   const [mediaLoading, setMediaLoading] = useState(true);
   const [mediaError, setMediaError] = useState("");
