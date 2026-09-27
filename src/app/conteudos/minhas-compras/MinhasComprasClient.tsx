@@ -79,7 +79,7 @@ export default function MinhasComprasClient() {
   const [downloadError, setDownloadError] = useState("");
   const [mediaPurchases, setMediaPurchases] = useState<Array<{
     id: string; media_id: string; amount: number; currency: string; purchased_at: string; expires_at: string | null;
-    kind: string; url: string; access_expires_in: number; profile: { slug: string; display_name: string | null };
+    kind: string; url: string; access_expires_in: number; profile: { id: string; slug: string; display_name: string | null };
   }>>([]);
   const [mediaLoading, setMediaLoading] = useState(true);
   const [mediaError, setMediaError] = useState("");
@@ -383,7 +383,7 @@ export default function MinhasComprasClient() {
                   sourceId={item.id}
                   sellerName={item.profile.display_name}
                 />
-                <div className="mt-3 flex items-center justify-between gap-3"><Link href={`/anunciantes/${item.profile.slug}#galeria`} className="text-xs font-black text-violet-300 hover:text-violet-200">Ver perfil</Link><a href={item.url} target="_blank" rel="noreferrer" download className="rounded-xl bg-white px-3 py-2 text-xs font-black text-slate-950">Abrir / baixar</a></div>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3"><div className="flex flex-wrap gap-x-4 gap-y-2"><Link href={`/anunciantes/${item.profile.slug}#galeria`} className="text-xs font-black text-violet-300 hover:text-violet-200">Ver perfil</Link><Link href={`/conteudos?owner_type=advertiser&owner_id=${item.profile.id}`} className="text-xs font-black text-white/60 hover:text-white">Ver loja</Link></div><a href={item.url} target="_blank" rel="noreferrer" download className="rounded-xl bg-white px-3 py-2 text-xs font-black text-slate-950">Abrir / baixar</a></div>
                 <div className="mt-2 text-[10px] text-white/30">Link de acesso válido por {Math.round(item.access_expires_in / 60)} minutos.</div>
               </div>
             </article>
