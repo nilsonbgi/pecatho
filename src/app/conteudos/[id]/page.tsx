@@ -4,6 +4,13 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 
+type SellerReputation = {
+  average_rating: number | null;
+  review_count: number;
+  verified_sales_count: number;
+  trust_badge: boolean;
+};
+
 type Product = {
   id: string;
   title: string;
@@ -45,6 +52,8 @@ export default function DigitalContentProductPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [reputation, setReputation] = useState<SellerReputation | null>(null);
+  const [reputationLoading, setReputationLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
@@ -79,6 +88,35 @@ export default function DigitalContentProductPage() {
       active = false;
     };
   }, [params.id]);
+
+  useEffect(() => {
+    if (!product) return;
+
+    let active = true;
+    setReputationLoading(true);
+
+    fetch(
+      `/api/conteudos/seller-reputation?owner_type=${encodeURIComponent(product.owner_type)}&owner_id=${encodeURIComponent(product.owner_id)}`,
+      { cache: "no-store" },
+    )
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Não foi possível carregar a reputação.");
+        return response.json() as Promise<{ reputation?: SellerReputation | null }>;
+      })
+      .then((body) => {
+        if (active) setReputation(body.reputation ?? null);
+      })
+      .catch(() => {
+        if (active) setReputation(null);
+      })
+      .finally(() => {
+        if (active) setReputationLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [product]);
 
   async function buy() {
     setBusy(true);
@@ -219,6 +257,28 @@ export default function DigitalContentProductPage() {
                 {product.file_count} arquivo{product.file_count === 1 ? "" : "s"}
               </span>
             </div>
+
+            {!reputationLoading && reputation?.trust_badge ? (
+              <div className="mt-5 rounded-2xl border border-emerald-300/20 bg-emerald-400/[.06] p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-400/15 text-sm text-emerald-300">
+                    ✓
+                  </span>
+                  <span className="text-[10px] font-black tracking-[.1em] text-emerald-200">
+                    VENDEDOR DE CONTEÚDO VERIFICADO
+                  </span>
+                  {reputation.average_rating !== null ? (
+                    <span className="rounded-full bg-white/[.08] px-2.5 py-1 text-xs font-black text-white">
+                      ★ {reputation.average_rating.toFixed(1)} · {reputation.review_count} {reputation.review_count === 1 ? "avaliação" : "avaliações"}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-2 text-xs leading-5 text-white/55">
+                  {reputation.verified_sales_count} {reputation.verified_sales_count === 1 ? "venda confirmada" : "vendas confirmadas"} de conteúdo no ecossistema Pecatho.
+                  {reputation.review_count > 0 ? " O rating é atribuído por compradores com compra verificada." : ""}
+                </p>
+              </div>
+            ) : null}
 
             <p className="mt-6 whitespace-pre-wrap text-[15px] leading-7 text-slate-300">
               {product.description ||
