@@ -277,7 +277,7 @@ export default function MinhasComprasClient() {
                             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-black uppercase tracking-[0.1em] text-white/40">
                               {selectedPurchase.product.seller_reputation.average_rating !== null ? (
                                 <span className="text-amber-300">
-                                  ★ {selectedPurchase.product.seller_reputation.average_rating.toFixed(1)} · {selectedPurchase.product.seller_reputation.review_count} avaliação{selectedPurchase.product.seller_reputation.review_count === 1 ? "" : "ões"}
+                                  ★ {selectedPurchase.product.seller_reputation.average_rating.toFixed(1)} · {selectedPurchase.product.seller_reputation.review_count} {selectedPurchase.product.seller_reputation.review_count === 1 ? "avaliação" : "avaliações"}
                                 </span>
                               ) : null}
                               <span>
@@ -411,7 +411,7 @@ export default function MinhasComprasClient() {
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[9px] font-black uppercase tracking-[0.08em] text-white/35">
                     {item.profile.seller_reputation.average_rating !== null ? (
                       <span className="text-amber-300">
-                        ★ {item.profile.seller_reputation.average_rating.toFixed(1)} · {item.profile.seller_reputation.review_count} avaliação{item.profile.seller_reputation.review_count === 1 ? "" : "ões"}
+                        ★ {item.profile.seller_reputation.average_rating.toFixed(1)} · {item.profile.seller_reputation.review_count} {item.profile.seller_reputation.review_count === 1 ? "avaliação" : "avaliações"}
                       </span>
                     ) : null}
                     <span>{item.profile.seller_reputation.verified_sales_count} venda{item.profile.seller_reputation.verified_sales_count === 1 ? "" : "s"} confirmada{item.profile.seller_reputation.verified_sales_count === 1 ? "" : "s"}</span>
