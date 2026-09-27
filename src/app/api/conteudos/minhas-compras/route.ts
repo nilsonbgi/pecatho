@@ -50,10 +50,10 @@ export async function GET() {
   const [{ data: advertisers }, { data: creators }] = await Promise.all([
     advertiserIds.length
       ? admin.from("advertiser_profiles").select("id,display_name,title,slug").in("id", advertiserIds).eq("status", "published")
-      : Promise.resolve({ data: [] }),
+      : Promise.resolve({ data: [], error: null }),
     creatorIds.length
       ? admin.from("fans_creators").select("id,display_name,slug").in("id", creatorIds).eq("status", "active")
-      : Promise.resolve({ data: [] }),
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
   const sellerMap = new Map<string, { name: string; href: string }>();
@@ -82,14 +82,14 @@ export async function GET() {
           const [owner_type, owner_id] = key.split(":");
           return `and(owner_type.eq.${owner_type},owner_id.eq.${owner_id})`;
         }).join(","))
-      : Promise.resolve({ data: [] }),
+      : Promise.resolve({ data: [], error: null }),
     ownerKeys.length
       ? admin.from("digital_content_sales").select("owner_type,owner_id").eq("status", "paid")
         .or(ownerKeys.map((key) => {
           const [owner_type, owner_id] = key.split(":");
           return `and(owner_type.eq.${owner_type},owner_id.eq.${owner_id})`;
         }).join(","))
-      : Promise.resolve({ data: [] }),
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
   if (reviewsError) return NextResponse.json({ error: reviewsError.message }, { status: 500 });
