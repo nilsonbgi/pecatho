@@ -25,7 +25,7 @@ export default async function ParceiroDetalhe({params}:{params:Promise<{slug:str
   supabase.from("partner_venue_rates").select("id,period_type,label,price,minimum_nights,notes").eq("venue_id",v.id).eq("active",true).order("sort_order")
  ]);
  const admin=process.env.SUPABASE_SERVICE_ROLE_KEY?createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{autoRefreshToken:false,persistSession:false}}):null;
- const gallery=await Promise.all((media||[]).map(async m=>{let url:string|null=null;if(admin){const signed=await admin.storage.from(m.storage_bucket).createSignedUrl(m.storage_path,600);url=signed.data?.signedUrl||null;}return {...m,url};}));
+ const gallery=(await Promise.all((media||[]).map(async m=>{if(!admin)return null;const signed=await admin.storage.from(m.storage_bucket).createSignedUrl(m.storage_path,600);const url=signed.data?.signedUrl||null;return url?{...m,url}:null;}))).filter((m):m is NonNullable<typeof m>=>m!==null);
  const location=city+(state?" · "+state:""); const recruitmentWhatsapp=v.recruitment_contact_whatsapp?String(v.recruitment_contact_whatsapp).replace(/\D/g,""): ""; const partnerWhatsapp=v.phone?String(v.phone).replace(/\D/g,""): "";
  return <main className="shell partnerDetail">
   <nav className="topbar"><Link className="brand" href="/"><span className="brandMark">P</span><span>Pecatho</span></Link><div className="navLinks"><Link href="/parceiros">Parceiros</Link><Link href="/anunciantes">Anunciantes</Link><Link href="/fans">Fans</Link></div></nav>
