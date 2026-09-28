@@ -4,3 +4,43 @@
 /* Pecatho advertiser profile hero */
 .advertiserHeroGrid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(320px,.65fr);gap:0;min-height:390px}
 @media (max-width: 760px){.advertiserHeroGrid{grid-template-columns:1fr}.advertiserHeroGrid>div:first-child{min-height:300px!important}.advertiserHeroGrid>div:first-child img,.advertiserHeroGrid>div:first-child video{min-height:300px!important}.advertiserHeroGrid>div:last-child{padding:26px 20px!important}}
+/* Quick actions for mobile advertiser profiles */
+.advertiserMobileActions{display:none}
+@media(max-width:760px){
+  .advertiserMobileActions{
+    position:fixed;
+    left:10px;
+    right:10px;
+    bottom:10px;
+    z-index:55;
+    display:grid;
+    grid-template-columns:1.25fr .9fr .9fr;
+    gap:7px;
+    padding:7px;
+    border:1px solid rgba(15,23,42,.12);
+    border-radius:18px;
+    background:rgba(255,255,255,.94);
+    box-shadow:0 16px 40px rgba(15,23,42,.18);
+    backdrop-filter:blur(16px);
+  }
+  .advertiserMobileActions a,
+  .advertiserMobileActions button{
+    min-height:44px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:10px 8px;
+    font-size:12px;
+    text-decoration:none;
+    margin:0;
+  }
+  .advertiserMobileActions .secondaryButton{
+    border:1px solid rgba(15,23,42,.1);
+    border-radius:12px;
+    background:#fff;
+    color:#111827;
+    font-weight:800;
+  }
+  .advertiserMobileActions .primaryButton{border-radius:12px}
+  .publicProfile{padding-bottom:92px}
+}
