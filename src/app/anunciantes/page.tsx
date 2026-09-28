@@ -119,13 +119,25 @@ export default function AnunciantesPage() {
       }
 
       const ids = rows.map((x) => x.id);
-      const { data: mr } = await s.from("profile_media").select("profile_id,storage_bucket,storage_path,kind,is_primary,is_public").in("profile_id", ids).eq("is_public", true).eq("moderation_status", "approved").order("is_primary", { ascending: false }).order("sort_order");
+      const [{ data: mr }, { data: pm }] = await Promise.all([
+        s.from("profile_media").select("profile_id,storage_bucket,storage_path,kind,is_primary,is_public").in("profile_id", ids).eq("is_public", true).eq("moderation_status", "approved").order("is_primary", { ascending: false }).order("sort_order"),
+        s.from("advertiser_profiles").select("id,availability").in("id", ids)
+      ]);
       const byProfile = new Map<string, Media>();
-      for (const m of (mr ?? []) as Media[]) if (!byProfile.has(m.profile_id) && m.kind === "image") byProfile.set(m.profile_id, m);
+      const mediaCounts = new Map<string, number>();
+      for (const m of (mr ?? []) as Media[]) {
+        mediaCounts.set(m.profile_id, (mediaCounts.get(m.profile_id) || 0) + 1);
+        if (!byProfile.has(m.profile_id) && m.kind === "image") byProfile.set(m.profile_id, m);
+      }
+      const availabilityMap = new Map((pm ?? []).map((p) => [p.id, p.availability]));
       const moreCards = rows.map((x) => {
         const m = byProfile.get(x.id);
-        if (!m) return { ...x, imageUrl: null };
-        return { ...x, imageUrl: s.storage.from(m.storage_bucket).getPublicUrl(m.storage_path).data.publicUrl || null };
+        return {
+          ...x,
+          imageUrl: m ? s.storage.from(m.storage_bucket).getPublicUrl(m.storage_path).data.publicUrl || null : null,
+          mediaCount: mediaCounts.get(x.id) || 0,
+          availability: availabilityMap.get(x.id) || null
+        };
       });
       setAdvertisers((current) => [...current, ...moreCards.filter((item) => !current.some((existing) => existing.id === item.id))]);
       const matchingCount = Number(rows[0]?.total_count ?? 0);
