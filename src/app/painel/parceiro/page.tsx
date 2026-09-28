@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/browser";
 const types=[["nightclub","Casa noturna"],["club","Boate / clube"],["bar","Bar"],["lounge","Lounge"],["event_space","Espaço para eventos"],["other","Outro"]];
 
 function slugify(v:string){return v.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,130)}
+async function uniqueSlug(supabase:ReturnType<typeof createClient>,raw:string,currentId:string){const base=slugify(raw);if(base.length<3)throw new Error("Informe um nome ou slug com pelo menos 3 caracteres.");let candidate=base;for(let i=2;i<=50;i++){const query=supabase.from("partner_venues").select("id").eq("slug",candidate);const {data,error}=currentId?await query.neq("id",currentId).maybeSingle():await query.maybeSingle();if(error)throw error;if(!data)return candidate;const suffix=`-${i}`;candidate=`${base.slice(0,140-suffix.length)}${suffix}`}throw new Error("Não foi possível gerar um endereço público único para esta casa.")}
 function formatCep(v:string){const d=v.replace(/\D/g,"").slice(0,8);return d.length>5?d.slice(0,5)+"-"+d.slice(5):d}
 
 export default function ParceiroPainel(){
@@ -36,7 +37,9 @@ export default function ParceiroPainel(){
   try{
    const s=createClient();if(!userId)throw new Error("Sessão não encontrada.");
    const nextStatus=status==="published"?"pending_review":status;
-   const payload={owner_user_id:userId,name:name.trim(),slug:(slug.trim()||slugify(name)),venue_type:type,tagline:tagline.trim()||null,highlights:highlights.trim()||null,description:description.trim()||null,phone:phone.trim()||null,recruitment_enabled:recruitmentEnabled,recruitment_title:recruitmentTitle.trim()||null,recruitment_description:recruitmentDescription.trim()||null,recruitment_contact_phone:recruitmentPhone.trim()||null,recruitment_contact_email:recruitmentEmail.trim()||null,recruitment_contact_whatsapp:recruitmentWhatsapp.trim()||null,website_url:website.trim()||null,instagram_url:instagram.trim()||null,zipcode:zipcode.replace(/\D/g,"")||null,street:street.trim()||null,number:number.trim()||null,complement:complement.trim()||null,neighborhood:neighborhood.trim()||null,city_id:cityId?Number(cityId):null,state_id:stateId?Number(stateId):null,status:nextStatus};
+   const requestedSlug=slug.trim()||name.trim();
+   const resolvedSlug=await uniqueSlug(s,requestedSlug,id);
+   const payload={owner_user_id:userId,name:name.trim(),slug:resolvedSlug,venue_type:type,tagline:tagline.trim()||null,highlights:highlights.trim()||null,description:description.trim()||null,phone:phone.trim()||null,recruitment_enabled:recruitmentEnabled,recruitment_title:recruitmentTitle.trim()||null,recruitment_description:recruitmentDescription.trim()||null,recruitment_contact_phone:recruitmentPhone.trim()||null,recruitment_contact_email:recruitmentEmail.trim()||null,recruitment_contact_whatsapp:recruitmentWhatsapp.trim()||null,website_url:website.trim()||null,instagram_url:instagram.trim()||null,zipcode:zipcode.replace(/\D/g,"")||null,street:street.trim()||null,number:number.trim()||null,complement:complement.trim()||null,neighborhood:neighborhood.trim()||null,city_id:cityId?Number(cityId):null,state_id:stateId?Number(stateId):null,status:nextStatus};
    if(id){const {error:e}=await s.from("partner_venues").update(payload).eq("id",id);if(e)throw e}else{const {data,error:e}=await s.from("partner_venues").insert(payload).select("id").single();if(e)throw e;setId(data.id)}
    setSlug(payload.slug);setStatus(nextStatus);
    setMessage(nextStatus==="pending_review"?"Perfil atualizado e reenviado para análise, pois uma alteração foi feita em um perfil publicado.":"Dados do parceiro salvos.");
