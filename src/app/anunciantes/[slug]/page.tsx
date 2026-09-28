@@ -366,6 +366,18 @@ export default function PublicAdvertiserPage() {
         </div>
       </section>
 
+      <section className="advertiserCommercialStrip" style={{ marginTop: 18, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))", gap: 12 }}>
+        <article className="card" style={{ padding: 18, border: "1px solid rgba(124,58,237,.12)", background: "linear-gradient(135deg,rgba(124,58,237,.07),rgba(255,255,255,.98))" }}>
+          <div className="eyebrow">ATENDIMENTO</div><strong style={{ display: "block", fontSize: 20, marginTop: 5 }}>{profile.availability ? "Agenda informada" : "Consulte a disponibilidade"}</strong><p style={{ margin: "7px 0 12px", color: "#64748b", lineHeight: 1.5 }}>{profile.availability || "Fale diretamente com a anunciante para confirmar horários e condições."}</p>
+          {whatsappContact ? <a href={whatsappUrl("Olá! Encontrei seu perfil no Pecatho e gostaria de consultar sua disponibilidade. Este contato ocorreu por intermédio do Pecatho.") || "#"} target="_blank" rel="noreferrer" className="secondaryButton" style={{ textDecoration: "none" }}>Consultar disponibilidade</a> : <button type="button" className="secondaryButton" onClick={() => void startConversation("Olá! Gostaria de consultar sua disponibilidade. Este contato ocorreu por intermédio do Pecatho.")} disabled={conversationBusy}>Consultar disponibilidade</button>}
+        </article>
+        <article className="card" style={{ padding: 18, border: "1px solid rgba(231,195,63,.28)", background: "linear-gradient(135deg,rgba(231,195,63,.10),rgba(255,255,255,.98))" }}>
+          <div className="eyebrow">VALORES</div><strong style={{ display: "block", fontSize: 20, marginTop: 5 }}>{validPrices.length > 0 ? "A partir de " + brl(Number(validPrices[0].price)) : "Valores sob consulta"}</strong><p style={{ margin: "7px 0 12px", color: "#64748b", lineHeight: 1.5 }}>{validPrices.length > 0 ? validPrices.length + " período(s) informado(s). Confira os valores e condições abaixo." : "Consulte diretamente a anunciante sobre os períodos disponíveis."}</p><a href="#valores" className="secondaryButton" style={{ textDecoration: "none" }}>Ver valores</a>
+        </article>
+        <article className="card" style={{ padding: 18, border: "1px solid rgba(15,23,42,.08)", background: "#fff" }}>
+          <div className="eyebrow">CONTATO</div><strong style={{ display: "block", fontSize: 20, marginTop: 5 }}>{whatsappContact ? "WhatsApp disponível" : "Atendimento pelo Pecatho"}</strong><p style={{ margin: "7px 0 12px", color: "#64748b", lineHeight: 1.5 }}>O primeiro contato informa que você chegou até este anúncio por intermédio do Pecatho.</p>{whatsappContact ? <a href={whatsappUrl("Olá! Encontrei seu perfil no Pecatho e gostaria de conversar sobre os serviços anunciados. Este contato ocorreu por intermédio do Pecatho.") || "#"} target="_blank" rel="noreferrer" className="primaryButton" style={{ textDecoration: "none" }}>Falar pelo WhatsApp</a> : <button type="button" className="primaryButton" onClick={() => void startConversation("Olá! Encontrei seu perfil no Pecatho e gostaria de conversar sobre os serviços anunciados. Este contato ocorreu por intermédio do Pecatho.")} disabled={conversationBusy}>{conversationBusy ? "Abrindo conversa..." : "Enviar mensagem"}</button>}
+        </article>
+      </section>
       <DigitalContentShowcase ownerType="advertiser" ownerId={profile.id} compact />
 
       <ProfileCommerceHub
