@@ -44,3 +44,18 @@
   .advertiserMobileActions .primaryButton{border-radius:12px}
   .publicProfile{padding-bottom:92px}
 }
+/* Partner public profile — mobile commercial actions */
+.partnerMobileActions{display:none}
+@media(max-width:760px){
+ .partnerMobileActions{
+  position:fixed;left:10px;right:10px;bottom:10px;z-index:55;
+  display:grid;grid-template-columns:1.2fr .9fr .9fr;gap:7px;
+  padding:7px;border:1px solid rgba(15,23,42,.12);border-radius:18px;
+  background:rgba(255,255,255,.95);box-shadow:0 16px 40px rgba(15,23,42,.18);
+  backdrop-filter:blur(16px)
+ }
+ .partnerMobileActions a{min-height:44px;display:flex;align-items:center;justify-content:center;padding:10px 8px;font-size:12px;text-decoration:none}
+ .partnerMobileActions .secondaryButton{border:1px solid rgba(15,23,42,.1);border-radius:12px;background:#fff;color:#111827;font-weight:800}
+ .partnerMobileActions .primaryButton{border-radius:12px}
+ .partnerDetail{padding-bottom:92px}
+}
