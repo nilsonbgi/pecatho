@@ -40,7 +40,7 @@ export default async function ParceiroDetalhe({params}:{params:Promise<{slug:str
    <a className="secondaryButton" href="#estrutura">Estrutura</a>
    <a className="secondaryButton" href="#condicoes-profissionais">Valores</a>
   </div>
-    <LeadForm venueId={v.id}/>
+    <section id="contato"><LeadForm venueId={v.id}/></section>
   <section className="authCard" style={{textAlign:"center"}}><div className="eyebrow">PECATHO</div><h2>Quer falar com a casa?</h2><p style={{opacity:.75}}>Use os canais oficiais acima para consultar reservas, serviços, eventos e outras informações.</p></section>
  </main>;
 }
