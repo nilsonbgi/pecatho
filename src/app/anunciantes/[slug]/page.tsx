@@ -466,6 +466,20 @@ export default function PublicAdvertiserPage() {
         <span>WhatsApp</span>
       </a>}
 
+      <div className="advertiserMobileActions" aria-label="Ações rápidas do anúncio">
+        {whatsappContact ? (
+          <a href={whatsappUrl("Olá! Encontrei seu perfil no Pecatho e gostaria de conversar sobre os serviços anunciados. Este contato ocorreu por intermédio do Pecatho.") || "#"} target="_blank" rel="noreferrer" className="primaryButton">
+            WhatsApp
+          </a>
+        ) : (
+          <button type="button" className="primaryButton" onClick={() => void startConversation("Olá! Encontrei seu perfil no Pecatho e gostaria de conversar sobre os serviços anunciados. Este contato ocorreu por intermédio do Pecatho.")} disabled={conversationBusy}>
+            {conversationBusy ? "Abrindo..." : "Mensagem"}
+          </button>
+        )}
+        <a href="#valores" className="secondaryButton">Valores</a>
+        <a href="#galeria" className="secondaryButton">Galeria</a>
+      </div>
+
       <footer><span>Pecatho · experiência pública da anunciante</span><Link href="/anunciantes">Voltar para a busca</Link></footer>
     </main>
   );
