@@ -11,7 +11,8 @@ type State = { id: number; uf: string; name: string };
 type City = { id: number; name: string; state_id: number };
 type CatalogAttribute = { id: string; name: string; slug: string; field_type: string; options: unknown; display_public: boolean; sort_order: number };
 type CatalogService = { id: string; name: string; slug: string; display_public: boolean; sort_order: number };
-type Media = { profile_id: string; storage_bucket: string; storage_path: string; kind: string; is_primary: boolean; is_public: boolean };\ntype PublicProfileMeta = { id: string; availability: string | null };
+type Media = { profile_id: string; storage_bucket: string; storage_path: string; kind: string; is_primary: boolean; is_public: boolean };
+type PublicProfileMeta = { id: string; availability: string | null };
 
 type Option = { label: string; value: string };
 function options(value: unknown): Option[] { if (!Array.isArray(value)) return []; return value.flatMap((x) => typeof x === "string" ? [{ label: x, value: x }] : x && typeof x === "object" && typeof (x as { value?: unknown }).value === "string" ? [{ label: typeof (x as { label?: unknown }).label === "string" ? String((x as { label?: unknown }).label) : String((x as { value: string }).value), value: String((x as { value: string }).value) }] : []); }
