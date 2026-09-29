@@ -10,7 +10,7 @@ import ProfileCommerceHub from "@/components/ProfileCommerceHub";
 
 type Profile = { id: string; user_id: string; title: string | null; display_name: string | null; summary: string | null; description: string | null; status: string; verification_status: string | null; city_id: number | null; state_id: number | null; category_id: number | null; birth_date: string | null; height_cm: number | null; weight_kg: number | null; availability: string | null; phone: string | null; whatsapp: string | null; phone_secondary: string | null; positioning: string | null; pricing: Record<string, unknown> | null; payment_options: Record<string, unknown> | null; social_links: Record<string, string> | null };
 type Address = { public_latitude: number | null; public_longitude: number | null };
-type Media = { id: string; profile_id: string; storage_bucket: string; storage_path: string; preview_storage_bucket: string | null; preview_storage_path: string | null; kind: string; access_type: "public" | "paid"; price: number; currency: string; is_primary: boolean; is_featured: boolean; show_in_cards: boolean; show_in_gallery: boolean; sort_order: number; moderation_status: string };
+type Media = { id: string; profile_id: string; storage_bucket: string; storage_path: string; preview_storage_bucket: string | null; preview_storage_path: string | null; kind: string; access_type: "public" | "paid"; price: number; currency: string; is_primary: boolean; is_featured: boolean; width: number | null; height: number | null; show_in_cards: boolean; show_in_gallery: boolean; sort_order: number; moderation_status: string };
 type Review = { id: string; rating: number | null; comment: string | null; created_at: string; experience_verified: boolean };
 type City = { name: string };
 type State = { uf: string; name: string };
@@ -119,7 +119,7 @@ export default function PublicAdvertiserPage() {
         supabase.from("profile_attribute_values").select("attribute_id,value").eq("profile_id", typed.id),
         typed.category_id ? supabase.from("category_services").select("id,name,slug,description,sort_order").eq("category_id", typed.category_id).eq("display_public", true).order("sort_order") : Promise.resolve({ data: [], error: null }),
         supabase.from("profile_services").select("service_id,selected,notes").eq("profile_id", typed.id).eq("selected", true),
-        supabase.from("profile_media").select("id,profile_id,storage_bucket,storage_path,preview_storage_bucket,preview_storage_path,kind,access_type,price,currency,is_primary,is_featured,show_in_cards,show_in_gallery,sort_order,moderation_status").eq("profile_id", typed.id).eq("moderation_status", "approved").order("sort_order"),
+        supabase.from("profile_media").select("id,profile_id,storage_bucket,storage_path,preview_storage_bucket,preview_storage_path,kind,access_type,price,currency,width,height,is_primary,is_featured,show_in_cards,show_in_gallery,sort_order,moderation_status").eq("profile_id", typed.id).eq("moderation_status", "approved").order("sort_order"),
         supabase.from("profile_feedback").select("id,rating,comment,created_at,experience_verified").eq("profile_id", typed.id).eq("status", "approved").eq("experience_verified", true).order("created_at", { ascending: false }).limit(12),
         supabase.from("fans_creators").select("slug,display_name,bio,status").eq("advertiser_profile_id", typed.id).eq("status", "active").maybeSingle(),
       ]);
@@ -420,10 +420,10 @@ export default function PublicAdvertiserPage() {
         {notice && <div className="mediaNotice">{notice}</div>}
         {filteredMedia.length === 0 ? <div className="emptyDiscovery"><h2>Galeria em preparação</h2><p>Esta anunciante ainda não publicou mídia aprovada nesta categoria.</p></div> : <div className="profileGallery">{filteredMedia.map((item) => {
           const unlocked = Boolean(item.unlockedUrl);
-          const src = unlocked ? item.unlockedUrl : item.url || item.previewUrl; const blurPreview = item.access_type === "paid" && !unlocked;
+          const src = unlocked ? item.unlockedUrl : item.url || item.previewUrl; const blurPreview = item.access_type === "paid" && !unlocked; const mediaRatio = item.width && item.height ? item.width / item.height : isVideo ? 16 / 9 : 1;
           const isVideo = item.kind === "video";
           return <article className={`profileMediaCard ${item.access_type === "paid" ? "paid" : "public"}`} key={item.id}>
-            <div className="profileMediaVisual">{src ? (isVideo && unlocked ? <video src={src} controls playsInline preload="metadata" /> : <img src={src} alt={item.access_type === "paid" ? "Prévia de conteúdo exclusivo" : "Foto do perfil"} style={{ filter: blurPreview ? "blur(18px)", transform: blurPreview ? "scale(1.08)" : undefined }} />) : <div className="lockedMedia"><span>{isVideo ? "▶" : "✦"}</span><strong>Conteúdo exclusivo</strong><small>Prévia não publicada</small></div>}
+            <div className="profileMediaVisual" style={{ aspectRatio: String(mediaRatio), maxHeight: "min(72vh, 760px)" }}>{src ? (isVideo && unlocked ? <video src={src} controls playsInline preload="metadata" /> : <img src={src} alt={item.access_type === "paid" ? "Prévia de conteúdo exclusivo" : "Foto do perfil"} style={{ filter: blurPreview ? "blur(18px)", transform: blurPreview ? "scale(1.08)" : undefined }} />) : <div className="lockedMedia"><span>{isVideo ? "▶" : "✦"}</span><strong>Conteúdo exclusivo</strong><small>Prévia não publicada</small></div>}
               {item.access_type === "paid" && !unlocked && <div className="paidOverlay"><span>🔒 EXCLUSIVO</span><strong>{brl(Number(item.price))}</strong><button type="button" onClick={() => unlock(item)} disabled={unlocking === item.id}>{unlocking === item.id ? "Preparando compra..." : `Comprar conteúdo · ${brl(Number(item.price))}`}</button></div>}
               {item.access_type === "paid" && unlocked && (
                 <div className="mediaBadge" style={{ background: "rgba(16,185,129,.92)", color: "#fff", right: 12, left: "auto" }}>
