@@ -43,7 +43,7 @@ export default function AdvertiserMediaManager() {
         if (file.size > 50 * 1024 * 1024) throw new Error("Cada arquivo deve ter no máximo 50 MB.");
         const kind = file.type.startsWith("video/") ? "video" : "image";
         const ext = (file.name.split(".").pop() || "bin").toLowerCase();
-        const bucket = access === "paid" ? "pecatho-private" : "pecatho-media";
+        const bucket = access === "paid" ? "pecatho-profile-paid" : "pecatho-media";
         const path = `${user.id}/${profileId}/${crypto.randomUUID()}.${ext}`;
         const uploadResult = await supabase.storage.from(bucket).upload(path, file, { contentType: file.type, upsert: false });
         if (uploadResult.error) throw uploadResult.error;
@@ -62,10 +62,14 @@ export default function AdvertiserMediaManager() {
     if (nextAccess === "paid" && nextPrice <= 0) { setError("Informe um valor maior que zero para conteúdo pago."); return; }
     setBusy(true); setError(""); setMessage("");
     try {
-      const supabase = createClient();
-      const { error: updateError } = await supabase.from("profile_media").update({ access_type: nextAccess, price: nextPrice }).eq("id", item.id);
-      if (updateError) throw updateError;
-      setMessage("Regra de acesso atualizada. A mudança ficará sujeita à moderação quando aplicável.");
+      const response = await fetch("/api/anunciantes/media/commerce", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ media_id: item.id, access_type: nextAccess, price: nextPrice }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error || "Não foi possível atualizar a regra de acesso.");
+      setMessage(nextAccess === "paid" ? "Conteúdo protegido em armazenamento privado e enviado para a regra de conteúdo pago." : "Mídia configurada como pública e mantida atrás de URL assinada.");
       await load();
     } catch (err) { setError(err instanceof Error ? err.message : "Não foi possível atualizar a mídia."); }
     finally { setBusy(false); }
