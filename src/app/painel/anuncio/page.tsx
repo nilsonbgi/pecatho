@@ -3,6 +3,7 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/browser";
+import { optimizeImage } from "@/lib/media/optimize-image";
 
 type StateRow = { id: number; uf: string; name: string };
 type CityRow = { id: number; name: string; state_id?: number | null; ibge_code?: string | null };
@@ -10,7 +11,7 @@ type CategoryRow = { id: number; name: string; display?: boolean };
 type AttributeOption = string | { label?: string; value?: string };
 type AttributeRow = { id: string; name: string; slug: string; field_type: string; options: unknown; required: boolean; display_public: boolean; sort_order: number };
 type ServiceRow = { id: string; name: string; slug: string; description: string | null; required: boolean; display_public: boolean; sort_order: number };
-type MediaRow = { id: string; kind: string; storage_bucket: string; storage_path: string; original_filename: string | null; mime_type: string | null; size_bytes: number | null; sort_order: number; is_primary: boolean; is_public: boolean; moderation_status: string; access_type?: string; price?: number; preview_url?: string; salesCount?: number }; type MediaSalesSummary = { paidCount: number; grossPaid: number; pendingCount: number; refundedCount: number; grossRefunded: number }; type MediaSaleRow = { id: string; media_id: string; amount: number; status: string; created_at: string; purchased_at: string | null }; type MediaFinanceSummary = { balance: number; credits: number; fees: number; reversals: number };
+type MediaRow = { id: string; kind: string; storage_bucket: string; storage_path: string; original_filename: string | null; mime_type: string | null; size_bytes: number | null; sort_order: number; is_primary: boolean; is_featured?: boolean; show_in_cards?: boolean; show_in_gallery?: boolean; is_public: boolean; moderation_status: string; access_type?: string; price?: number; preview_storage_bucket?: string | null; preview_storage_path?: string | null; preview_url?: string; salesCount?: number }; type MediaSalesSummary = { paidCount: number; grossPaid: number; pendingCount: number; refundedCount: number; grossRefunded: number }; type MediaSaleRow = { id: string; media_id: string; amount: number; status: string; created_at: string; purchased_at: string | null }; type MediaFinanceSummary = { balance: number; credits: number; fees: number; reversals: number };
 type JsonObject = Record<string, unknown>;
 type PricingPeriod = { minutes: number; price: number; period: string; starting_from?: boolean };
 const PRICING_OPTIONS: PricingPeriod[] = [
@@ -94,7 +95,7 @@ export default function AnuncioPage() {
         return false;
       }
     })();
-    const approvedPrimaryImage = media.some((item) => item.kind === "image" && item.is_primary && item.moderation_status === "approved" && item.is_public);
+    const approvedPrimaryImage = media.some((item) => item.kind === "image" && item.is_featured && item.moderation_status === "approved" && item.is_public);
     const requiredServicesReady = services.every((service) => !service.required || selectedServices[service.id] === true);
     const atLeastOneServiceReady = services.length === 0 || Object.values(selectedServices).some(Boolean);
     const validPrice = pricingPeriods.length > 0 && pricingPeriods.some((row) => row.minutes === 60 && Number(row.price) > 0) && pricingPeriods.every((row) => Number(row.price) > 0 && Number.isFinite(Number(row.price)));
@@ -117,7 +118,7 @@ export default function AnuncioPage() {
 
   async function loadMedia(profileId: string) {
     const supabase = createClient();
-    const { data, error: mediaError } = await supabase.from("profile_media").select("id,kind,storage_bucket,storage_path,original_filename,mime_type,size_bytes,sort_order,is_primary,is_public,moderation_status,access_type,price").eq("profile_id", profileId).order("sort_order");
+    const { data, error: mediaError } = await supabase.from("profile_media").select("id,kind,storage_bucket,storage_path,original_filename,mime_type,size_bytes,sort_order,is_primary,is_featured,show_in_cards,show_in_gallery,is_public,moderation_status,access_type,price,preview_storage_bucket,preview_storage_path").eq("profile_id", profileId).order("sort_order");
     if (mediaError) return;
     const rows = (data || []) as MediaRow[];
     const mediaIds = rows.map((row) => row.id);
@@ -333,15 +334,47 @@ export default function AnuncioPage() {
         profile = { id: String(payload.profile.id) };
       }
       let order = media.length;
-      for (const file of files) {
-        if (!(file.type.startsWith("image/") || file.type.startsWith("video/"))) throw new Error("Envie apenas imagens ou vídeos.");
-        if (file.size > 50 * 1024 * 1024) throw new Error("Cada arquivo deve ter no máximo 50 MB.");
-        const kind = file.type.startsWith("video/") ? "video" : "image"; const ext = (file.name.split(".").pop() || "bin").toLowerCase(); const path = `${user.id}/${profile.id}/${crypto.randomUUID()}.${ext}`;
-        const upload = await supabase.storage.from("pecatho-media").upload(path, file, { contentType: file.type, upsert: false }); if (upload.error) throw upload.error;
-        const insert = await supabase.from("profile_media").insert({ profile_id: profile.id, kind, storage_bucket: "pecatho-media", storage_path: path, original_filename: file.name, mime_type: file.type, size_bytes: file.size, sort_order: order, is_primary: order === 0, is_public: true, moderation_status: "pending", access_type: "public", price: 0 }).select("id,kind,storage_bucket,storage_path,original_filename,mime_type,size_bytes,sort_order,is_primary,is_public,moderation_status,access_type,price").single(); if (insert.error) throw insert.error; order++;
+      for (const original of files) {
+        if (!(original.type.startsWith("image/") || original.type.startsWith("video/"))) throw new Error("Envie apenas imagens ou vídeos.");
+        if (original.size > 50 * 1024 * 1024) throw new Error("Cada arquivo deve ter no máximo 50 MB.");
+        let file = original;
+        let previewFile: File | null = null;
+        let width: number | null = null;
+        let height: number | null = null;
+        if (original.type.startsWith("image/")) {
+          const optimized = await optimizeImage(original);
+          file = optimized.file; previewFile = optimized.preview; width = optimized.width; height = optimized.height;
+        }
+        const kind = original.type.startsWith("video/") ? "video" : "image";
+        const path = user.id + "/" + profile.id + "/" + crypto.randomUUID() + "." + (file.name.split(".").pop() || "bin").toLowerCase();
+        const upload = await supabase.storage.from("pecatho-media").upload(path, file, { contentType: file.type, upsert: false });
+        if (upload.error) throw upload.error;
+        let previewStorageBucket: string | null = null;
+        let previewStoragePath: string | null = null;
+        if (previewFile) {
+          previewStorageBucket = "pecatho-media-preview";
+          previewStoragePath = user.id + "/" + profile.id + "/" + crypto.randomUUID() + ".webp";
+          const previewUpload = await supabase.storage.from(previewStorageBucket).upload(previewStoragePath, previewFile, { contentType: "image/webp", upsert: false });
+          if (previewUpload.error) throw previewUpload.error;
+        }
+        const insert = await supabase.from("profile_media").insert({ profile_id: profile.id, kind, storage_bucket: "pecatho-media", storage_path: path, original_filename: original.name, mime_type: file.type, size_bytes: file.size, sort_order: order, is_primary: order === 0, is_featured: order === 0 && kind === "image", show_in_cards: true, show_in_gallery: true, is_public: true, moderation_status: "pending", access_type: "public", price: 0, preview_storage_bucket: previewStorageBucket, preview_storage_path: previewStoragePath }).select("id,kind,storage_bucket,storage_path,original_filename,mime_type,size_bytes,sort_order,is_primary,is_featured,show_in_cards,show_in_gallery,is_public,moderation_status,access_type,price,preview_storage_bucket,preview_storage_path").single();
+        if (insert.error) throw insert.error;
+        order++;
       }
-      await loadMedia(profile.id); setMessage("Mídia enviada e encaminhada para moderação.");
+      await loadMedia(profile.id); setMessage("Mídia otimizada, enviada e encaminhada para moderação.");
     } catch (err) { setError(err instanceof Error ? err.message : "Não foi possível enviar a mídia."); } finally { setMediaBusy(false); e.target.value = ""; }
+  }
+
+  async function updateMediaPresentation(mediaId: string, featured: boolean, cards: boolean, gallery: boolean) {
+    setMediaBusy(true); setError(""); setMessage("");
+    try {
+      const { error: rpcError } = await createClient().rpc("set_profile_media_presentation", { p_media_id: mediaId, p_is_featured: featured, p_show_in_cards: cards, p_show_in_gallery: gallery });
+      if (rpcError) throw rpcError;
+      const { data: profileRow } = await createClient().from("advertiser_profiles").select("id").eq("user_id", (await createClient().auth.getUser()).data.user?.id || "").maybeSingle();
+      if (!profileRow?.id) throw new Error("Anúncio não encontrado.");
+      await loadMedia(profileRow.id);
+      setMessage("Apresentação da mídia atualizada.");
+    } catch (err) { setError(err instanceof Error ? err.message : "Não foi possível atualizar a mídia."); } finally { setMediaBusy(false); }
   }
 
   async function updateMediaCommerce(mediaId: string, accessType: "public" | "paid", priceValue: string) {
