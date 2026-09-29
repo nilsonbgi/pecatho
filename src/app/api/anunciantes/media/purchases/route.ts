@@ -116,7 +116,7 @@ export async function GET() {
   for (const purchase of purchases ?? []) {
     const item = mediaMap.get(purchase.media_id);
     const profile = item ? profileMap.get(item.profile_id) : null;
-    if (!item || !profile || item.moderation_status !== "approved") continue;
+    if (!item || !profile) continue;
     if (purchase.expires_at && new Date(purchase.expires_at).getTime() < now) continue;
 
     const { data: signed, error: signedError } = await admin.storage
