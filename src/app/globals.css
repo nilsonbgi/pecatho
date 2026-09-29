@@ -465,3 +465,12 @@
 .partnerManager .authCard>.authCard{max-width:none;background:rgba(255,255,255,.018)}
 @media(max-width:900px){.digitalHeader{align-items:flex-start;flex-direction:column}.digitalLayout{grid-template-columns:1fr}.digitalStats{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:560px){.digitalManagerInner{padding:20px 13px 45px}.digitalHeader{padding-top:8px}.digitalHeaderActions{width:100%}.digitalHeaderActions a{flex:1;text-align:center}.digitalStats{grid-template-columns:1fr 1fr}.digitalStats>div{padding:13px}.digitalStats strong{font-size:20px}.digitalSectionHead{padding:17px}.digitalForm{padding:17px}.digitalFormGrid{grid-template-columns:1fr}.digitalProductBody{display:grid}.digitalProductBody>strong{font-size:16px}.digitalTrust{grid-template-columns:auto 1fr}.digitalTrust>div:last-child{grid-column:2}.partnerManager .navLinks{gap:6px}.partnerManager .navLinks a{padding:8px 9px}.partnerManager .authCard{padding:17px}}
+
+.partnerManager .topbar,.partnerDetail .topbar{min-width:0}
+.partnerManager .hero,.partnerDetail .hero{max-width:none}
+.partnerManager .authCard{width:100%;box-sizing:border-box}
+.partnerManager .formGrid{min-width:0}
+.partnerManager input,.partnerManager textarea,.partnerManager select{min-width:0}
+.partnerDetail img,.partnerDetail video{max-width:100%;display:block}
+@media(max-width:800px){.partnerManager .topbar,.partnerDetail .topbar{height:auto;min-height:70px;gap:10px;padding-top:12px;padding-bottom:12px}.partnerManager .navLinks,.partnerDetail .navLinks{display:flex;overflow-x:auto;max-width:100%;white-space:nowrap}.partnerManager .navLinks a:not(.navCta),.partnerDetail .navLinks a:not(.navCta){display:inline-flex}.partnerManager .hero,.partnerDetail .hero{padding-top:55px}.partnerManager .hero h1,.partnerDetail .hero h1{font-size:clamp(38px,11vw,60px)}}
+@media(max-width:560px){.partnerManager .navLinks a,.partnerDetail .navLinks a{font-size:11px}.partnerManager .authCard{border-radius:14px}.partnerManager .heroCopy,.partnerDetail .heroCopy{font-size:16px}.partnerDetail .heroActions{display:grid;grid-template-columns:1fr 1fr}.partnerDetail .heroActions .primaryButton,.partnerDetail .heroActions .secondaryButton{width:100%}}
