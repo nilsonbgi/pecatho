@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
     const profileIds = [...new Set(media.map((item) => item.profile_id))];
     const { data: profiles } = await supabaseAdmin.from("advertiser_profiles").select("id,status").in("id", profileIds);
     const publishedProfiles = new Set((profiles ?? []).filter((profile) => profile.status === "published").map((profile) => profile.id));
-    const paidIds = media.filter((item) => item.access_type === "paid" && item.moderation_status === "approved").map((item) => item.id);
+    const paidIds = media.filter((item) => item.access_type === "paid").map((item) => item.id);
     const { data: purchases } = paidIds.length > 0
       ? await supabaseAdmin.from("profile_media_purchases").select("media_id,status,expires_at,purchased_at").eq("buyer_user_id", userData.user.id).eq("status", "paid").in("media_id", paidIds).order("purchased_at", { ascending: false })
       : { data: [] };
@@ -49,8 +49,8 @@ Deno.serve(async (req) => {
 
     const accesses = [];
     for (const item of media) {
-      if (item.moderation_status !== "approved") continue;
       if (item.access_type === "public") {
+        if (item.moderation_status !== "approved") continue;
         if (!publishedProfiles.has(item.profile_id)) continue;
         const { data: signed, error: signedError } = await supabaseAdmin.storage.from(item.storage_bucket).createSignedUrl(item.storage_path, 600);
         if (!signedError && signed?.signedUrl) accesses.push({ media_id: item.id, access: "public", url: signed.signedUrl, expires_in: 600 });
