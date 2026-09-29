@@ -52,8 +52,8 @@ Deno.serve(async (req) => {
       if (item.moderation_status !== "approved") continue;
       if (item.access_type === "public") {
         if (!publishedProfiles.has(item.profile_id)) continue;
-        const { data } = supabaseAdmin.storage.from(item.storage_bucket).getPublicUrl(item.storage_path);
-        accesses.push({ media_id: item.id, access: "public", url: data.publicUrl });
+        const { data: signed, error: signedError } = await supabaseAdmin.storage.from(item.storage_bucket).createSignedUrl(item.storage_path, 600);
+        if (!signedError && signed?.signedUrl) accesses.push({ media_id: item.id, access: "public", url: signed.signedUrl, expires_in: 600 });
         continue;
       }
       const expiresAt = latestPurchase.get(item.id);
