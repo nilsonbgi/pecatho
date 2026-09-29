@@ -50,12 +50,14 @@ export async function POST(request: Request) {
     : `${user.id}/${profile.id}/${media.id}-${basename(media.storage_path)}`;
 
   let moved = false;
+  let sourceFile: Blob | null = null;
   if (currentBucket !== targetBucket) {
     const { data: file, error: downloadError } = await admin.storage.from(currentBucket).download(media.storage_path);
     if (downloadError || !file) return NextResponse.json({ error: "Não foi possível preparar o arquivo para a nova política de acesso." }, { status: 409 });
 
     const { error: uploadError } = await admin.storage.from(targetBucket).upload(targetPath, file, { contentType: file.type || undefined, upsert: false });
     if (uploadError) return NextResponse.json({ error: "Não foi possível proteger o arquivo no armazenamento privado." }, { status: 409 });
+    sourceFile = file;
     moved = true;
 
     const { error: deleteError } = await admin.storage.from(currentBucket).remove([media.storage_path]);
@@ -78,9 +80,9 @@ export async function POST(request: Request) {
     .eq("profile_id", profile.id);
 
   if (updateError) {
-    if (moved) {
+    if (moved && sourceFile) {
       await admin.storage.from(targetBucket).remove([targetPath]);
-      await admin.storage.from(currentBucket).upload(media.storage_path, await admin.storage.from(targetBucket).download(targetPath).then((r) => r.data || new Blob()), { contentType: undefined, upsert: false }).catch(() => ({ error: null }));
+      await admin.storage.from(currentBucket).upload(media.storage_path, sourceFile, { contentType: sourceFile.type || undefined, upsert: false });
     }
     return NextResponse.json({ error: "Arquivo migrado, mas não foi possível atualizar o cadastro da mídia." }, { status: 500 });
   }
