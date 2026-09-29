@@ -10,7 +10,7 @@ import ProfileCommerceHub from "@/components/ProfileCommerceHub";
 
 type Profile = { id: string; user_id: string; title: string | null; display_name: string | null; summary: string | null; description: string | null; status: string; verification_status: string | null; city_id: number | null; state_id: number | null; category_id: number | null; birth_date: string | null; height_cm: number | null; weight_kg: number | null; availability: string | null; phone: string | null; whatsapp: string | null; phone_secondary: string | null; positioning: string | null; pricing: Record<string, unknown> | null; payment_options: Record<string, unknown> | null; social_links: Record<string, string> | null };
 type Address = { public_latitude: number | null; public_longitude: number | null };
-type Media = { id: string; profile_id: string; storage_bucket: string; storage_path: string; preview_storage_bucket: string | null; preview_storage_path: string | null; kind: string; access_type: "public" | "paid"; price: number; currency: string; is_primary: boolean; sort_order: number; moderation_status: string };
+type Media = { id: string; profile_id: string; storage_bucket: string; storage_path: string; preview_storage_bucket: string | null; preview_storage_path: string | null; kind: string; access_type: "public" | "paid"; price: number; currency: string; is_primary: boolean; is_featured: boolean; show_in_cards: boolean; show_in_gallery: boolean; sort_order: number; moderation_status: string };
 type Review = { id: string; rating: number | null; comment: string | null; created_at: string; experience_verified: boolean };
 type City = { name: string };
 type State = { uf: string; name: string };
@@ -123,10 +123,10 @@ export default function PublicAdvertiserPage() {
         supabase.from("profile_feedback").select("id,rating,comment,created_at,experience_verified").eq("profile_id", typed.id).eq("status", "approved").eq("experience_verified", true).order("created_at", { ascending: false }).limit(12),
         supabase.from("fans_creators").select("slug,display_name,bio,status").eq("advertiser_profile_id", typed.id).eq("status", "active").maybeSingle(),
       ]);
-      const gallery = ((mediaResult.data ?? []) as Media[]).map((item) => ({
+      const gallery = ((mediaResult.data ?? []) as Media[]).filter((item) => item.moderation_status === "approved" && item.show_in_gallery !== false).map((item) => ({
         ...item,
         url: null,
-        previewUrl: null,
+        previewUrl: item.preview_storage_bucket && item.preview_storage_path ? supabase.storage.from(item.preview_storage_bucket).getPublicUrl(item.preview_storage_path).data.publicUrl || null : null,
       }));
       if (!active) return;
       setProfile(typed); setAddress((a.data as Address | null) || null); setCity((c.data as City | null) || null); setState((s.data as State | null) || null); setCategory((cat.data as Category | null) || null);
@@ -158,10 +158,10 @@ export default function PublicAdvertiserPage() {
   }, [params.slug]);
 
   const filteredMedia = useMemo(() => media.filter((item) => mediaTab === "all" || item.kind === mediaTab), [media, mediaTab]);
-  const primaryMedia = media.find((item) => item.is_primary) || media[0] || null;
+  const primaryMedia = media.find((item) => item.is_featured) || media.find((item) => item.is_primary) || media[0] || null;
   const averageRating = reviews.length ? reviews.reduce((sum, item) => sum + Number(item.rating || 0), 0) / reviews.length : 0;
-  const publicImages = media.filter((item) => item.kind === "image").length;
-  const publicVideos = media.filter((item) => item.kind === "video").length;
+  const publicImages = media.filter((item) => item.kind === "image" && item.show_in_gallery !== false).length;
+  const publicVideos = media.filter((item) => item.kind === "video" && item.show_in_gallery !== false).length;
   const socialLinks = Object.entries(profile?.social_links || {}).map(([label, value]) => { const url = safeExternalUrl(value); return url ? [label, url] as const : null; }).filter((entry): entry is readonly [string, string] => entry !== null);
   const paymentMethods = (() => {
     const methods = profile?.payment_options?.methods;
@@ -420,10 +420,10 @@ export default function PublicAdvertiserPage() {
         {notice && <div className="mediaNotice">{notice}</div>}
         {filteredMedia.length === 0 ? <div className="emptyDiscovery"><h2>Galeria em preparação</h2><p>Esta anunciante ainda não publicou mídia aprovada nesta categoria.</p></div> : <div className="profileGallery">{filteredMedia.map((item) => {
           const unlocked = Boolean(item.unlockedUrl);
-          const src = unlocked ? item.unlockedUrl : item.url || item.previewUrl;
+          const src = unlocked ? item.unlockedUrl : item.url || item.previewUrl; const blurPreview = item.access_type === "paid" && !unlocked;
           const isVideo = item.kind === "video";
           return <article className={`profileMediaCard ${item.access_type === "paid" ? "paid" : "public"}`} key={item.id}>
-            <div className="profileMediaVisual">{src ? (isVideo && unlocked ? <video src={src} controls playsInline preload="metadata" /> : <img src={src} alt={item.access_type === "paid" ? "Prévia de conteúdo exclusivo" : "Foto do perfil"} />) : <div className="lockedMedia"><span>{isVideo ? "▶" : "✦"}</span><strong>Conteúdo exclusivo</strong><small>Prévia não publicada</small></div>}
+            <div className="profileMediaVisual">{src ? (isVideo && unlocked ? <video src={src} controls playsInline preload="metadata" /> : <img src={src} alt={item.access_type === "paid" ? "Prévia de conteúdo exclusivo" : "Foto do perfil"} style={{ filter: blurPreview ? "blur(18px)", transform: blurPreview ? "scale(1.08)" : undefined }} />) : <div className="lockedMedia"><span>{isVideo ? "▶" : "✦"}</span><strong>Conteúdo exclusivo</strong><small>Prévia não publicada</small></div>}
               {item.access_type === "paid" && !unlocked && <div className="paidOverlay"><span>🔒 EXCLUSIVO</span><strong>{brl(Number(item.price))}</strong><button type="button" onClick={() => unlock(item)} disabled={unlocking === item.id}>{unlocking === item.id ? "Preparando compra..." : `Comprar conteúdo · ${brl(Number(item.price))}`}</button></div>}
               {item.access_type === "paid" && unlocked && (
                 <div className="mediaBadge" style={{ background: "rgba(16,185,129,.92)", color: "#fff", right: 12, left: "auto" }}>
