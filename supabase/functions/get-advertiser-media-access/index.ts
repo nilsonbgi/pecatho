@@ -24,7 +24,6 @@ Deno.serve(async (req) => {
     if (userError || !userData.user) return new Response(JSON.stringify({ error: "Sessão inválida ou expirada." }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     const body = await req.json().catch(() => ({}));
-    const body = await req.json().catch(() => ({}));
     const requestedIds = Array.isArray(body.media_ids)
       ? body.media_ids.filter((value) => typeof value === "string" && value.length > 0).slice(0, 100)
       : [];
@@ -40,7 +39,7 @@ Deno.serve(async (req) => {
     const profileIds = [...new Set(media.map((item) => item.profile_id))];
     const { data: profiles } = await supabaseAdmin.from("advertiser_profiles").select("id,status").in("id", profileIds);
     const publishedProfiles = new Set((profiles ?? []).filter((profile) => profile.status === "published").map((profile) => profile.id));
-    const paidIds = media.filter((item) => item.access_type === "paid" && publishedProfiles.has(item.profile_id) && item.moderation_status === "approved").map((item) => item.id);
+    const paidIds = media.filter((item) => item.access_type === "paid" && item.moderation_status === "approved").map((item) => item.id);
     const { data: purchases } = paidIds.length > 0
       ? await supabaseAdmin.from("profile_media_purchases").select("media_id,status,expires_at,purchased_at").eq("buyer_user_id", userData.user.id).eq("status", "paid").in("media_id", paidIds).order("purchased_at", { ascending: false })
       : { data: [] };
@@ -50,8 +49,9 @@ Deno.serve(async (req) => {
 
     const accesses = [];
     for (const item of media) {
-      if (!publishedProfiles.has(item.profile_id) || item.moderation_status !== "approved") continue;
+      if (item.moderation_status !== "approved") continue;
       if (item.access_type === "public") {
+        if (!publishedProfiles.has(item.profile_id)) continue;
         const { data } = supabaseAdmin.storage.from(item.storage_bucket).getPublicUrl(item.storage_path);
         accesses.push({ media_id: item.id, access: "public", url: data.publicUrl });
         continue;
