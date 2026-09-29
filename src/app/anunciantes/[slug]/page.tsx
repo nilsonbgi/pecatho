@@ -131,7 +131,7 @@ export default function PublicAdvertiserPage() {
       ]);
       const gallery = ((mediaResult.data ?? []) as Media[]).map((item) => ({
         ...item,
-        url: item.access_type === "public" ? publicUrl(supabase, item.storage_bucket, item.storage_path) : null,
+        url: null,
         previewUrl: item.access_type === "paid" ? publicUrl(supabase, item.preview_storage_bucket, item.preview_storage_path) : null,
       }));
       if (!active) return;
@@ -141,14 +141,15 @@ export default function PublicAdvertiserPage() {
 
       const { data: authData } = await supabase.auth.getUser();
       if (authData.user && authData.user.id !== typed.user_id) {
-        const paidMediaIds = gallery.filter((item) => item.access_type === "paid").map((item) => item.id);
-        if (paidMediaIds.length > 0) {
-          const { data: accessData } = await supabase.functions.invoke("get-advertiser-media-access", { body: { media_ids: paidMediaIds } });
-          const accesses = Array.isArray(accessData?.accesses) ? accessData.accesses as Array<{ media_id: string; url?: string }> : [];
+        const approvedMediaIds = gallery.filter((item) => item.moderation_status === "approved").map((item) => item.id);
+        if (approvedMediaIds.length > 0) {
+          const { data: accessData } = await supabase.functions.invoke("get-advertiser-media-access", { body: { media_ids: approvedMediaIds } });
+          const accesses = Array.isArray(accessData?.accesses) ? accessData.accesses as Array<{ media_id: string; access?: string; url?: string }> : [];
           if (active && accesses.length > 0) {
             setMedia((current) => current.map((entry) => {
               const access = accesses.find((item) => item.media_id === entry.id);
-              return access?.url ? { ...entry, unlockedUrl: access.url } : entry;
+              if (!access?.url) return entry;
+              return access.access === "public" ? { ...entry, url: access.url } : { ...entry, unlockedUrl: access.url };
             }));
           }
         }
