@@ -311,38 +311,29 @@ export default function AnuncioPage() {
   }
 
   async function updateMediaCommerce(mediaId: string, accessType: "public" | "paid", priceValue: string) {
-  async function updateMediaCommerce(mediaId: string, accessType: "public" | "paid", priceValue: string) {
     setMediaBusy(true); setMessage(""); setError("");
     try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Sessão expirada.");
-      const profileResult = await supabase.from("advertiser_profiles").select("id").eq("user_id", user.id).maybeSingle();
-      if (profileResult.error) throw profileResult.error;
-      if (!profileResult.data?.id) throw new Error("Anúncio não encontrado.");
       const parsedPrice = priceValue.trim() === "" ? 0 : Number(priceValue.replace(",", "."));
       if (accessType === "paid" && (!Number.isFinite(parsedPrice) || parsedPrice <= 0)) {
         throw new Error("Informe um valor maior que zero para liberar esta mídia como conteúdo pago.");
       }
-      const { error: updateError } = await supabase
-        .from("profile_media")
-        .update({
-          access_type: accessType,
-          price: accessType === "paid" ? parsedPrice : 0,
-          is_public: true,
-        })
-        .eq("id", mediaId)
-        .eq("profile_id", profileResult.data.id);
-      if (updateError) throw updateError;
+      const response = await fetch("/api/anunciantes/media/commerce", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ media_id: mediaId, access_type: accessType, price: accessType === "paid" ? parsedPrice : 0 }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error || "Não foi possível atualizar o acesso da mídia.");
+      const profileResult = await createClient().from("advertiser_profiles").select("id").eq("user_id", (await createClient().auth.getUser()).data.user?.id || "").maybeSingle();
+      if (profileResult.error || !profileResult.data?.id) throw new Error(profileResult.error?.message || "Anúncio não encontrado.");
       await loadMedia(profileResult.data.id);
-      setMessage(accessType === "paid" ? "Mídia configurada como conteúdo exclusivo pago." : "Mídia configurada como conteúdo público.");
+      setMessage(accessType === "paid" ? "Mídia protegida como conteúdo exclusivo pago." : "Mídia configurada como conteúdo público.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível atualizar o acesso da mídia.");
     } finally {
       setMediaBusy(false);
     }
   }
-
   async function requestPublication() {
     setPublishBusy(true); setMessage(""); setError("");
     try {
