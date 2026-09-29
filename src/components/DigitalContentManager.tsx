@@ -6,109 +6,94 @@ import { createClient } from "@/lib/supabase/browser";
 type OwnerType = "advertiser" | "creator";
 type Product = { id:string; title:string; description:string|null; product_type:string; price:number|string; status:string; created_at:string };
 
-export default function DigitalContentManager({ ownerType }:{ ownerType: OwnerType }) {
-  const supabase = useMemo(() => createClient(), []);
-  const [ownerId,setOwnerId]=useState("");
-  const [products,setProducts]=useState<Product[]>([]);
-  const [title,setTitle]=useState("");
-  const [description,setDescription]=useState("");
-  const [price,setPrice]=useState("");
-  const [productType,setProductType]=useState<"single_image"|"single_video"|"package">("package");
-  const [files,setFiles]=useState<File[]>([]);
-  const [busy,setBusy]=useState(false);
-  const [message,setMessage]=useState("");
-  const [error,setError]=useState("");
-  const [metrics,setMetrics]=useState({sales:0,gross:0,ownerAmount:0,last30Sales:0,last30Gross:0});
+function brl(value:number){return new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(value);}
+function fileSize(value:number){if(value<1024*1024)return Math.max(1,Math.round(value/1024))+" KB";return (value/1024/1024).toFixed(1).replace(".",",")+" MB";}
 
-  async function load(){
-    setError("");
-    const {data:{user}}=await supabase.auth.getUser();
-    if(!user){ setError("Sessão expirada."); return; }
-    const table=ownerType==="creator"?"fans_creators":"advertiser_profiles";
-    const {data:owner,error:ownerError}=await supabase.from(table).select("id").eq("user_id",user.id).maybeSingle();
-    if(ownerError||!owner){setError(ownerType==="creator"?"Ative o Pecatho Fans antes de criar conteúdos.":"Crie seu anúncio antes de criar conteúdos.");return;}
-    setOwnerId(owner.id);
-    const {data:list,error:listError}=await supabase.from("digital_content_products").select("id,title,description,product_type,price,status,created_at").eq("owner_user_id",user.id).eq("owner_type",ownerType).order("created_at",{ascending:false});
-    if(listError) setError(listError.message); else setProducts((list??[]) as Product[]);
-  }
-  async function loadMetrics(){
-    const response=await fetch("/api/conteudos/sales",{cache:"no-store"});
-    if(response.ok){ const data=await response.json(); setMetrics({sales:Number(data.sales||0),gross:Number(data.gross||0),ownerAmount:Number(data.ownerAmount||0),last30Sales:Number(data.last30Sales||0),last30Gross:Number(data.last30Gross||0)}); }
-  }
-  useEffect(()=>{void load();void loadMetrics()},[]);
+export default function DigitalContentManager({ownerType}:{ownerType:OwnerType}){
+ const supabase=useMemo(()=>createClient(),[]);
+ const [ownerId,setOwnerId]=useState("");const [products,setProducts]=useState<Product[]>([]);
+ const [title,setTitle]=useState("");const [description,setDescription]=useState("");const [price,setPrice]=useState("");
+ const [productType,setProductType]=useState<"single_image"|"single_video"|"package">("package");const [files,setFiles]=useState<File[]>([]);
+ const [busy,setBusy]=useState(false);const [message,setMessage]=useState("");const [error,setError]=useState("");
+ const [metrics,setMetrics]=useState({sales:0,gross:0,ownerAmount:0,last30Sales:0,last30Gross:0});
 
-  async function createProduct(){
-    setBusy(true);setError("");setMessage("");
-    try{
-      if(!ownerId) throw new Error("Proprietário não identificado.");
-      const normalized=Number(price.replace(".","").replace(",",".")); 
-      if(!title.trim()||!Number.isFinite(normalized)||normalized<=0) throw new Error("Informe título e valor válido.");
-      if(!files.length) throw new Error("Adicione pelo menos um arquivo.");
-      if(productType==="single_image" && files.length!==1) throw new Error("Uma venda de imagem deve conter exatamente uma imagem.");
-      if(productType==="single_video" && files.length!==1) throw new Error("Uma venda de vídeo deve conter exatamente um vídeo.");
-      if(productType==="single_image" && !files[0].type.startsWith("image/")) throw new Error("O arquivo precisa ser uma imagem.");
-      if(productType==="single_video" && !files[0].type.startsWith("video/")) throw new Error("O arquivo precisa ser um vídeo.");
-      for(const file of files) if(file.size>250*1024*1024) throw new Error("Cada arquivo pode ter no máximo 250 MB.");
+ async function load(){
+  setError("");const {data:{user}}=await supabase.auth.getUser();if(!user){setError("Sessão expirada.");return;}
+  const table=ownerType==="creator"?"fans_creators":"advertiser_profiles";
+  const {data:owner,error:ownerError}=await supabase.from(table).select("id").eq("user_id",user.id).maybeSingle();
+  if(ownerError||!owner){setError(ownerType==="creator"?"Ative o Pecatho Fans antes de criar conteúdos.":"Crie seu anúncio antes de criar conteúdos.");return;}
+  setOwnerId(owner.id);
+  const {data:list,error:listError}=await supabase.from("digital_content_products").select("id,title,description,product_type,price,status,created_at").eq("owner_user_id",user.id).eq("owner_type",ownerType).order("created_at",{ascending:false});
+  if(listError)setError(listError.message);else setProducts((list??[]) as Product[]);
+ }
+ async function loadMetrics(){const response=await fetch("/api/conteudos/sales",{cache:"no-store"});if(response.ok){const data=await response.json();setMetrics({sales:Number(data.sales||0),gross:Number(data.gross||0),ownerAmount:Number(data.ownerAmount||0),last30Sales:Number(data.last30Sales||0),last30Gross:Number(data.last30Gross||0)});}}
+ useEffect(()=>{void load();void loadMetrics()},[]);
 
-      const {data:{user}}=await supabase.auth.getUser(); if(!user) throw new Error("Sessão expirada.");
-      const {data:product,error:productError}=await supabase.from("digital_content_products").insert({
-        owner_type:ownerType,owner_id:ownerId,owner_user_id:user.id,title:title.trim(),description:description.trim()||null,product_type:productType,price:normalized,currency:"BRL",status:"draft"
-      }).select("id").single();
-      if(productError||!product) throw new Error(productError?.message||"Não foi possível criar o produto.");
+ async function createProduct(){
+  setBusy(true);setError("");setMessage("");
+  try{
+   if(!ownerId)throw new Error("Proprietário não identificado.");
+   const normalized=Number(price.replace(/\./g,"").replace(",","."));
+   if(!title.trim()||!Number.isFinite(normalized)||normalized<=0)throw new Error("Informe título e valor válido.");
+   if(!files.length)throw new Error("Adicione pelo menos um arquivo.");
+   if(productType==="single_image"&&(files.length!==1||!files[0].type.startsWith("image/")))throw new Error("Uma venda de imagem deve conter exatamente uma imagem.");
+   if(productType==="single_video"&&(files.length!==1||!files[0].type.startsWith("video/")))throw new Error("Uma venda de vídeo deve conter exatamente um vídeo.");
+   for(const file of files)if(file.size>250*1024*1024)throw new Error("Cada arquivo pode ter no máximo 250 MB.");
+   const {data:{user}}=await supabase.auth.getUser();if(!user)throw new Error("Sessão expirada.");
+   const {data:product,error:productError}=await supabase.from("digital_content_products").insert({owner_type:ownerType,owner_id:ownerId,owner_user_id:user.id,title:title.trim(),description:description.trim()||null,product_type:productType,price:normalized,currency:"BRL",status:"draft"}).select("id").single();
+   if(productError||!product)throw new Error(productError?.message||"Não foi possível criar o produto.");
+   const rows=[];
+   for(let i=0;i<files.length;i++){const file=files[i];const safe=file.name.normalize("NFKD").replace(/[^a-zA-Z0-9._-]+/g,"-").replace(/-+/g,"-").replace(/^-|-$/g,"").slice(0,120)||"arquivo";const path=user.id+"/digital-products/"+product.id+"/"+crypto.randomUUID()+"-"+safe;const {error:uploadError}=await supabase.storage.from("pecatho-private").upload(path,file,{upsert:false,contentType:file.type||"application/octet-stream"});if(uploadError)throw new Error("Falha no upload de "+file.name+": "+uploadError.message);const mediaType=file.type.startsWith("image/")?"image":file.type.startsWith("video/")?"video":file.type.startsWith("audio/")?"audio":"document";rows.push({product_id:product.id,owner_user_id:user.id,storage_bucket:"pecatho-private",storage_path:path,original_filename:file.name,mime_type:file.type||null,size_bytes:file.size,media_type:mediaType,sort_order:i});}
+   const {error:itemError}=await supabase.from("digital_content_product_items").insert(rows);if(itemError)throw new Error(itemError.message);
+   const {error:publishError}=await supabase.from("digital_content_products").update({status:"published",updated_at:new Date().toISOString()}).eq("id",product.id);if(publishError)throw new Error(publishError.message);
+   setTitle("");setDescription("");setPrice("");setFiles([]);setMessage("Conteúdo publicado e disponível para venda.");await load();await loadMetrics();
+  }catch(e){setError(e instanceof Error?e.message:"Não foi possível criar o conteúdo.");}finally{setBusy(false);}
+ }
+ async function archive(id:string){setBusy(true);setError("");const {error:e}=await supabase.from("digital_content_products").update({status:"archived",updated_at:new Date().toISOString()}).eq("id",id);if(e)setError(e.message);else await load();setBusy(false);}
 
-      const rows=[];
-      for(let i=0;i<files.length;i++){
-        const file=files[i];
-        const safe=file.name.normalize("NFKD").replace(/[^a-zA-Z0-9._-]+/g,"-").replace(/-+/g,"-").replace(/^-|-$/g,"").slice(0,120)||"arquivo";
-        const path=`${user.id}/digital-products/${product.id}/${crypto.randomUUID()}-${safe}`;
-        const {error:uploadError}=await supabase.storage.from("pecatho-private").upload(path,file,{upsert:false,contentType:file.type||"application/octet-stream"});
-        if(uploadError) throw new Error(`Falha no upload de ${file.name}: ${uploadError.message}`);
-        const mediaType=file.type.startsWith("image/")?"image":file.type.startsWith("video/")?"video":file.type.startsWith("audio/")?"audio":"document";
-        rows.push({product_id:product.id,owner_user_id:user.id,storage_bucket:"pecatho-private",storage_path:path,original_filename:file.name,mime_type:file.type||null,size_bytes:file.size,media_type:mediaType,sort_order:i});
-      }
-      const {error:itemError}=await supabase.from("digital_content_product_items").insert(rows);
-      if(itemError) throw new Error(itemError.message);
-      const {error:publishError}=await supabase.from("digital_content_products").update({status:"published",updated_at:new Date().toISOString()}).eq("id",product.id);
-      if(publishError) throw new Error(publishError.message);
-      setTitle("");setDescription("");setPrice("");setFiles([]);setMessage("Conteúdo publicado e disponível para venda.");await load();
-    }catch(e){setError(e instanceof Error?e.message:"Não foi possível criar o conteúdo.");}
-    finally{setBusy(false);}
-  }
+ const totalSize=files.reduce((sum,file)=>sum+file.size,0);
+ const activeProducts=products.filter(p=>p.status==="published").length;
+ const label=ownerType==="creator"?"FANS":"ANUNCIANTE";
 
-  async function archive(id:string){
-    setBusy(true);setError("");const {error:e}=await supabase.from("digital_content_products").update({status:"archived",updated_at:new Date().toISOString()}).eq("id",id);if(e)setError(e.message);else await load();setBusy(false);
-  }
+ return <main className="digitalManager">
+  <div className="digitalManagerInner">
+   <header className="digitalHeader">
+    <div><div className="digitalKicker">PECATHO · {label} · CONTEÚDO DIGITAL</div><h1>Sua loja de conteúdo.</h1><p>Publique fotos, vídeos e pacotes com preço definido por você. O arquivo original fica privado e o comprador só recebe acesso após o pagamento confirmado.</p></div>
+    <div className="digitalHeaderActions"><a href={ownerType==="creator"?"/fans/gerenciar/perfil":"/painel/anuncio"}>← Voltar ao perfil</a><a className="digitalPrimaryLink" href="/conteudos/minhas-compras">Minhas compras</a></div>
+   </header>
 
-  return <main className="min-h-screen bg-[#f5f5f7] text-slate-950"><div className="mx-auto max-w-6xl px-4 py-7 sm:px-6">
-    <div className="flex items-end justify-between gap-4"><div><div className="text-[10px] font-black tracking-[.2em] text-violet-600">PECATHO · {ownerType==="creator"?"FANS":"ANUNCIANTE"}</div><h1 className="mt-2 text-3xl font-black tracking-[-.05em]">Loja de conteúdo</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Crie vendas individuais de imagens e vídeos ou pacotes com vários arquivos. Você define o preço; o conteúdo original permanece em pasta privada e o comprador recebe links temporários somente após o pagamento.</p></div></div>
-    <section className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {[
-        ["Vendas confirmadas", String(metrics.sales), "compras pagas"],
-        ["Faturamento bruto", `R$ ${metrics.gross.toFixed(2).replace(".",",")}`, "antes da taxa da plataforma"],
-        ["A receber", `R$ ${metrics.ownerAmount.toFixed(2).replace(".",",")}`, "valor destinado ao vendedor"],
-        ["Últimos 30 dias", `${metrics.last30Sales} · R$ ${metrics.last30Gross.toFixed(2).replace(".",",")}`, "vendas e faturamento"],
-      ].map(([label,value,note])=><div key={label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="text-[10px] font-black uppercase tracking-[.14em] text-slate-400">{label}</div>
-        <div className="mt-2 text-xl font-black tracking-[-.04em]">{value}</div>
-        <div className="mt-1 text-[11px] text-slate-500">{note}</div>
-      </div>)}
+   <section className="digitalStats">
+    <div><span>Vendas confirmadas</span><strong>{metrics.sales}</strong><small>compras pagas</small></div>
+    <div><span>Faturamento bruto</span><strong>{brl(metrics.gross)}</strong><small>antes das taxas</small></div>
+    <div><span>A receber</span><strong>{brl(metrics.ownerAmount)}</strong><small>destinado ao vendedor</small></div>
+    <div><span>Últimos 30 dias</span><strong>{metrics.last30Sales}</strong><small>{brl(metrics.last30Gross)}</small></div>
+   </section>
+
+   <div className="digitalLayout">
+    <section className="digitalComposer">
+     <div className="digitalSectionHead"><div><span>01</span><div><b>CRIAR PRODUTO</b><h2>Monte uma oferta.</h2></div></div><small>Você define o preço e o que será entregue.</small></div>
+     <div className="digitalForm">
+      <label>Título<input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Ex.: Ensaio exclusivo — coleção de setembro"/></label>
+      <label>Descrição<textarea value={description} onChange={e=>setDescription(e.target.value)} rows={4} placeholder="Explique ao comprador o que ele receberá."/></label>
+      <div className="digitalFormGrid">
+       <label>Preço<input value={price} onChange={e=>setPrice(e.target.value)} inputMode="decimal" placeholder="49,90"/></label>
+       <label>Tipo<select value={productType} onChange={e=>setProductType(e.target.value as typeof productType)}><option value="package">Pacote</option><option value="single_image">Imagem única</option><option value="single_video">Vídeo único</option></select></label>
+      </div>
+      <label className="digitalFileDrop"><span>02 · ARQUIVOS</span><strong>Selecione fotos ou vídeos</strong><small>Os originais permanecem privados. Até 250 MB por arquivo.</small><input type="file" multiple accept="image/*,video/*,audio/*,.pdf" onChange={e=>setFiles(Array.from(e.target.files??[]))}/></label>
+      {files.length>0&&<div className="digitalFileList">{files.map((file,index)=><div key={file.name+"-"+index}><span>{file.type.startsWith("video/")?"▶":"✦"}</span><div><strong>{file.name}</strong><small>{file.type||"arquivo"} · {fileSize(file.size)}</small></div></div>)}</div>}
+      {files.length>0&&<div className="digitalUploadSummary"><span>{files.length} arquivo(s)</span><strong>{fileSize(totalSize)}</strong></div>}
+      <button type="button" className="digitalPublishButton" onClick={()=>void createProduct()} disabled={busy}>{busy?"Preparando conteúdo...":"Publicar para venda"}</button>
+      {message&&<p className="digitalSuccess">{message}</p>}{error&&<p className="digitalError">{error}</p>}
+     </div>
     </section>
 
-    <section className="mt-7 grid gap-5 lg:grid-cols-[420px_1fr]">
-      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"><div className="text-xs font-black tracking-[.14em] text-slate-400">NOVO PRODUTO</div>
-        <div className="mt-4 grid gap-3">
-          <label className="text-xs font-bold">Título<input className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-sm" value={title} onChange={e=>setTitle(e.target.value)} placeholder="Ex.: Ensaio exclusivo" /></label>
-          <label className="text-xs font-bold">Descrição<textarea className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-sm" value={description} onChange={e=>setDescription(e.target.value)} rows={4} placeholder="O que o comprador receberá?" /></label>
-          <div className="grid grid-cols-2 gap-3"><label className="text-xs font-bold">Valor (R$)<input className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-sm" inputMode="decimal" value={price} onChange={e=>setPrice(e.target.value)} placeholder="49,90" /></label><label className="text-xs font-bold">Formato<select className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-sm" value={productType} onChange={e=>setProductType(e.target.value as typeof productType)}><option value="package">Pacote</option><option value="single_image">Imagem</option><option value="single_video">Vídeo</option></select></label></div>
-          <label className="text-xs font-bold">Arquivos<input className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-sm" type="file" multiple onChange={e=>setFiles(Array.from(e.target.files??[]))} accept="image/*,video/*,audio/*,.pdf" /></label>
-          {files.length>0&&<div className="rounded-xl bg-slate-50 p-3 text-xs text-slate-500">{files.length} arquivo(s) selecionado(s) · {Math.round(files.reduce((n,f)=>n+f.size,0)/1024/1024)} MB</div>}
-          <button type="button" onClick={()=>void createProduct()} disabled={busy} className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:opacity-50">{busy?"Processando...":"Publicar para venda"}</button>
-          {message&&<p className="text-sm font-semibold text-emerald-700">{message}</p>}{error&&<p className="text-sm font-semibold text-red-600">{error}</p>}
-        </div>
-      </div>
-      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><div className="text-xs font-black tracking-[.14em] text-slate-400">MINHA BIBLIOTECA</div><h2 className="mt-1 text-xl font-black">Produtos publicados</h2></div><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold">{products.length}</span></div>
-        <div className="mt-5 grid gap-3">{products.length===0?<div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-500">Sua pasta comercial ainda está vazia.</div>:products.map(p=><article key={p.id} className="rounded-2xl border border-slate-200 p-4"><div className="flex items-start justify-between gap-3"><div><div className="text-[10px] font-black uppercase tracking-[.12em] text-violet-600">{p.product_type==="package"?"PACOTE":p.product_type==="single_video"?"VÍDEO":"IMAGEM"}</div><h3 className="mt-1 font-black">{p.title}</h3><p className="mt-1 text-xs text-slate-500">{p.description||"Sem descrição."}</p></div><strong>R$ {Number(p.price).toFixed(2).replace(".",",")}</strong></div><div className="mt-3 flex items-center justify-between text-xs"><span className={p.status==="published"?"text-emerald-700":"text-slate-500"}>{p.status==="published"?"À venda":"Arquivado"}</span>{p.status==="published"&&<button type="button" onClick={()=>void archive(p.id)} disabled={busy} className="font-bold text-red-600">Arquivar</button>}</div></article>)}</div>
-      </div>
+    <section className="digitalLibrary">
+     <div className="digitalSectionHead"><div><span>03</span><div><b>CATÁLOGO</b><h2>Seus produtos.</h2></div></div><strong>{activeProducts} à venda</strong></div>
+     {products.length===0?<div className="digitalEmpty"><div>✦</div><h3>Sua loja ainda está vazia.</h3><p>Crie a primeira oferta ao lado. Ela aparecerá no seu perfil e poderá ser comprada pelos clientes.</p></div>:
+      <div className="digitalProducts">{products.map(p=><article key={p.id} className="digitalProduct"><div className="digitalProductTop"><span className={"digitalStatus "+(p.status==="published"?"live":"archived")}>{p.status==="published"?"● À VENDA":"ARQUIVADO"}</span><span>{p.product_type==="package"?"PACOTE":p.product_type==="single_video"?"VÍDEO":"IMAGEM"}</span></div><div className="digitalProductBody"><div><h3>{p.title}</h3><p>{p.description||"Sem descrição."}</p></div><strong>{brl(Number(p.price))}</strong></div><div className="digitalProductFoot"><small>{new Date(p.created_at).toLocaleDateString("pt-BR")}</small>{p.status==="published"&&<button type="button" onClick={()=>void archive(p.id)} disabled={busy}>Arquivar</button>}</div></article>)}</div>}
     </section>
-  </div></main>;
+   </div>
+   <div className="digitalTrust"><span>🔒</span><div><strong>Venda protegida</strong><p>O conteúdo comercial permanece em armazenamento privado. O cliente não recebe o arquivo antes da confirmação do pagamento.</p></div><div><strong>Preço sob seu controle</strong><p>Você define e altera a oferta comercial de cada produto.</p></div></div>
+  </div>
+ </main>;
 }
