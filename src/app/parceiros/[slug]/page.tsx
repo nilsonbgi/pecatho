@@ -17,7 +17,7 @@ export default async function ParceiroDetalhe({params}:{params:Promise<{slug:str
  let city="",state="";
  if(v.city_id){const {data}=await supabase.from("cities").select("name,state_id").eq("id",v.city_id).maybeSingle();city=data?.name||"";if(data?.state_id){const {data:s}=await supabase.from("states").select("name,uf").eq("id",data.state_id).maybeSingle();state=s?.uf||s?.name||"";}}
  const [{data:media},{data:hours},{data:services},{data:events},{data:amenities},{data:rates}]=await Promise.all([
-  supabase.from("partner_venue_media").select("id,kind,storage_bucket,storage_path,original_filename,is_primary,sort_order").eq("venue_id",v.id).eq("moderation_status","approved").order("is_primary",{ascending:false}).order("sort_order"),
+  supabase.from("partner_venue_media").select("id,kind,storage_bucket,storage_path,preview_storage_bucket,preview_storage_path,original_filename,is_primary,sort_order").eq("venue_id",v.id).eq("moderation_status","approved").order("is_primary",{ascending:false}).order("sort_order"),
   supabase.from("partner_venue_hours").select("weekday,open_time,close_time,is_closed").eq("venue_id",v.id).order("weekday"),
   supabase.from("partner_venue_services").select("id,name,description,price_from").eq("venue_id",v.id).eq("active",true).order("sort_order"),
   supabase.from("partner_venue_events").select("id,title,description,starts_at,ends_at,price_from").eq("venue_id",v.id).eq("status","published").gte("starts_at",new Date().toISOString()).order("starts_at").limit(12),
@@ -25,7 +25,7 @@ export default async function ParceiroDetalhe({params}:{params:Promise<{slug:str
   supabase.from("partner_venue_rates").select("id,period_type,label,price,minimum_nights,notes").eq("venue_id",v.id).eq("active",true).order("sort_order")
  ]);
  const admin=process.env.SUPABASE_SERVICE_ROLE_KEY?createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{autoRefreshToken:false,persistSession:false}}):null;
- const gallery=(await Promise.all((media||[]).map(async m=>{if(!admin)return null;const signed=await admin.storage.from(m.storage_bucket).createSignedUrl(m.storage_path,600);const url=signed.data?.signedUrl||null;return url?{...m,url}:null;}))).filter((m):m is NonNullable<typeof m>=>m!==null);
+ const gallery=(await Promise.all((media||[]).map(async m=>{const previewUrl=m.preview_storage_bucket&&m.preview_storage_path?supabase.storage.from(m.preview_storage_bucket).getPublicUrl(m.preview_storage_path).data.publicUrl||null:null;if(previewUrl)return {...m,url:previewUrl};if(!admin)return null;const signed=await admin.storage.from(m.storage_bucket).createSignedUrl(m.storage_path,600);const url=signed.data?.signedUrl||null;return url?{...m,url}:null;}))).filter((m):m is NonNullable<typeof m>=>m!==null);
  const location=city+(state?" · "+state:""); const recruitmentWhatsapp=v.recruitment_contact_whatsapp?String(v.recruitment_contact_whatsapp).replace(/\D/g,""): ""; const partnerWhatsapp=v.phone?String(v.phone).replace(/\D/g,""): "";
  return <main className="shell partnerDetail">
   <nav className="topbar"><Link className="brand" href="/"><span className="brandMark">P</span><span>Pecatho</span></Link><div className="navLinks"><Link href="/parceiros">Parceiros</Link><Link href="/anunciantes">Anunciantes</Link><Link href="/fans">Fans</Link></div></nav>
