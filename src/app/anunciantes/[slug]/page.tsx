@@ -27,12 +27,6 @@ function brl(value: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
 
-function publicUrl(supabase: ReturnType<typeof createClient>, bucket: string | null, path: string | null) {
-  if (!bucket || !path) return null;
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-  return data.publicUrl || null;
-}
-
 function labelValue(value: unknown) {
   if (Array.isArray(value)) return value.map((item) => String(item)).filter(Boolean).join(", ");
   if (typeof value === "boolean") return value ? "Sim" : "Não";
@@ -132,7 +126,7 @@ export default function PublicAdvertiserPage() {
       const gallery = ((mediaResult.data ?? []) as Media[]).map((item) => ({
         ...item,
         url: null,
-        previewUrl: item.access_type === "paid" ? publicUrl(supabase, item.preview_storage_bucket, item.preview_storage_path) : null,
+        previewUrl: null,
       }));
       if (!active) return;
       setProfile(typed); setAddress((a.data as Address | null) || null); setCity((c.data as City | null) || null); setState((s.data as State | null) || null); setCategory((cat.data as Category | null) || null);
