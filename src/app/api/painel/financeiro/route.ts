@@ -55,9 +55,7 @@ export async function GET() {
     .filter((row) => row.entry_type === "payout")
     .reduce((sum, row) => sum + Number(row.amount || 0), 0);
   const requested = pendingPayouts.reduce((sum, row) => sum + Number(row.amount || 0), 0);
-  const available = Math.max(credits + entries
-    .filter((row) => row.entry_type === "adjustment")
-    .reduce((sum, row) => sum, 0) - fees - reversals - paidOut - requested, 0);
+  const available = Math.max(credits - fees - reversals - paidOut - requested, 0);
 
   const movements = entries.map((row) => ({
     id: row.id,
