@@ -9,6 +9,7 @@ type Purchase = {
   id: string;
   amount: number;
   currency: string;
+  status: string;
   paid_at: string | null;
   created_at: string;
   product: {
@@ -62,6 +63,16 @@ function typeLabel(type: string) {
   return "Pacote exclusivo";
 }
 
+function purchaseStatusLabel(status: string) {
+  if (status === "paid") return "PAGO";
+  if (status === "refunded") return "ESTORNADO";
+  if (status === "chargeback") return "CHARGEBACK";
+  if (status === "pending") return "AGUARDANDO PAGAMENTO";
+  if (status === "failed") return "PAGAMENTO NÃO CONCLUÍDO";
+  if (status === "cancelled") return "CANCELADO";
+  return status.replaceAll("_", " ").toUpperCase();
+}
+
 function mediaLabel(types: string[]) {
   const labels = types.map((type) => {
     if (type === "image") return "imagem";
@@ -77,6 +88,13 @@ export default function MinhasComprasClient() {
   const sale = params.get("sale");
 
   const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [stats, setStats] = useState({
+    total: 0,
+    paid: 0,
+    refunded: 0,
+    chargeback: 0,
+    spent: 0,
+  });
   const [downloads, setDownloads] = useState<Download[]>([]);
   const [selectedSale, setSelectedSale] = useState(sale ?? "");
   const [loading, setLoading] = useState(true);
@@ -145,10 +163,15 @@ export default function MinhasComprasClient() {
         const body = await response.json();
         if (!response.ok) throw new Error(body.error || "Não foi possível carregar suas compras.");
         setPurchases(body.purchases ?? []);
+        setStats(body.stats ?? { total: 0, paid: 0, refunded: 0, chargeback: 0, spent: 0 });
 
         const initialSale = sale ?? body.purchases?.[0]?.id ?? "";
         if (initialSale) {
-          await loadDownloads(initialSale);
+          const initialPurchase = (body.purchases ?? []).find((purchase: Purchase) => purchase.id === initialSale);
+          setSelectedSale(initialSale);
+          if (initialPurchase?.status === "paid") {
+            await loadDownloads(initialSale);
+          }
         }
       })
       .catch((loadFailure) => {
@@ -187,6 +210,31 @@ export default function MinhasComprasClient() {
           </div>
         </div>
 
+        {!loading && !error ? (
+          <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+              <div className="text-[9px] font-black uppercase tracking-[0.16em] text-white/35">Compras</div>
+              <div className="mt-2 text-2xl font-black">{stats.total}</div>
+              <div className="mt-1 text-[10px] text-white/35">{stats.paid} com acesso liberado</div>
+            </div>
+            <div className="rounded-2xl border border-emerald-400/15 bg-emerald-400/[0.04] p-4">
+              <div className="text-[9px] font-black uppercase tracking-[0.16em] text-emerald-300/60">Conteúdos ativos</div>
+              <div className="mt-2 text-2xl font-black text-emerald-200">{stats.paid}</div>
+              <div className="mt-1 text-[10px] text-white/35">pagamentos confirmados</div>
+            </div>
+            <div className="rounded-2xl border border-amber-400/15 bg-amber-400/[0.04] p-4">
+              <div className="text-[9px] font-black uppercase tracking-[0.16em] text-amber-200/60">Estornos</div>
+              <div className="mt-2 text-2xl font-black text-amber-100">{stats.refunded + stats.chargeback}</div>
+              <div className="mt-1 text-[10px] text-white/35">{stats.refunded} estornado · {stats.chargeback} chargeback</div>
+            </div>
+            <div className="rounded-2xl border border-violet-400/15 bg-violet-400/[0.04] p-4">
+              <div className="text-[9px] font-black uppercase tracking-[0.16em] text-violet-200/60">Total pago</div>
+              <div className="mt-2 text-2xl font-black text-violet-100">{money(stats.spent, "BRL")}</div>
+              <div className="mt-1 text-[10px] text-white/35">compras confirmadas</div>
+            </div>
+          </div>
+        ) : null}
+
         {loading ? (
           <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-8 text-sm text-white/60">
             Carregando sua biblioteca…
@@ -218,7 +266,15 @@ export default function MinhasComprasClient() {
                   <button
                     key={purchase.id}
                     type="button"
-                    onClick={() => loadDownloads(purchase.id)}
+                    onClick={() => {
+                      setSelectedSale(purchase.id);
+                      if (purchase.status === "paid") {
+                        loadDownloads(purchase.id);
+                      } else {
+                        setDownloads([]);
+                        setDownloadError("");
+                      }
+                    }}
                     className={`w-full rounded-2xl border p-5 text-left transition ${
                       active
                         ? "border-violet-400/60 bg-violet-500/10 shadow-[0_0_40px_rgba(139,92,246,0.12)]"
@@ -237,9 +293,18 @@ export default function MinhasComprasClient() {
                           </span>
                         ) : null}
                       </div>
-                      <span className="shrink-0 text-sm font-black">
-                        {money(purchase.amount, purchase.currency)}
-                      </span>
+                      <div className="shrink-0 text-right">
+                        <span className="block text-sm font-black">{money(purchase.amount, purchase.currency)}</span>
+                        <span className={`mt-1 block text-[8px] font-black uppercase tracking-[0.12em] ${
+                          purchase.status === "paid"
+                            ? "text-emerald-300"
+                            : purchase.status === "refunded" || purchase.status === "chargeback"
+                              ? "text-amber-200"
+                              : "text-white/35"
+                        }`}>
+                          {purchaseStatusLabel(purchase.status)}
+                        </span>
+                      </div>
                     </div>
                     <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-white/45">
                       <span>{dateTime(purchase.paid_at)}</span>
@@ -256,8 +321,10 @@ export default function MinhasComprasClient() {
                 <>
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <div className="text-[10px] font-black tracking-[0.2em] text-emerald-300">
-                        COMPRA CONFIRMADA
+                      <div className={`text-[10px] font-black tracking-[0.2em] ${
+                        selectedPurchase.status === "paid" ? "text-emerald-300" : "text-amber-200"
+                      }`}>
+                        {selectedPurchase.status === "paid" ? "COMPRA CONFIRMADA" : "HISTÓRICO DA COMPRA"}
                       </div>
                       <h2 className="mt-2 text-2xl font-black tracking-[-0.04em]">
                         {selectedPurchase.product.title}
@@ -298,13 +365,27 @@ export default function MinhasComprasClient() {
                         </div>
                       ) : null}
                     </div>
-                    <div className="rounded-full bg-emerald-400/10 px-3 py-1 text-[10px] font-black text-emerald-300">
-                      PAGO
+                    <div className={`rounded-full px-3 py-1 text-[10px] font-black ${
+                      selectedPurchase.status === "paid"
+                        ? "bg-emerald-400/10 text-emerald-300"
+                        : "bg-amber-400/10 text-amber-200"
+                    }`}>
+                      {purchaseStatusLabel(selectedPurchase.status)}
                     </div>
                   </div>
 
-                  <div className="mt-5 rounded-2xl border border-violet-400/10 bg-violet-500/[0.06] p-4 text-xs leading-5 text-white/50">
-                    Compra vinculada ao vendedor. Seu acesso permanece associado à sua conta Pecatho.
+                  <div className={`mt-5 rounded-2xl border p-4 text-xs leading-5 ${
+                    selectedPurchase.status === "paid"
+                      ? "border-violet-400/10 bg-violet-500/[0.06] text-white/50"
+                      : "border-amber-400/15 bg-amber-500/[0.06] text-amber-100/70"
+                  }`}>
+                    {selectedPurchase.status === "paid"
+                      ? "Compra vinculada ao vendedor. Seu acesso permanece associado à sua conta Pecatho."
+                      : selectedPurchase.status === "refunded"
+                        ? "Esta compra foi estornada. O acesso aos arquivos permanece bloqueado."
+                        : selectedPurchase.status === "chargeback"
+                          ? "Esta compra entrou em chargeback. O acesso aos arquivos permanece bloqueado."
+                          : "Esta transação não possui acesso liberado aos arquivos."}
                   </div>
                   {selectedPurchase.product.seller ? (
                     <ContentSellerReview
@@ -344,11 +425,20 @@ export default function MinhasComprasClient() {
                       Acesso ao conteúdo
                     </div>
                     <p className="mt-2 text-xs leading-5 text-white/40">
-                      Gere os links protegidos somente quando precisar baixar. Eles expiram após
-                      alguns minutos por segurança.
+                      {selectedPurchase.status === "paid"
+                        ? "Gere os links protegidos somente quando precisar baixar. Eles expiram após alguns minutos por segurança."
+                        : "O acesso aos arquivos está bloqueado para esta transação."}
                     </p>
 
-                    {loadingDownloads ? (
+                    {selectedPurchase.status !== "paid" ? (
+                      <div className="mt-5 rounded-2xl border border-amber-400/15 bg-amber-500/[0.06] p-4 text-sm text-amber-100/75">
+                        {selectedPurchase.status === "refunded"
+                          ? "O valor desta compra foi estornado e o conteúdo não está mais disponível para download."
+                          : selectedPurchase.status === "chargeback"
+                            ? "O conteúdo permanece indisponível enquanto esta transação estiver em chargeback."
+                            : "Esta transação ainda não possui pagamento confirmado."}
+                      </div>
+                    ) : loadingDownloads ? (
                       <div className="mt-5 rounded-2xl bg-white/[0.05] p-4 text-sm text-white/60">
                         Liberando arquivos…
                       </div>
