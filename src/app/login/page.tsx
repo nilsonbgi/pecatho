@@ -37,7 +37,24 @@ export default function LoginPage() {
         .limit(1)
         .maybeSingle();
 
-      window.location.href = adminRole?.role ? "/admin" : "/painel";
+      const next = new URLSearchParams(window.location.search).get("next");
+      if (next && next.startsWith("/") && !next.startsWith("//")) {
+        window.location.href = next;
+        return;
+      }
+
+      if (adminRole?.role) {
+        window.location.href = "/admin";
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("account_type")
+        .eq("id", userId)
+        .maybeSingle();
+
+      window.location.href = profile?.account_type === "customer" ? "/painel/cliente" : "/painel";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível conectar ao serviço de autenticação.");
     } finally {
