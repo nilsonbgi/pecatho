@@ -8,7 +8,8 @@ export default async function Painel() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
-  const { data: profile } = await supabase.from("profiles").select("display_name,username,status").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("profiles").select("display_name,username,status,account_type").eq("id", user.id).single();
+  if (profile?.account_type === "customer") redirect("/painel/cliente");
   const { data: advertiser } = await supabase.from("advertiser_profiles").select("id,title,status,verification_status,city_id,state_id").eq("user_id", user.id).maybeSingle();
   const { data: creator } = await supabase.from("fans_creators").select("id,slug,display_name,status,bio").eq("user_id", user.id).maybeSingle();
   const { count: followingCount } = await supabase.from("user_follows").select("profile_id", { count: "exact", head: true }).eq("follower_id", user.id);
