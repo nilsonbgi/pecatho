@@ -478,3 +478,14 @@
 
 /* Pecatho — central financeiro do vendedor */
 .financeBig{font-size:28px;font-weight:800;margin:8px 0}.financeRequestCard{margin-top:18px}.financeRequestForm{display:flex;gap:12px;align-items:end;flex-wrap:wrap}.financeRequestForm label{min-width:220px;flex:1}.financeHistory{display:grid;gap:10px;margin-top:14px}.financeHistory article{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 14px;padding:14px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.018)}.financeHistory small{display:block;color:#858d9d;margin-top:4px}.financeHistory p{grid-column:1/-1;margin:4px 0 0;color:#ff9a9a}.financeStatus{font-size:11px;font-weight:800;padding:6px 9px;border-radius:999px;background:rgba(255,255,255,.06);align-self:start}.financeStatus-paid{color:#a7e6bb}.financeStatus-rejected,.financeStatus-failed,.financeStatus-cancelled{color:#ffb0b0}@media(max-width:640px){.financeRequestForm{align-items:stretch}.financeRequestForm button{width:100%}.financeHistory article{grid-template-columns:1fr}}
+
+
+.digitalSalesPanel{margin-top:24px;padding:28px;border:1px solid rgba(255,255,255,.08);border-radius:22px;background:rgba(255,255,255,.025)}
+.digitalSalesTable{display:grid;gap:10px;margin-top:18px}
+.digitalSaleRow{display:grid;grid-template-columns:minmax(220px,1.7fr) repeat(3,minmax(120px,.7fr));gap:18px;align-items:center;padding:17px 18px;border:1px solid rgba(255,255,255,.07);border-radius:15px;background:rgba(0,0,0,.16)}
+.digitalSaleRow>div{display:grid;gap:5px}
+.digitalSaleRow span,.digitalSaleRow small{font-size:.76rem;opacity:.62}
+.digitalSaleRow strong{font-size:.95rem}
+.digitalSaleStatus{font-size:.72rem;letter-spacing:.08em}
+.digitalSaleStatus-paid{color:#65d68a}.digitalSaleStatus-refunded,.digitalSaleStatus-chargeback{color:#e8a36b}
+@media (max-width:800px){.digitalSaleRow{grid-template-columns:1fr 1fr}.digitalSaleRow>div:first-child{grid-column:1/-1}}
