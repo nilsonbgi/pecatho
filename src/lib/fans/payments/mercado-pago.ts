@@ -45,8 +45,8 @@ export async function createMercadoPagoPreference(input: MercadoPagoPreferenceIn
       notification_url: notificationUrl,
       back_urls: {
         success: `${baseUrl}/fans/checkout/sucesso?order=${encodeURIComponent(input.orderId)}`,
-        pending: `${baseUrl}/fans/checkout/pendente?order=${encodeURIComponent(input.orderId)}`,
-        failure: `${baseUrl}/fans/checkout/falha?order=${encodeURIComponent(input.orderId)}`,
+        pending: `${baseUrl}/fans/checkout/pendente?order=${encodeURIComponent(input.orderId)}&product_type=${encodeURIComponent(productType)}`,
+        failure: `${baseUrl}/fans/checkout/falha?order=${encodeURIComponent(input.orderId)}&product_type=${encodeURIComponent(productType)}`,
       },
       auto_return: "approved",
       metadata: {
