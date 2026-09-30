@@ -21,8 +21,7 @@ export async function GET() {
     .from("digital_content_sales")
     .select("id,product_id,amount,currency,paid_at,created_at,status")
     .eq("buyer_user_id", user.id)
-    .eq("status", "paid")
-    .order("paid_at", { ascending: false });
+    .order("created_at", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
@@ -174,6 +173,7 @@ export async function GET() {
       id: sale.id,
       amount: sale.amount,
       currency: sale.currency,
+      status: sale.status,
       paid_at: sale.paid_at,
       created_at: sale.created_at,
       product: product
@@ -187,7 +187,15 @@ export async function GET() {
     };
   }).filter((purchase) => purchase.product !== null);
 
-  return NextResponse.json({ purchases }, {
+  const stats = {
+    total: purchases.length,
+    paid: purchases.filter((purchase) => purchase.status === "paid").length,
+    refunded: purchases.filter((purchase) => purchase.status === "refunded").length,
+    chargeback: purchases.filter((purchase) => purchase.status === "chargeback").length,
+    spent: purchases.filter((purchase) => purchase.status === "paid").reduce((total, purchase) => total + Number(purchase.amount || 0), 0),
+  };
+
+  return NextResponse.json({ purchases, stats }, {
     headers: { "Cache-Control": "no-store" },
   });
 }
