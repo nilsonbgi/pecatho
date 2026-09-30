@@ -130,6 +130,12 @@ export default function DigitalContentProductPage() {
       });
       const body = await response.json();
 
+      if (response.status === 401) {
+        const next = window.location.pathname + window.location.search;
+        window.location.href = `/login?next=${encodeURIComponent(next)}`;
+        return;
+      }
+
       if (!response.ok) {
         throw new Error(body.error || "Não foi possível iniciar a compra.");
       }
