@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/browser";
 import ApproximateLocationMap from "@/components/ApproximateLocationMap";
 import DigitalContentShowcase from "@/components/DigitalContentShowcase";
 import ProfileCommerceHub from "@/components/ProfileCommerceHub";
+import GiftButton from "@/components/GiftButton";
 
 type Profile = { id: string; user_id: string; title: string | null; display_name: string | null; summary: string | null; description: string | null; status: string; verification_status: string | null; city_id: number | null; state_id: number | null; category_id: number | null; birth_date: string | null; height_cm: number | null; weight_kg: number | null; availability: string | null; phone: string | null; whatsapp: string | null; phone_secondary: string | null; positioning: string | null; pricing: Record<string, unknown> | null; payment_options: Record<string, unknown> | null; social_links: Record<string, string> | null };
 type Address = { public_latitude: number | null; public_longitude: number | null };
@@ -355,6 +356,7 @@ export default function PublicAdvertiserPage() {
             <div style={{display:"flex",flexWrap:"wrap",gap:9,marginTop:20}}>
               <button type="button" className="primaryButton" onClick={() => void startConversation("Olá! Encontrei seu perfil no Pecatho e gostaria de conversar sobre os serviços anunciados. Este contato ocorreu por intermédio do Pecatho.")} disabled={conversationBusy}>{conversationBusy ? "Abrindo conversa..." : "✉ Enviar mensagem"}</button>
               <button type="button" className={`followButton ${following ? "active" : ""}`} onClick={toggleFollow} disabled={followBusy}>{followBusy ? "Atualizando..." : following ? "✓ Acompanhando" : "＋ Acompanhar perfil"}</button>
+              <GiftButton recipientType="advertiser" recipientId={profile.id} recipientName={profile.display_name || profile.title || "este anunciante"} />
             </div>
             {conversationNotice && <span className="followNotice" style={{marginTop:10}}>{conversationNotice}</span>}
           </div>
