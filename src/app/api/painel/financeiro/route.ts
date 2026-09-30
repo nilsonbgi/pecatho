@@ -27,7 +27,8 @@ export async function GET() {
     supabase.from("ledger_entries")
       .select("id,entry_type,amount,currency,description,idempotency_key,metadata,created_at")
       .eq("user_id", user.id)
-      .order("created_at", { ascending: false }),
+      .order("created_at", { ascending: false })
+      .limit(100),
     supabase.from("fans_payout_requests")
       .select("id,amount,currency,status,requested_at,processed_at,rejection_reason,provider,provider_reference,idempotency_key")
       .eq("seller_user_id", user.id)
@@ -50,12 +51,28 @@ export async function GET() {
   const reversals = entries
     .filter((row) => row.entry_type === "refund" || row.entry_type === "chargeback")
     .reduce((sum, row) => sum + Number(row.amount || 0), 0);
+  const paidOut = entries
+    .filter((row) => row.entry_type === "payout")
+    .reduce((sum, row) => sum + Number(row.amount || 0), 0);
   const requested = pendingPayouts.reduce((sum, row) => sum + Number(row.amount || 0), 0);
-  const available = Math.max(credits - fees - reversals - requested, 0);
+  const available = Math.max(credits + entries
+    .filter((row) => row.entry_type === "adjustment")
+    .reduce((sum, row) => sum, 0) - fees - reversals - paidOut - requested, 0);
+
+  const movements = entries.map((row) => ({
+    id: row.id,
+    type: row.entry_type,
+    amount: Number(row.amount || 0),
+    currency: row.currency,
+    description: row.description,
+    created_at: row.created_at,
+    metadata: row.metadata,
+  }));
 
   return NextResponse.json({
-    summary: { credits, fees, reversals, requested, available },
+    summary: { credits, fees, reversals, paid_out: paidOut, requested, available },
     payouts: (payouts || []).map((row) => ({ ...row, status_label: STATUS_LABELS[row.status] || row.status })),
+    movements,
   });
 }
 
