@@ -92,7 +92,7 @@ begin
     buyer_user_id,recipient_user_id,recipient_type,recipient_id,order_id,amount,currency,message,status
   ) values (
     v_user,v_recipient_user_id,p_recipient_type,p_recipient_id,v_order,v_amount,'BRL',
-    nullif(left(trim(coalesce(p_message,'')),300)),'pending'
+    nullif(left(trim(coalesce(p_message,'')),300),''),'pending'
   ) returning id into v_gift;
 
   return jsonb_build_object('gift_id',v_gift,'order_id',v_order,'order_number',v_order_number,
