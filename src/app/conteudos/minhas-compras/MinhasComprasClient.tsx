@@ -392,6 +392,7 @@ export default function MinhasComprasClient() {
                       sourceType="digital_content"
                       sourceId={selectedPurchase.id}
                       sellerName={selectedPurchase.product.seller.name}
+                      canReview={selectedPurchase.status === "paid"}
                     />
                   ) : null}
 
@@ -522,6 +523,7 @@ export default function MinhasComprasClient() {
                   sourceType="profile_media"
                   sourceId={item.id}
                   sellerName={item.profile.display_name}
+                  canReview
                 />
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3"><div className="flex flex-wrap gap-x-4 gap-y-2"><Link href={`/anunciantes/${item.profile.slug}#galeria`} className="text-xs font-black text-violet-300 hover:text-violet-200">Ver perfil</Link><Link href={`/conteudos?owner_type=advertiser&owner_id=${item.profile.id}`} className="text-xs font-black text-white/60 hover:text-white">Ver loja</Link></div><a href={item.url} target="_blank" rel="noreferrer" download className="rounded-xl bg-white px-3 py-2 text-xs font-black text-slate-950">Abrir / baixar</a></div>
                 <div className="mt-2 text-[10px] text-white/30">Link de acesso válido por {Math.round(item.access_expires_in / 60)} minutos.</div>
