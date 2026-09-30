@@ -25,7 +25,7 @@ export async function GET() {
 
   const [{ data: ledger, error: ledgerError }, { data: payouts, error: payoutError }] = await Promise.all([
     supabase.from("ledger_entries")
-      .select("id,entry_type,amount,currency,description,idempotency_key,metadata,created_at")
+      .select("id,order_id,payment_id,entry_type,amount,currency,description,idempotency_key,metadata,created_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(100),
@@ -57,6 +57,16 @@ export async function GET() {
   const requested = pendingPayouts.reduce((sum, row) => sum + Number(row.amount || 0), 0);
   const available = Math.max(credits - fees - reversals - paidOut - requested, 0);
 
+  const saleIds = entries.map((row) => row.metadata && typeof row.metadata === "object" && "sale_id" in row.metadata ? String(row.metadata.sale_id) : null).filter((id): id is string => Boolean(id));
+  const productIds = entries.map((row) => row.metadata && typeof row.metadata === "object" && "product_id" in row.metadata ? String(row.metadata.product_id) : null).filter((id): id is string => Boolean(id));
+
+  const [{ data: sales }, { data: products }] = await Promise.all([
+    saleIds.length ? supabase.from("digital_content_sales").select("id,product_id,order_id,amount,owner_amount,status,paid_at").in("id", [...new Set(saleIds)]) : Promise.resolve({ data: [] as unknown[] }),
+    productIds.length ? supabase.from("digital_content_products").select("id,title").in("id", [...new Set(productIds)]) : Promise.resolve({ data: [] as unknown[] }),
+  ]);
+  const saleMap = new Map((sales || []).map((sale) => [sale.id, sale]));
+  const productMap = new Map((products || []).map((product) => [product.id, product]));
+
   const movements = entries.map((row) => ({
     id: row.id,
     type: row.entry_type,
@@ -65,6 +75,8 @@ export async function GET() {
     description: row.description,
     created_at: row.created_at,
     metadata: row.metadata,
+    sale: row.metadata && typeof row.metadata === "object" && "sale_id" in row.metadata ? saleMap.get(String(row.metadata.sale_id)) || null : null,
+    product: row.metadata && typeof row.metadata === "object" && "product_id" in row.metadata ? productMap.get(String(row.metadata.product_id)) || null : null,
   }));
 
   return NextResponse.json({
