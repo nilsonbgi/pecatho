@@ -469,7 +469,7 @@ export default function ConversationPage() {
             <form onSubmit={sendMessage} style={{ display: "grid", gap: 10, marginTop: 16 }}>
               <label>Mensagem<textarea value={body} onChange={(event) => handleTyping(event.target.value)} rows={4} maxLength={4000} placeholder="Escreva sua mensagem..." />{otherTyping && <small style={{ display: "block", marginTop: 6, opacity: .72 }}>A outra pessoa está digitando...</small>}</label>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {["❤️","😍","🔥","😘","😉","😂","🥰","👍","🙏","✨","💋","🎁"].map((emoji) => <button key={emoji} type="button" onClick={() => handleTyping(body + emoji)} style={{ border: "1px solid rgba(255,255,255,.12)", borderRadius: 10, background: "rgba(255,255,255,.04)", padding: "7px 9px", cursor: "pointer", fontSize: 17 }} aria-label={"Inserir " + emoji}>{emoji}</button>)}
+                {["❤️","😍","🔥","😘","😉","😂","🥰","👍","🙏","✨","💋","🎁",":)", ";)", ":D", "<3"].map((emoji) => <button key={emoji} type="button" onClick={() => handleTyping(body + emoji)} style={{ border: "1px solid rgba(255,255,255,.12)", borderRadius: 10, background: "rgba(255,255,255,.04)", padding: "7px 9px", cursor: "pointer", fontSize: 17 }} aria-label={"Inserir " + emoji}>{emoji}</button>)}
               </div>
               {error && <p className="fieldNote">{error}</p>}
               <button type="submit" className="primaryButton" disabled={sending || !body.trim()}>{sending ? "Enviando..." : "Enviar mensagem"}</button>
