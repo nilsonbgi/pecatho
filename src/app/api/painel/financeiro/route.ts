@@ -13,6 +13,21 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: "Cancelado",
 };
 
+type SaleRow = {
+  id: string;
+  product_id: string;
+  order_id: string;
+  amount: number | string | null;
+  owner_amount: number | string | null;
+  status: string;
+  paid_at: string | null;
+};
+
+type ProductRow = {
+  id: string;
+  title: string;
+};
+
 function idempotencyKey(value: unknown) {
   if (typeof value === "string" && value.trim()) return value.trim().slice(0, 120);
   return crypto.randomUUID();
@@ -61,11 +76,13 @@ export async function GET() {
   const productIds = entries.map((row) => row.metadata && typeof row.metadata === "object" && "product_id" in row.metadata ? String(row.metadata.product_id) : null).filter((id): id is string => Boolean(id));
 
   const [{ data: sales }, { data: products }] = await Promise.all([
-    saleIds.length ? supabase.from("digital_content_sales").select("id,product_id,order_id,amount,owner_amount,status,paid_at").in("id", [...new Set(saleIds)]) : Promise.resolve({ data: [] as unknown[] }),
-    productIds.length ? supabase.from("digital_content_products").select("id,title").in("id", [...new Set(productIds)]) : Promise.resolve({ data: [] as unknown[] }),
+    saleIds.length ? supabase.from("digital_content_sales").select("id,product_id,order_id,amount,owner_amount,status,paid_at").in("id", [...new Set(saleIds)]) : Promise.resolve({ data: [] as SaleRow[] }),
+    productIds.length ? supabase.from("digital_content_products").select("id,title").in("id", [...new Set(productIds)]) : Promise.resolve({ data: [] as ProductRow[] }),
   ]);
-  const saleMap = new Map((sales || []).map((sale) => [sale.id, sale]));
-  const productMap = new Map((products || []).map((product) => [product.id, product]));
+  const saleRows = (sales || []) as SaleRow[];
+  const productRows = (products || []) as ProductRow[];
+  const saleMap = new Map(saleRows.map((sale) => [sale.id, sale]));
+  const productMap = new Map(productRows.map((product) => [product.id, product]));
 
   const movements = entries.map((row) => ({
     id: row.id,
