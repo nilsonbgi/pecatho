@@ -9,6 +9,12 @@ type SellerReputation = {
   review_count: number;
   verified_sales_count: number;
   trust_badge: boolean;
+  reviews: Array<{
+    id: string;
+    rating: number;
+    comment: string | null;
+    created_at: string;
+  }>;
 };
 
 type Product = {
@@ -284,6 +290,33 @@ export default function DigitalContentProductPage() {
                   {reputation.review_count > 0 ? " O rating é atribuído por compradores com compra verificada." : ""}
                 </p>
               </div>
+            ) : null}
+
+            {!reputationLoading && reputation && reputation.reviews.length > 0 ? (
+              <section className="mt-5 rounded-2xl border border-white/10 bg-white/[.025] p-4">
+                <div className="text-[10px] font-black uppercase tracking-[.14em] text-white/40">
+                  Avaliações de compradores
+                </div>
+                <div className="mt-3 space-y-3">
+                  {reputation.reviews.slice(0, 4).map((review) => (
+                    <article key={review.id} className="rounded-xl border border-white/10 bg-black/20 p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-sm font-black tracking-wide text-amber-300">
+                          {"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}
+                        </span>
+                        <span className="text-[9px] font-black uppercase tracking-[.1em] text-emerald-300/80">
+                          COMPRA VERIFICADA
+                        </span>
+                      </div>
+                      {review.comment ? (
+                        <p className="mt-2 text-xs leading-5 text-white/55">
+                          “{review.comment}”
+                        </p>
+                      ) : null}
+                    </article>
+                  ))}
+                </div>
+              </section>
             ) : null}
 
             <p className="mt-6 whitespace-pre-wrap text-[15px] leading-7 text-slate-300">
