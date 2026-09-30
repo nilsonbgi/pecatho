@@ -96,6 +96,18 @@ export async function GET(request: Request) {
     if (sale) {
       entitlement = { entitled: true, subscription_id: null, purchase_id: sale.id, ends_at: null };
     }
+  } else if (productType === "gift") {
+    const { data: gift } = await admin
+      .from("pecatho_gifts")
+      .select("id,status,paid_at")
+      .eq("order_id", order.id)
+      .eq("buyer_user_id", user.id)
+      .eq("status", "paid")
+      .not("paid_at", "is", null)
+      .maybeSingle();
+    if (gift) {
+      entitlement = { entitled: true, subscription_id: null, purchase_id: gift.id, ends_at: null };
+    }
   } else if (productType === "profile_media" && productId) {
     const { data: purchase } = await admin
       .from("profile_media_purchases")
