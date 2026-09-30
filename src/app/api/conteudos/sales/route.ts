@@ -17,6 +17,7 @@ type SaleRow = {
 };
 
 type ProductRow = { id: string; title: string; product_type: string };
+type BuyerRow = { id: string; display_name: string | null };
 
 export async function GET() {
   const supabase = await createClient();
@@ -42,6 +43,12 @@ export async function GET() {
 
   const products = (productData ?? []) as ProductRow[];
   const productMap = new Map(products.map((product) => [product.id, product]));
+  const buyerIds = [...new Set(sales.map((sale) => sale.buyer_user_id))];
+  const { data: buyerData, error: buyerError } = buyerIds.length
+    ? await admin.from("profiles").select("id,display_name").in("id", buyerIds)
+    : { data: [], error: null };
+  if (buyerError) return NextResponse.json({ error: buyerError.message }, { status: 500 });
+  const buyerMap = new Map(((buyerData ?? []) as BuyerRow[]).map((buyer) => [buyer.id, buyer]));
   const paid = sales.filter((row) => row.status.toLowerCase() === "paid");
   const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
   const recent = paid.filter((row) => row.paid_at && new Date(row.paid_at).getTime() >= cutoff);
