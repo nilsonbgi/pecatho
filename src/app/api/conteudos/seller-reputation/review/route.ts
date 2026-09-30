@@ -164,7 +164,7 @@ export async function POST(request: Request) {
       source_type: sourceType,
       source_id: sourceId,
       verified_purchase: true,
-      status: "pending",
+      status: "approved",
     })
     .select("id,owner_type,owner_id,buyer_user_id,rating,comment,source_type,source_id,verified_purchase,status,created_at,updated_at")
     .single();
