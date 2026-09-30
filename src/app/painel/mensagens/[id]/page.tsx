@@ -4,6 +4,8 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
+import GiftButton from "@/components/GiftButton";
+import MessageReactions from "@/components/MessageReactions";
 
 type Message = { id: string; sender_id: string; body: string; status: string; created_at: string };
 type Profile = { id: string; title: string | null; display_name: string | null; slug: string | null };
@@ -355,6 +357,10 @@ export default function ConversationPage() {
           <h1>{profile?.title || profile?.display_name || "Conversa"}</h1>
           <p className="heroCopy">{profile?.display_name || "Anunciante"} {otherOnline ? "· online agora" : "· offline"}</p>
           {profile?.slug && <Link href={`/anunciantes/${profile.slug}`} className="secondaryButton">Voltar ao perfil</Link>}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+            {profile && <GiftButton recipientType="advertiser" recipientId={profile.id} recipientName={profile.display_name || profile.title || "este anunciante"} compact />}
+            {fansConversation && <GiftButton recipientType="creator" recipientId={fansConversation.creator_id} recipientName={profile?.display_name || "este vendedor de conteúdo"} compact />}
+          </div>
 
           {fansConversation && (
             <section className="card" style={{ marginTop: 24 }}>
@@ -458,10 +464,13 @@ export default function ConversationPage() {
           <section className="card" style={{ marginTop: 24 }}>
             <div style={{ display: "grid", gap: 12, maxHeight: 520, overflowY: "auto", paddingBottom: 16 }}>
               {messages.length === 0 && <p className="fieldNote">Esta conversa ainda não tem mensagens. Envie a primeira mensagem.</p>}
-              {messages.map((message) => <div key={message.id} style={{ display: "flex", justifyContent: message.sender_id === userId ? "flex-end" : "flex-start" }}><div style={{ maxWidth: "78%", padding: "12px 14px", borderRadius: 14, background: message.sender_id === userId ? "var(--accent, #E7C33F)" : "rgba(255,255,255,.08)", color: message.sender_id === userId ? "#000" : "inherit" }}><p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{message.body}</p><small style={{ opacity: .7 }}>{new Date(message.created_at).toLocaleString("pt-BR")}</small></div></div>)}
+              {messages.map((message) => <div key={message.id} style={{ display: "flex", justifyContent: message.sender_id === userId ? "flex-end" : "flex-start" }}><div style={{ maxWidth: "78%", padding: "12px 14px", borderRadius: 14, background: message.sender_id === userId ? "var(--accent, #E7C33F)" : "rgba(255,255,255,.08)", color: message.sender_id === userId ? "#000" : "inherit" }}><p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{message.body}</p><small style={{ opacity: .7 }}>{new Date(message.created_at).toLocaleString("pt-BR")}</small>{userId && <MessageReactions messageId={message.id} userId={userId} />}</div></div>)}
             </div>
             <form onSubmit={sendMessage} style={{ display: "grid", gap: 10, marginTop: 16 }}>
               <label>Mensagem<textarea value={body} onChange={(event) => handleTyping(event.target.value)} rows={4} maxLength={4000} placeholder="Escreva sua mensagem..." />{otherTyping && <small style={{ display: "block", marginTop: 6, opacity: .72 }}>A outra pessoa está digitando...</small>}</label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {["❤️","😍","🔥","😘","😉","😂","🥰","👍","🙏","✨","💋","🎁"].map((emoji) => <button key={emoji} type="button" onClick={() => handleTyping(body + emoji)} style={{ border: "1px solid rgba(255,255,255,.12)", borderRadius: 10, background: "rgba(255,255,255,.04)", padding: "7px 9px", cursor: "pointer", fontSize: 17 }} aria-label={"Inserir " + emoji}>{emoji}</button>)}
+              </div>
               {error && <p className="fieldNote">{error}</p>}
               <button type="submit" className="primaryButton" disabled={sending || !body.trim()}>{sending ? "Enviando..." : "Enviar mensagem"}</button>
             </form>
