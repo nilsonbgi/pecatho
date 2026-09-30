@@ -85,6 +85,7 @@ export async function GET(request: Request) {
     const { data: sale } = await admin
       .from("digital_content_sales")
       .select("id,status,paid_at")
+      .eq("order_id", order.id)
       .eq("product_id", productId)
       .eq("buyer_user_id", user.id)
       .eq("status", "paid")
