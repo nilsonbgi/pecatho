@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 
-type Summary = { credits: number; fees: number; reversals: number; requested: number; available: number };
+type Summary = { credits: number; fees: number; reversals: number; paid_out: number; requested: number; available: number };
+
+type Movement = { id: string; type: string; amount: number; currency: string; description: string | null; created_at: string };
 type Payout = {
   id: string;
   amount: number;
@@ -13,12 +15,15 @@ type Payout = {
   requested_at: string;
   processed_at: string | null;
   rejection_reason: string | null;
+  provider: string | null;
+  provider_reference: string | null;
 };
 
 const money = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function FinanceiroPage() {
-  const [summary, setSummary] = useState<Summary>({ credits: 0, fees: 0, reversals: 0, requested: 0, available: 0 });
+  const [summary, setSummary] = useState<Summary>({ credits: 0, fees: 0, reversals: 0, paid_out: 0, requested: 0, available: 0 });
+  const [movements, setMovements] = useState<Movement[]>([]);
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(true);
@@ -35,6 +40,7 @@ export default function FinanceiroPage() {
       if (!response.ok) throw new Error(payload.error || "Não foi possível carregar o financeiro.");
       setSummary(payload.summary);
       setPayouts(payload.payouts || []);
+      setMovements(payload.movements || []);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Não foi possível carregar o financeiro.");
     } finally {
@@ -87,6 +93,7 @@ export default function FinanceiroPage() {
           <article className="card"><div className="cardIcon">+</div><h2>Créditos</h2><p className="financeBig">{loading ? "..." : money(summary.credits)}</p><p>Vendas e demais créditos contabilizados.</p></article>
           <article className="card"><div className="cardIcon">−</div><h2>Reservado</h2><p className="financeBig">{loading ? "..." : money(summary.requested)}</p><p>Solicitações aguardando conclusão.</p></article>
           <article className="card"><div className="cardIcon">↩</div><h2>Reversões</h2><p className="financeBig">{loading ? "..." : money(summary.reversals)}</p><p>Estornos e chargebacks contabilizados.</p></article>
+          <article className="card"><div className="cardIcon">✓</div><h2>Já recebido</h2><p className="financeBig">{loading ? "..." : money(summary.paid_out)}</p><p>Valores já liquidados pela Pecatho.</p></article>
         </section>
 
         <section className="card financeRequestCard">
@@ -110,7 +117,26 @@ export default function FinanceiroPage() {
                 <article key={payout.id}>
                   <div><strong>{money(Number(payout.amount))}</strong><small>{new Date(payout.requested_at).toLocaleString("pt-BR")}</small></div>
                   <span className={"financeStatus financeStatus-" + payout.status}>{payout.status_label}</span>
+                  {payout.provider_reference && <small>Referência: {payout.provider_reference}</small>}
                   {payout.rejection_reason && <p>{payout.rejection_reason}</p>}
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="card">
+          <div className="eyebrow">EXTRATO</div>
+          <h2>Movimentações financeiras</h2>
+          {loading ? <p>Carregando extrato...</p> : movements.length === 0 ? <p className="fieldNote">Nenhuma movimentação financeira foi registrada.</p> : (
+            <div className="financeHistory">
+              {movements.map((movement) => (
+                <article key={movement.id}>
+                  <div>
+                    <strong>{movement.description || movement.type}</strong>
+                    <small>{new Date(movement.created_at).toLocaleString("pt-BR")}</small>
+                  </div>
+                  <span className="financeStatus">{money(movement.amount)}</span>
                 </article>
               ))}
             </div>
