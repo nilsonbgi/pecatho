@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/browser";
 import { optimizeImage } from "@/lib/media/optimize-image";
+import CustomerReview from "@/components/CustomerReview";
 
 type OwnerType = "advertiser" | "creator";
 type Product = { id:string; title:string; description:string|null; product_type:string; price:number|string; status:string; created_at:string };
-type Sale = { id:string; product_id:string; order_id:string; amount:number; owner_amount:number; status:string; paid_at:string|null; created_at:string; product:{id:string;title:string;product_type:string}|null };
+type Sale = { id:string; product_id:string; order_id:string; buyer_user_id:string; buyer:{id:string;display_name:string|null}|null; amount:number; owner_amount:number; status:string; paid_at:string|null; created_at:string; product:{id:string;title:string;product_type:string}|null };
 
 function brl(value:number){return new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(value);}
 function fileSize(value:number){if(value<1024*1024)return Math.max(1,Math.round(value/1024))+" KB";return (value/1024/1024).toFixed(1).replace(".",",")+" MB";}
@@ -95,6 +96,7 @@ export default function DigitalContentManager({ownerType}:{ownerType:OwnerType})
       <div className="digitalProducts">{products.map(p=><article key={p.id} className="digitalProduct"><div className="digitalProductTop"><span className={"digitalStatus "+(p.status==="published"?"live":"archived")}>{p.status==="published"?"● À VENDA":"ARQUIVADO"}</span><span>{p.product_type==="package"?"PACOTE":p.product_type==="single_video"?"VÍDEO":"IMAGEM"}</span></div><div className="digitalProductBody"><div><h3>{p.title}</h3><p>{p.description||"Sem descrição."}</p></div><strong>{brl(Number(p.price))}</strong></div><div className="digitalProductFoot"><small>{new Date(p.created_at).toLocaleDateString("pt-BR")}</small>{p.status==="published"&&<button type="button" onClick={()=>void archive(p.id)} disabled={busy}>Arquivar</button>}</div></article>)}</div>}
     </section>
    </div>
+   <section className="digitalSalesPanel"><div className="digitalSectionHead"><div><span>04</span><div><b>COMERCIAL</b><h2>Vendas realizadas.</h2></div></div><strong>{sales.length} registro{sales.length === 1 ? "" : "s"}</strong></div>{sales.length===0?<div className="digitalEmpty"><div>R$</div><h3>Ainda não há vendas.</h3><p>Quando um cliente confirmar uma compra, a transação aparecerá aqui.</p></div>:<div className="digitalSalesTable">{sales.map((sale)=><article key={sale.id} className="digitalSaleRow"><div><strong>{sale.product?.title || "Conteúdo"}</strong><span>{sale.buyer?.display_name ? "Cliente: "+sale.buyer.display_name : "Cliente Pecatho"}</span><small>{new Date(sale.paid_at || sale.created_at).toLocaleString("pt-BR")} · Venda {sale.id.slice(0,8)}</small></div><div><strong>{brl(sale.amount)}</strong><span>Você recebe {brl(sale.owner_amount)}</span><small className={"digitalSaleStatus digitalSaleStatus-"+sale.status}>{sale.status}</small><CustomerReview sourceType="digital_content" sourceId={sale.id} customerName={sale.buyer?.display_name}/></div></article>))}</div>}</section>
    <div className="digitalTrust"><span>🔒</span><div><strong>Venda protegida</strong><p>O conteúdo comercial permanece em armazenamento privado. O cliente não recebe o arquivo antes da confirmação do pagamento.</p></div><div><strong>Preço sob seu controle</strong><p>Você define e altera a oferta comercial de cada produto.</p></div></div>
   </div>
  </main>;
