@@ -38,7 +38,13 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient();
   const { data: orderMeta } = await admin.from("orders").select("metadata").eq("id", orderId).maybeSingle();
-  const settlementRpc = orderMeta?.metadata?.product_type === "live_extension" ? "settle_fans_live_extension_checkout" : "settle_fans_checkout";
+  const productType = orderMeta?.metadata?.product_type;
+  const settlementRpc =
+    productType === "gift"
+      ? "settle_pecatho_gift_checkout"
+      : productType === "live_extension"
+        ? "settle_fans_live_extension_checkout"
+        : "settle_fans_checkout";
   const { data, error } = await admin.rpc(settlementRpc, {
     p_order_id: orderId,
     p_provider: provider,
