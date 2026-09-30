@@ -5,7 +5,7 @@ import { FormEvent, useEffect, useState } from "react";
 
 type Summary = { credits: number; fees: number; reversals: number; paid_out: number; requested: number; available: number };
 
-type Movement = { id: string; type: string; amount: number; currency: string; description: string | null; created_at: string };
+type Movement = { id: string; type: string; amount: number; currency: string; description: string | null; created_at: string; sale: { id: string; product_id: string; order_id: string; amount: number; owner_amount: number; status: string; paid_at: string | null } | null; product: { id: string; title: string } | null };
 type Payout = {
   id: string;
   amount: number;
@@ -133,8 +133,8 @@ export default function FinanceiroPage() {
               {movements.map((movement) => (
                 <article key={movement.id}>
                   <div>
-                    <strong>{movement.description || movement.type}</strong>
-                    <small>{new Date(movement.created_at).toLocaleString("pt-BR")}</small>
+                    <strong>{movement.product?.title || movement.description || movement.type}</strong>
+                    <small>{movement.sale ? `Venda ${movement.sale.id.slice(0, 8)} · ${movement.sale.status}` : movement.type} · {new Date(movement.created_at).toLocaleString("pt-BR")}</small>
                   </div>
                   <span className="financeStatus">{money(movement.amount)}</span>
                 </article>
