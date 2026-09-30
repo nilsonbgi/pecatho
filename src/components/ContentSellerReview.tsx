@@ -16,9 +16,10 @@ type Props = {
   sourceType: SourceType;
   sourceId: string;
   sellerName?: string | null;
+  canReview?: boolean;
 };
 
-export default function ContentSellerReview({ sourceType, sourceId, sellerName }: Props) {
+export default function ContentSellerReview({ sourceType, sourceId, sellerName, canReview = true }: Props) {
   const [existing, setExisting] = useState<Review | null>(null);
   const [open, setOpen] = useState(false);
   const [rating, setRating] = useState(5);
@@ -79,6 +80,8 @@ export default function ContentSellerReview({ sourceType, sourceId, sellerName }
       </div>
     );
   }
+
+  if (!canReview) return null;
 
   return (
     <div className="mt-3">
