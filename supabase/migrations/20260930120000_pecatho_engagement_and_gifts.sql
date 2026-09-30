@@ -76,9 +76,9 @@ begin
 
   v_order_number := 'PEC-GIFT-' || upper(substr(replace(gen_random_uuid()::text,'-',''),1,20));
 
-  insert into public.orders(order_number,user_id,subtotal,discount,fee,total,currency,metadata)
+  insert into public.orders(order_number,user_id,status,subtotal,discount,fee,total,currency,metadata)
   values (
-    v_order_number,v_user,v_amount,0,0,v_amount,'BRL',
+    v_order_number,v_user,'awaiting_payment',v_amount,0,0,v_amount,'BRL',
     jsonb_build_object('source','pecatho','kind','gift','product_type','gift',
       'recipient_type',p_recipient_type,'recipient_id',p_recipient_id,
       'recipient_user_id',v_recipient_user_id,'title','Presente Pecatho',
