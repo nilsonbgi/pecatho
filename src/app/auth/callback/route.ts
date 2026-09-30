@@ -44,7 +44,7 @@ export async function GET(request: Request) {
   const city = String(registration?.city || "").trim();
   const uf = String(registration?.uf || "").trim().toUpperCase();
   const ibgeCode = String(registration?.ibge_code || "").trim();
-  const entryMode = ["advertiser", "fans", "both"].includes(String(registration?.entry_mode)) ? String(registration?.entry_mode) : "advertiser";
+  const entryMode = ["customer", "advertiser", "fans", "both"].includes(String(registration?.entry_mode)) ? String(registration?.entry_mode) : "customer";
 
   if (name && user.email && validCpf(cpf) && isAdult(birthDate)) {
     const { data: existingCpf, error: cpfError } = await supabase.from("profiles").select("id").eq("cpf", cpf).neq("id", user.id).maybeSingle();
@@ -84,5 +84,5 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.redirect(new URL("/painel", url.origin));
+  return NextResponse.redirect(new URL(entryMode === "customer" ? "/painel/cliente" : "/painel", url.origin));
 }
