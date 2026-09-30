@@ -3,8 +3,12 @@
 
 alter table public.fans_payout_requests add column if not exists seller_user_id uuid;
 alter table public.fans_payout_requests alter column creator_id drop not null;
-alter table public.fans_payout_requests add constraint fans_payout_requests_owner_check
-  check ((creator_id is not null) <> (seller_user_id is not null));
+do $ begin
+  if not exists (select 1 from pg_constraint where conname='fans_payout_requests_owner_check' and conrelid='public.fans_payout_requests'::regclass) then
+    alter table public.fans_payout_requests add constraint fans_payout_requests_owner_check
+      check ((creator_id is not null) <> (seller_user_id is not null));
+  end if;
+end $;
 create index if not exists fans_payout_seller_user_idx
   on public.fans_payout_requests(seller_user_id, requested_at desc);
 create index if not exists fans_payout_seller_outstanding_idx
