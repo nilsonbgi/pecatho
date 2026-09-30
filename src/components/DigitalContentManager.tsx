@@ -6,6 +6,7 @@ import { optimizeImage } from "@/lib/media/optimize-image";
 
 type OwnerType = "advertiser" | "creator";
 type Product = { id:string; title:string; description:string|null; product_type:string; price:number|string; status:string; created_at:string };
+type Sale = { id:string; product_id:string; order_id:string; amount:number; owner_amount:number; status:string; paid_at:string|null; created_at:string; product:{id:string;title:string;product_type:string}|null };
 
 function brl(value:number){return new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(value);}
 function fileSize(value:number){if(value<1024*1024)return Math.max(1,Math.round(value/1024))+" KB";return (value/1024/1024).toFixed(1).replace(".",",")+" MB";}
@@ -16,7 +17,7 @@ export default function DigitalContentManager({ownerType}:{ownerType:OwnerType})
  const [title,setTitle]=useState("");const [description,setDescription]=useState("");const [price,setPrice]=useState("");
  const [productType,setProductType]=useState<"single_image"|"single_video"|"package">("package");const [files,setFiles]=useState<File[]>([]);
  const [busy,setBusy]=useState(false);const [message,setMessage]=useState("");const [error,setError]=useState("");
- const [metrics,setMetrics]=useState({sales:0,gross:0,ownerAmount:0,last30Sales:0,last30Gross:0});
+ const [metrics,setMetrics]=useState({sales:0,gross:0,ownerAmount:0,last30Sales:0,last30Gross:0});const [sales,setSales]=useState<Sale[]>([]);
 
  async function load(){
   setError("");const {data:{user}}=await supabase.auth.getUser();if(!user){setError("Sessão expirada.");return;}
@@ -27,7 +28,7 @@ export default function DigitalContentManager({ownerType}:{ownerType:OwnerType})
   const {data:list,error:listError}=await supabase.from("digital_content_products").select("id,title,description,product_type,price,status,created_at").eq("owner_user_id",user.id).eq("owner_type",ownerType).order("created_at",{ascending:false});
   if(listError)setError(listError.message);else setProducts((list??[]) as Product[]);
  }
- async function loadMetrics(){const response=await fetch("/api/conteudos/sales",{cache:"no-store"});if(response.ok){const data=await response.json();setMetrics({sales:Number(data.sales||0),gross:Number(data.gross||0),ownerAmount:Number(data.ownerAmount||0),last30Sales:Number(data.last30Sales||0),last30Gross:Number(data.last30Gross||0)});}}
+ async function loadMetrics(){const response=await fetch("/api/conteudos/sales",{cache:"no-store"});if(response.ok){const data=await response.json();setMetrics({sales:Number(data.sales||0),gross:Number(data.gross||0),ownerAmount:Number(data.ownerAmount||0),last30Sales:Number(data.last30Sales||0),last30Gross:Number(data.last30Gross||0)});setSales(Array.isArray(data.rows)?data.rows:[]);}}
  useEffect(()=>{void load();void loadMetrics()},[]);
 
  async function createProduct(){
