@@ -90,8 +90,8 @@ export default function PublicAdvertiserPage() {
     const supabase = createClient();
     (async () => {
       const { data: p, error: profileError } = await supabase
-        .from("advertiser_profiles")
-        .select("id,user_id,title,display_name,summary,description,status,verification_status,city_id,state_id,category_id,birth_date,height_cm,weight_kg,availability,phone,whatsapp,phone_secondary,positioning,pricing,payment_options,social_links")
+        .from("advertiser_profiles_public")
+        .select("id,slug,title,display_name,summary,description,status,verification_status,city_id,state_id,category_id,age_years,height_cm,weight_kg,availability,phone,whatsapp,positioning,pricing,payment_options,social_links,public_latitude,public_longitude,is_owner")
         .eq("slug", params.slug)
         .eq("status", "published")
         .maybeSingle();
@@ -137,7 +137,7 @@ export default function PublicAdvertiserPage() {
           }
         }
       }
-      if (authData.user && authData.user.id !== typed.user_id) {
+      if (authData.user && !typed.is_owner) {
         if (active) setCurrentUserId(authData.user.id);
         const { data: followRow } = await supabase.from("user_follows").select("profile_id").eq("follower_id", authData.user.id).eq("profile_id", typed.id).maybeSingle();
         if (active) setFollowing(Boolean(followRow));
@@ -213,7 +213,7 @@ export default function PublicAdvertiserPage() {
         window.location.href = `/login?redirect=/anunciantes/${params.slug}`;
         return;
       }
-      if (authData.user.id === profile.user_id) {
+      if (profile.is_owner) {
         setConversationNotice("Você não pode iniciar uma conversa com o próprio perfil.");
         return;
       }
