@@ -67,3 +67,27 @@
 .partnerCardArrow{margin-top:14px;font-size:12px;font-weight:900;color:#7c3aed}
 .advertiserCardSignals{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
 .advertiserCardSignals span{font-size:10px;font-weight:800;padding:6px 8px;border-radius:999px;background:rgba(15,23,42,.045);border:1px solid rgba(15,23,42,.08);color:#475569}
+
+
+/* Public profile navigation — mobile-first hierarchy */
+.profileSectionNav{overflow-x:auto;flex-wrap:nowrap!important;scrollbar-width:none;justify-content:flex-start}
+.profileSectionNav::-webkit-scrollbar{display:none}
+.profileSectionNav a{flex:0 0 auto;white-space:nowrap}
+@media(max-width:760px){
+ .profileSectionNav{position:sticky!important;top:8px!important;margin:8px -2px 14px!important;padding:7px!important;border-radius:14px!important}
+ .profileSectionNav a{padding:9px 11px!important;font-size:11px!important}
+ .publicProfileHero{border-radius:20px!important}
+ .advertiserHeroGrid>div:first-child{min-height:270px!important}
+ .advertiserHeroGrid>div:first-child img,.advertiserHeroGrid>div:first-child video{min-height:270px!important}
+}
+@media(max-width:480px){
+ .profileSectionNav a{font-size:10px!important}
+ .publicProfileHero{margin-left:-2px;margin-right:-2px}
+}
+
+
+/* Fans public profile navigation */
+.fansSectionNav{overflow-x:auto;flex-wrap:nowrap!important;scrollbar-width:none}
+.fansSectionNav::-webkit-scrollbar{display:none}
+.fansSectionNav a{flex:0 0 auto;white-space:nowrap}
+@media(max-width:700px){.fansSectionNav{top:6px!important;margin-left:0!important;margin-right:0!important}.fansSectionNav a{font-size:10px!important;padding:8px 10px!important}.fp-hero{border-radius:22px!important}.fp-hero-in{padding:25px 18px!important}.fp-avatar{width:88px;height:88px}.fp-pills{gap:6px}.fp-pill{font-size:10px}.fp-section h2{font-size:26px}.fp-card{border-radius:18px}.fp-empty{padding:30px 20px}.fp-wrap{padding-bottom:24px}}
