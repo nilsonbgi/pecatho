@@ -9,7 +9,7 @@ import DigitalContentShowcase from "@/components/DigitalContentShowcase";
 import ProfileCommerceHub from "@/components/ProfileCommerceHub";
 import GiftButton from "@/components/GiftButton";
 
-type Profile = { id: string; user_id: string; title: string | null; display_name: string | null; summary: string | null; description: string | null; status: string; verification_status: string | null; city_id: number | null; state_id: number | null; category_id: number | null; birth_date: string | null; height_cm: number | null; weight_kg: number | null; availability: string | null; phone: string | null; whatsapp: string | null; phone_secondary: string | null; positioning: string | null; pricing: Record<string, unknown> | null; payment_options: Record<string, unknown> | null; social_links: Record<string, string> | null };
+type Profile = { id: string; slug: string; title: string | null; display_name: string | null; summary: string | null; description: string | null; status: string; verification_status: string | null; city_id: number | null; state_id: number | null; category_id: number | null; age_years: number | null; height_cm: number | null; weight_kg: number | null; availability: string | null; phone: string | null; whatsapp: string | null; positioning: string | null; pricing: Record<string, unknown> | null; payment_options: Record<string, unknown> | null; social_links: Record<string, string> | null; public_latitude: number | null; public_longitude: number | null; is_owner: boolean };
 type Address = { public_latitude: number | null; public_longitude: number | null };
 type Media = { id: string; profile_id: string; storage_bucket: string; storage_path: string; preview_storage_bucket: string | null; preview_storage_path: string | null; kind: string; access_type: "public" | "paid"; price: number; currency: string; is_primary: boolean; is_featured: boolean; width: number | null; height: number | null; show_in_cards: boolean; show_in_gallery: boolean; sort_order: number; moderation_status: string };
 type Review = { id: string; rating: number | null; comment: string | null; created_at: string; experience_verified: boolean };
@@ -52,17 +52,6 @@ function contactDigits(value: string | null | undefined) {
   if (digits.startsWith("55")) return digits;
   if (digits.length === 10 || digits.length === 11) return `55${digits}`;
   return digits;
-}
-
-function calculateAge(birthDate: string | null) {
-  if (!birthDate) return null;
-  const birth = new Date(`${birthDate}T00:00:00`);
-  if (Number.isNaN(birth.getTime())) return null;
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const month = today.getMonth() - birth.getMonth();
-  if (month < 0 || (month === 0 && today.getDate() < birth.getDate())) age--;
-  return age >= 18 ? age : null;
 }
 
 export default function PublicAdvertiserPage() {
@@ -111,8 +100,7 @@ export default function PublicAdvertiserPage() {
         return;
       }
       const typed = p as Profile;
-      const [a, c, s, cat, attrs, attrValues, svc, svcValues, mediaResult, reviewResult, fansResult] = await Promise.all([
-        supabase.from("user_addresses").select("public_latitude,public_longitude").eq("user_id", typed.user_id).eq("is_primary", true).maybeSingle(),
+      const [c, s, cat, attrs, attrValues, svc, svcValues, mediaResult, reviewResult, fansResult] = await Promise.all([
         typed.city_id ? supabase.from("cities").select("name").eq("id", typed.city_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
         typed.state_id ? supabase.from("states").select("uf,name").eq("id", typed.state_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
         typed.category_id ? supabase.from("categories").select("name").eq("id", typed.category_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
@@ -130,12 +118,12 @@ export default function PublicAdvertiserPage() {
         previewUrl: item.preview_storage_bucket && item.preview_storage_path ? supabase.storage.from(item.preview_storage_bucket).getPublicUrl(item.preview_storage_path).data.publicUrl || null : null,
       }));
       if (!active) return;
-      setProfile(typed); setAddress((a.data as Address | null) || null); setCity((c.data as City | null) || null); setState((s.data as State | null) || null); setCategory((cat.data as Category | null) || null);
+      setProfile(typed); setAddress({ public_latitude: typed.public_latitude, public_longitude: typed.public_longitude }); setCity((c.data as City | null) || null); setState((s.data as State | null) || null); setCategory((cat.data as Category | null) || null);
       setAttributes((attrs.data ?? []) as Attribute[]); setAttributeValues((attrValues.data ?? []) as AttributeValue[]); setServices((svc.data ?? []) as Service[]); setProfileServices((svcValues.data ?? []) as ProfileService[]);
       setFans((fansResult.data as FansCreator | null) || null); setMedia(gallery); setReviews((reviewResult.data ?? []) as Review[]); setLoading(false);
 
       const { data: authData } = await supabase.auth.getUser();
-      if (authData.user && authData.user.id !== typed.user_id) {
+      if (authData.user && !typed.is_owner) {
         const approvedMediaIds = gallery.filter((item) => item.moderation_status === "approved").map((item) => item.id);
         if (approvedMediaIds.length > 0) {
           const { data: accessData } = await supabase.functions.invoke("get-advertiser-media-access", { body: { media_ids: approvedMediaIds } });
@@ -174,7 +162,7 @@ export default function PublicAdvertiserPage() {
   const whatsappContact = contactDigits(profile?.whatsapp);
   const whatsappUrl = (message: string) => whatsappContact ? `https://wa.me/${whatsappContact}?text=${encodeURIComponent(message)}` : null;
   const phoneContact = contactDigits(profile?.phone);
-  const age = calculateAge(profile?.birth_date || null);
+  const age = profile?.age_years ?? null;
   const visibleAttributeRows = attributes.map((attribute) => ({ attribute, value: attributeValues.find((entry) => entry.attribute_id === attribute.id)?.value })).filter(({ value }) => labelValue(value));
   const selectedServices = services
     .map((service) => ({
@@ -195,7 +183,7 @@ export default function PublicAdvertiserPage() {
         setFollowNotice("Entre na sua conta para acompanhar este perfil.");
         return;
       }
-      if (authData.user.id === profile.user_id) {
+      if (profile.is_owner) {
         setFollowNotice("Você não pode acompanhar o próprio perfil.");
         return;
       }
