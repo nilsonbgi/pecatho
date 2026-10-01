@@ -473,11 +473,11 @@ export default function PublicAdvertiserPage() {
             {conversationBusy ? "Abrindo..." : "Mensagem"}
           </button>
         )}
-        <a href="#valores" className="secondaryButton">Valores</a>
-        <a href="#galeria" className="secondaryButton">Galeria</a>
+        <a href="#conteudo-exclusivo" className="secondaryButton">Conteúdo</a>
+        <GiftButton recipientType="advertiser" recipientId={profile.id} recipientName={profile.display_name || profile.title || "este anunciante"} compact />
       </div>
 
-      <footer><span>Pecatho · experiência pública da anunciante</span><Link href="/anunciantes">Voltar para a busca</Link></footer>
+      <footer><span>Pecatho · experiência pública da anunciante</span><Link href="/anunciantes">Voltar para a busca</Link></footer><span>Pecatho · experiência pública da anunciante</span><Link href="/anunciantes">Voltar para a busca</Link></footer>
     </main>
   );
 }
