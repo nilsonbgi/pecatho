@@ -313,7 +313,7 @@ export default function PublicAdvertiserPage() {
       )}
       <nav className="topbar"><Link href="/" className="brand"><span className="brandMark">P</span><span>Pecatho</span></Link><Link href="/anunciantes" className="navCta">Ver anunciantes</Link></nav>
 
-      <nav aria-label="Navegação comercial do perfil" style={{ position: "sticky", top: 12, zIndex: 20, display: "flex", flexWrap: "wrap", gap: 8, margin: "12px 0 18px", padding: 8, border: "1px solid rgba(231,195,63,.22)", borderRadius: 16, background: "rgba(255,255,255,.92)", backdropFilter: "blur(14px)", boxShadow: "0 12px 30px rgba(15,23,42,.06)" }}>
+      <nav className="profileSectionNav" aria-label="Navegação comercial do perfil" style={{ position: "sticky", top: 12, zIndex: 20, display: "flex", flexWrap: "wrap", gap: 8, margin: "12px 0 18px", padding: 8, border: "1px solid rgba(231,195,63,.22)", borderRadius: 16, background: "rgba(255,255,255,.92)", backdropFilter: "blur(14px)", boxShadow: "0 12px 30px rgba(15,23,42,.06)" }}>
         <a href="#conteudo-exclusivo" className="secondaryButton" style={{ textDecoration: "none" }}>Conteúdo exclusivo</a>
         {selectedServices.length > 0 && <a href="#servicos" className="secondaryButton" style={{ textDecoration: "none" }}>Serviços</a>}
         {validPrices.length > 0 && <a href="#valores" className="secondaryButton" style={{ textDecoration: "none" }}>Valores</a>}
