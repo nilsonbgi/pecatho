@@ -44,7 +44,7 @@ export default async function FansCreatorPublicPage({params}:Props){
   `}</style>
   <div className="fp-wrap">
    <nav className="fp-nav"><Link href="/fans" className="fp-brand" style={{textDecoration:"none",color:"inherit"}}>Pecatho <small>Fans</small></Link><div className="fp-navlinks"><Link href="/anunciantes">Pecatho</Link>{user?<Link href="/fans/gerenciar">Meu Fans</Link>:<Link href={`/login?next=/fans/${creator.slug}`}>Entrar</Link>}</div></nav>
-   <nav aria-label="Navegação comercial do perfil" style={{position:"sticky",top:10,zIndex:30,display:"flex",flexWrap:"wrap",gap:8,margin:"0 0 14px",padding:8,border:"1px solid #e5e7eb",borderRadius:16,background:"rgba(255,255,255,.92)",backdropFilter:"blur(14px)",boxShadow:"0 12px 30px rgba(15,23,42,.06)"}}>
+   <nav className="fansSectionNav" aria-label="Navegação comercial do perfil" style={{position:"sticky",top:10,zIndex:30,display:"flex",flexWrap:"wrap",gap:8,margin:"0 0 14px",padding:8,border:"1px solid #e5e7eb",borderRadius:16,background:"rgba(255,255,255,.92)",backdropFilter:"blur(14px)",boxShadow:"0 12px 30px rgba(15,23,42,.06)"}}>
     <a href="#conteudo-exclusivo" className="fp-btn fp-btn-secondary" style={{color:"#111827",borderColor:"#e5e7eb",background:"#fff"}}>Comprar conteúdo</a>
     {activePlans.length>0&&<a href="#assinatura" className="fp-btn fp-btn-secondary" style={{color:"#111827",borderColor:"#e5e7eb",background:"#fff"}}>Assinatura</a>}
     {activeLiveOffers.length>0&&<a href="#videochamadas" className="fp-btn fp-btn-secondary" style={{color:"#111827",borderColor:"#e5e7eb",background:"#fff"}}>Videochamadas</a>}
