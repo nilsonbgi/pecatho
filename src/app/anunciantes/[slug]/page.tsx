@@ -90,10 +90,7 @@ export default function PublicAdvertiserPage() {
     const supabase = createClient();
     (async () => {
       const { data: p, error: profileError } = await supabase
-        .from("advertiser_profiles_public")
-        .select("id,slug,title,display_name,summary,description,status,verification_status,city_id,state_id,category_id,age_years,height_cm,weight_kg,availability,phone,whatsapp,positioning,pricing,payment_options,social_links,public_latitude,public_longitude,is_owner")
-        .eq("slug", params.slug)
-        .eq("status", "published")
+        .rpc("get_public_advertiser_profile", { p_slug: params.slug })
         .maybeSingle();
       if (profileError || !p) {
         if (active) { setError("Anúncio não encontrado ou ainda não publicado."); setLoading(false); }
