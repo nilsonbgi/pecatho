@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/server";
 
 function digits(value: string) { return value.replace(/\D/g, ""); }
 function validCpf(value: string) { const cpf = digits(value); if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false; let sum = 0; for (let i = 0; i < 9; i++) sum += Number(cpf[i]) * (10 - i); let d = 11 - (sum % 11); const d1 = d >= 10 ? 0 : d; sum = 0; for (let i = 0; i < 10; i++) sum += Number(cpf[i]) * (11 - i); d = 11 - (sum % 11); const d2 = d >= 10 ? 0 : d; return Number(cpf[9]) === d1 && Number(cpf[10]) === d2; }
@@ -21,9 +22,14 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { userId, name, email, cpf, birthDate, phone, cep, street, number, complement, neighborhood, city, uf, ibgeCode } = body ?? {};
+    const sessionClient = await createClient();
+    const { data: { user }, error: sessionError } = await sessionClient.auth.getUser();
+    if (sessionError || !user) return NextResponse.json({ error: "Sessão de autenticação necessária." }, { status: 401 });
+    if (String(user.id) !== String(userId)) return NextResponse.json({ error: "A conta autenticada não corresponde ao usuário informado." }, { status: 403 });
+    if (!user.email || user.email.toLowerCase() !== String(email).toLowerCase()) return NextResponse.json({ error: "O e-mail informado não corresponde à conta autenticada." }, { status: 403 });
     if (!userId || !name || !email || !validCpf(cpf) || !isAdult(birthDate) || digits(cep).length !== 8 || !street || !number || !neighborhood || !city || !uf || !/^\d{7}$/.test(String(ibgeCode || ""))) return NextResponse.json({ error: "Dados cadastrais inválidos ou incompletos." }, { status: 400 });
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.NEXT_PUBLIC_SUPABASE_URL) return NextResponse.json({ error: "Configuração do servidor indisponível." }, { status: 500 });
-    const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
+    const admin = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
     const { data: authUser, error: authError } = await admin.auth.admin.getUserById(userId);
     if (authError || !authUser.user || authUser.user.email?.toLowerCase() !== String(email).toLowerCase()) return NextResponse.json({ error: "Usuário de autenticação não pôde ser validado." }, { status: 401 });
 
