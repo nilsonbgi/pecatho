@@ -20,7 +20,7 @@ revoke execute on function private.search_public_advertisers(bigint,bigint,bigin
 revoke execute on function private.search_public_advertisers(bigint,bigint,bigint,text,jsonb,text[],integer,integer,numeric,numeric,integer,text,integer,integer) from anon, authenticated;
 grant usage on schema private to anon, authenticated;
 grant execute on function private.get_public_advertiser_location(uuid) to anon, authenticated;
-grant execute on function private.search_public_advertisers(bigint,bigint,bigint,text,jsonb,text[],integer,integer,numeric,integer,text,integer,integer) to anon, authenticated;
+grant execute on function private.search_public_advertisers(bigint,bigint,bigint,text,jsonb,text[],integer,integer,numeric,numeric,integer,text,integer,integer) to anon, authenticated;
 
 create or replace function public.get_public_advertiser_location(p_profile_id uuid)
 returns table(public_latitude numeric, public_longitude numeric)
