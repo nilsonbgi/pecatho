@@ -56,7 +56,7 @@ export default function DigitalContentManager({ownerType}:{ownerType:OwnerType})
 
  const totalSize=files.reduce((sum,file)=>sum+file.size,0);
  const activeProducts=products.filter(p=>p.status==="published").length;
- const label=ownerType==="creator"?"FANS":"ANUNCIANTE";
+ const label=ownerType==="creator"?"FANS":"ACOMPANHANTE";
 
  return <main className="digitalManager">
   <div className="digitalManagerInner">
