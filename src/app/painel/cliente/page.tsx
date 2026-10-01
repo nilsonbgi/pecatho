@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import CustomerProfessionalReviews from "@/components/CustomerProfessionalReviews";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +53,8 @@ export default async function ClientePainel() {
           <article className="card"><div className="cardIcon">P</div><h2>Meu cadastro</h2><p>Identidade e localização permanecem privadas. O rating não expõe seus dados pessoais.</p><Link className="secondaryButton" href="/painel/perfil">Editar cadastro</Link></article>
         </section>
         <section className="card"><div className="eyebrow">REPUTAÇÃO DO CLIENTE</div><h2>Seu histórico de confiança</h2>{reviews?.length ? <div className="financeHistory">{reviews.map((review) => <article key={review.id}><div><strong className="text-amber-300">{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</strong><small>{review.source_type === "digital_content" ? "Compra de conteúdo" : review.source_type === "profile_media" ? "Compra de mídia exclusiva" : "Experiência de serviço"} · {new Date(review.created_at).toLocaleString("pt-BR")}</small></div>{review.comment ? <p>{review.comment}</p> : <span className="financeStatus">Interação verificada</span>}</article>)}</div> : <p className="fieldNote">Ainda não há avaliações verificadas. Elas aparecerão conforme vendedores e anunciantes registrarem experiências reais com você.</p>}</section>
+        <CustomerProfessionalReviews />
+
         <section className="card"><div className="eyebrow">PROTEÇÃO</div><h2>Uma conta de cliente, sem mistura de funções</h2><p>O perfil de cliente não recebe ferramentas de anúncio, publicação ou recebimento. Se você quiser atuar profissionalmente no futuro, essa capacidade será tratada separadamente da sua identidade de cliente.</p><div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:16}}><Link className="primaryButton" href="/anunciantes">Encontrar anunciantes</Link><Link className="secondaryButton" href="/conteudos">Explorar conteúdos</Link></div></section>
       </section>
     </main>
