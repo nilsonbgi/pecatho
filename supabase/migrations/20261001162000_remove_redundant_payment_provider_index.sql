@@ -1,0 +1,1 @@
+drop index if exists public.payments_provider_payment_id_unique_idx;
