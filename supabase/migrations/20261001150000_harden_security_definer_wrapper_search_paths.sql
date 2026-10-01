@@ -1,0 +1,10 @@
+alter function public.admin_moderate_partner_venue(uuid,text,text) set search_path = pg_catalog, public, private;
+alter function public.admin_moderate_profile_media(uuid,text) set search_path = pg_catalog, public, private;
+alter function public.complete_registration_intent(uuid) set search_path = pg_catalog, public, private;
+alter function public.consume_registration_intent(uuid) set search_path = pg_catalog, public, private;
+alter function public.create_fans_checkout_intent(text,uuid,uuid) set search_path = pg_catalog, public, private;
+alter function public.request_fans_payout(uuid,numeric,text) set search_path = pg_catalog, public, private;
+alter function public.set_primary_profile_media(uuid) set search_path = pg_catalog, public, private;
+alter function public.submit_advertiser_for_review(uuid) set search_path = pg_catalog, public, private;
+alter function public.update_my_address(text,text,text,text,bigint,bigint,bigint) set search_path = pg_catalog, public;
+alter function public.update_my_profile(text,text,text,date,text) set search_path = pg_catalog, public;
