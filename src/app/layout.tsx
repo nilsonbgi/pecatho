@@ -16,10 +16,10 @@ export const metadata: Metadata = {
     default: "Pecatho — Descubra, conecte-se e escolha",
     template: "%s | Pecatho",
   },
-  description: "Pecatho reúne descoberta de anunciantes, perfis completos e a experiência Pecatho Fans em um único ecossistema.",
+  description: "Pecatho reúne acompanhantes, perfis completos e a experiência Pecatho Fans em um único ecossistema.",
   applicationName: "Pecatho",
   generator: "Next.js",
-  keywords: ["Pecatho", "anunciantes", "perfis", "Pecatho Fans", "conteúdo", "descoberta"],
+  keywords: ["Pecatho", "acompanhantes", "perfis", "Pecatho Fans", "conteúdo", "descoberta"],
   alternates: { canonical: "/" },
   icons: {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
