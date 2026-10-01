@@ -18,18 +18,21 @@ export default async function ClientePainel() {
   if (profile?.account_type !== "customer") redirect("/painel");
 
   const admin = createAdminClient();
-  const [{ data: sales }, { count: mediaPurchases }, { count: followingCount }, { count: conversationCount }, { count: unreadNotifications }, { data: reviews }] = await Promise.all([
+  const [{ data: sales }, { count: mediaPurchases }, { count: followingCount }, { count: conversationCount }, { count: unreadNotifications }, { data: reviews }, { data: gifts }] = await Promise.all([
     admin.from("digital_content_sales").select("amount,status").eq("buyer_user_id", user.id),
     admin.from("profile_media_purchases").select("id", { count: "exact", head: true }).eq("buyer_user_id", user.id).eq("status", "paid"),
     admin.from("user_follows").select("profile_id", { count: "exact", head: true }).eq("follower_id", user.id),
     admin.from("conversation_members").select("conversation_id", { count: "exact", head: true }).eq("user_id", user.id),
     admin.from("fans_notifications").select("id", { count: "exact", head: true }).eq("user_id", user.id).is("read_at", null),
     admin.from("customer_reviews").select("id,rating,comment,source_type,created_at").eq("customer_user_id", user.id).eq("status", "approved").eq("verified_interaction", true).order("created_at", { ascending: false }).limit(8),
+    admin.from("pecatho_gifts").select("id,amount,status,recipient_type,recipient_id,created_at").eq("buyer_user_id", user.id).order("created_at", { ascending: false }).limit(8),
   ]);
 
   const paidSales = (sales ?? []).filter((sale) => sale.status === "paid");
   const spent = paidSales.reduce((sum, sale) => sum + Number(sale.amount || 0), 0);
   const ratings = (reviews ?? []).map((review) => Number(review.rating)).filter(Number.isFinite);
+  const paidGifts = (gifts ?? []).filter((gift) => gift.status === "paid");
+  const giftSpent = paidGifts.reduce((sum, gift) => sum + Number(gift.amount || 0), 0);
   const average = ratings.length ? Number((ratings.reduce((sum, value) => sum + value, 0) / ratings.length).toFixed(1)) : null;
 
   return (
@@ -42,6 +45,7 @@ export default async function ClientePainel() {
         <section className="pillars">
           <article className="card"><div className="cardIcon">★</div><h2>Minha reputação</h2><p className="financeBig">{average !== null ? average.toFixed(1) + " / 5" : "Ainda sem rating"}</p><p>{ratings.length ? ratings.length + " avaliação" + (ratings.length === 1 ? "" : "ões") + " verificada" + (ratings.length === 1 ? "" : "s") + "." : "Sua nota será construída somente a partir de interações verificadas."}</p></article>
           <article className="card"><div className="cardIcon">C</div><h2>Conteúdos comprados</h2><p className="financeBig">{paidSales.length}</p><p>{money(spent)} em compras confirmadas.</p><Link className="secondaryButton" href="/conteudos/minhas-compras">Minha biblioteca</Link></article>
+          <article className="card"><div className="cardIcon">🎁</div><h2>Presentes enviados</h2><p className="financeBig">{paidGifts.length}</p><p>{money(giftSpent)} em presentes confirmados.</p><p className="fieldNote">Os presentes ficam vinculados ao pagamento e ao destinatário.</p></article>
           <article className="card"><div className="cardIcon">M</div><h2>Mensagens</h2><p>{conversationCount ?? 0} {(conversationCount ?? 0) === 1 ? "conversa ativa" : "conversas ativas"}.</p><Link className="secondaryButton" href="/painel/mensagens">Abrir mensagens</Link></article>
           <article className="card"><div className="cardIcon">♥</div><h2>Perfis acompanhados</h2><p>{followingCount ?? 0} {(followingCount ?? 0) === 1 ? "perfil" : "perfis"} acompanhados.</p><Link className="secondaryButton" href="/painel/seguindo">Ver acompanhamentos</Link></article>
           <article className="card"><div className="cardIcon">N</div><h2>Notificações</h2><p>{unreadNotifications ?? 0} não lida{unreadNotifications === 1 ? "" : "s"}.</p><Link className="secondaryButton" href="/painel/notificacoes">Abrir central</Link></article>
