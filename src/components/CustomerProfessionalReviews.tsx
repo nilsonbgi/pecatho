@@ -78,7 +78,7 @@ export default function CustomerProfessionalReviews() {
               <article key={item.id} style={{ border: "1px solid rgba(255,255,255,.09)", borderRadius: 16, padding: 16, background: "rgba(255,255,255,.025)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
                   <div>
-                    <strong>{item.profile?.display_name || "Anunciante"}</strong>
+                    <strong>{item.profile?.display_name || "Acompanhante"}</strong>
                     <p className="fieldNote">{item.service_label || item.profile?.title || "Experiência de serviço"} · {new Date(item.occurred_at).toLocaleDateString("pt-BR")}</p>
                   </div>
                   {reviewed ? (
