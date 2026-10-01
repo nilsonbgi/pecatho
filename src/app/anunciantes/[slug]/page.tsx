@@ -294,7 +294,7 @@ export default function PublicAdvertiserPage() {
   }
 
   if (loading) return <main className="shell"><section className="hero"><p>Carregando anúncio...</p></section></main>;
-  if (error || !profile) return <main className="shell"><section className="hero"><div className="eyebrow">PECATHO</div><h1>Anúncio <em>indisponível.</em></h1><p className="heroCopy">{error || "Este anúncio não está disponível."}</p><Link href="/anunciantes" className="primaryButton">Voltar aos anunciantes</Link></section></main>;
+  if (error || !profile) return <main className="shell"><section className="hero"><div className="eyebrow">PECATHO</div><h1>Anúncio <em>indisponível.</em></h1><p className="heroCopy">{error || "Este anúncio não está disponível."}</p><Link href="/anunciantes" className="primaryButton">Voltar aos acompanhantes</Link></section></main>;
 
   return (
     <main className="shell publicProfile">
@@ -304,14 +304,14 @@ export default function PublicAdvertiserPage() {
             <div className="pAgeMark">18+</div>
             <div className="pAgeKicker">ACESSO RESTRITO</div>
             <h2 id="advertiser-age-title">Conteúdo destinado a maiores de 18 anos</h2>
-            <p>Este perfil integra a área de anunciantes de serviços adultos do Pecatho. Para continuar, confirme que você possui 18 anos ou mais.</p>
+            <p>Este perfil integra a área de acompanhantes de serviços adultos do Pecatho. Para continuar, confirme que você possui 18 anos ou mais.</p>
             <div className="pAgeWarning"><strong>⚠ Aviso:</strong> este perfil pode apresentar imagens, serviços e informações de natureza sexualmente explícita. Menores de 18 anos não podem prosseguir.</div>
             <div className="pAgeActions"><button type="button" className="pAgeEnter" onClick={() => { window.localStorage.setItem("pecatho_age_verified", "true"); setAgeVerified(true); }}>TENHO 18 ANOS OU MAIS · ENTRAR</button><button type="button" className="pAgeLeave" onClick={() => { window.location.href = "https://www.google.com"; }}>SAIR</button></div>
             <div className="pAgeLegal">A confirmação é armazenada neste navegador para evitar a repetição do aviso em acessos futuros.</div>
           </div>
         </div>
       )}
-      <nav className="topbar"><Link href="/" className="brand"><span className="brandMark">P</span><span>Pecatho</span></Link><Link href="/anunciantes" className="navCta">Ver anunciantes</Link></nav>
+      <nav className="topbar"><Link href="/" className="brand"><span className="brandMark">P</span><span>Pecatho</span></Link><Link href="/anunciantes" className="navCta">Ver acompanhantes</Link></nav>
 
       <nav className="profileSectionNav" aria-label="Navegação comercial do perfil" style={{ position: "sticky", top: 12, zIndex: 20, display: "flex", flexWrap: "wrap", gap: 8, margin: "12px 0 18px", padding: 8, border: "1px solid rgba(231,195,63,.22)", borderRadius: 16, background: "rgba(255,255,255,.92)", backdropFilter: "blur(14px)", boxShadow: "0 12px 30px rgba(15,23,42,.06)" }}>
         <a href="#conteudo-exclusivo" className="secondaryButton" style={{ textDecoration: "none" }}>Conteúdo exclusivo</a>
@@ -356,7 +356,7 @@ export default function PublicAdvertiserPage() {
             <div style={{display:"flex",flexWrap:"wrap",gap:9,marginTop:20}}>
               <button type="button" className="primaryButton" onClick={() => void startConversation("Olá! Encontrei seu perfil no Pecatho e gostaria de conversar sobre os serviços anunciados. Este contato ocorreu por intermédio do Pecatho.")} disabled={conversationBusy}>{conversationBusy ? "Abrindo conversa..." : "✉ Enviar mensagem"}</button>
               <button type="button" className={`followButton ${following ? "active" : ""}`} onClick={toggleFollow} disabled={followBusy}>{followBusy ? "Atualizando..." : following ? "✓ Acompanhando" : "＋ Acompanhar perfil"}</button>
-              <GiftButton recipientType="advertiser" recipientId={profile.id} recipientName={profile.display_name || profile.title || "este anunciante"} />
+              <GiftButton recipientType="advertiser" recipientId={profile.id} recipientName={profile.display_name || profile.title || "esta acompanhante"} />
             </div>
             {conversationNotice && <span className="followNotice" style={{marginTop:10}}>{conversationNotice}</span>}
           </div>
@@ -393,7 +393,7 @@ export default function PublicAdvertiserPage() {
           <div>
             <div className="eyebrow">SERVIÇOS</div>
             <h2>Serviços e modalidades</h2>
-            <p>Veja o que esta anunciante disponibiliza e inicie o atendimento diretamente pelo Pecatho.</p>
+            <p>Veja o que esta acompanhante disponibiliza e inicie o atendimento diretamente pelo Pecatho.</p>
           </div>
           {whatsappContact ? <a href={whatsappUrl("Olá! Encontrei seu perfil no Pecatho e gostaria de conversar sobre os serviços anunciados. Este contato ocorreu por intermédio do Pecatho.") || "#"} target="_blank" rel="noreferrer" className="primaryButton" style={{ textDecoration: "none" }}>Conversar pelo WhatsApp</a> : <button type="button" className="primaryButton" onClick={() => void startConversation("Olá! Gostaria de conhecer os serviços disponíveis e alinhar o atendimento. Este contato ocorreu por intermédio do Pecatho.")} disabled={conversationBusy}>{conversationBusy ? "Abrindo atendimento..." : "Solicitar atendimento"}</button>}
         </div>
@@ -411,16 +411,16 @@ export default function PublicAdvertiserPage() {
 
       {validPrices.length > 0 && <section id="valores" className="profilePricing card"><div className="eyebrow">VALORES</div><h2>Preços por período</h2><div className="priceGrid">{validPrices.map((row, index) => { const minutes = Number(row.minutes); const label = typeof row.period === "string" && row.period ? row.period : minutes === 60 ? "1 Hora" : minutes > 0 ? `${minutes} minutos` : "Período"; const amount = brl(Number(row.price)); const context = `Olá! Tenho interesse no período ${label}, anunciado por ${row.starting_from === true ? "a partir de " : ""}${amount}. Gostaria de confirmar disponibilidade e condições. O contato foi realizado por intermédio do Pecatho.`; return <div key={`${String(row.minutes ?? row.period ?? index)}-${index}`} style={{ display: "grid", gap: 10, padding: 16, border: "1px solid rgba(15,23,42,.08)", borderRadius: 16, background: "#fff" }}><div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}><span>{label}</span><strong>{row.starting_from === true ? "A partir de " : ""}{amount}</strong></div><button type="button" className="secondaryButton" onClick={() => { const url = whatsappUrl(context); if (url) window.open(url, "_blank", "noopener,noreferrer"); else void startConversation(context); }} disabled={conversationBusy}>{conversationBusy ? "Abrindo atendimento..." : whatsappContact ? "Consultar pelo WhatsApp" : "Consultar este período"}</button></div>; })}</div></section>}
 
-      {paymentMethods.length > 0 && <section className="profilePayment card"><div className="eyebrow">PAGAMENTO DIRETO</div><h2>Formas de pagamento</h2><p>Os serviços de acompanhante são negociados diretamente entre cliente e anunciante. O Pecatho não realiza a cobrança antecipada desses serviços.</p><div className="paymentChips">{paymentMethods.map((key) => <span key={key}>✓ {paymentLabels[key] || key}</span>)}</div></section>}
+      {paymentMethods.length > 0 && <section className="profilePayment card"><div className="eyebrow">PAGAMENTO DIRETO</div><h2>Formas de pagamento</h2><p>Os serviços de acompanhante são negociados diretamente entre cliente e acompanhante. O Pecatho não realiza a cobrança antecipada desses serviços.</p><div className="paymentChips">{paymentMethods.map((key) => <span key={key}>✓ {paymentLabels[key] || key}</span>)}</div></section>}
 
-      {(whatsappContact || phoneContact || profile.positioning) && <section className="profileContact card"><div className="eyebrow">CONTATO</div><h2>Contato e atendimento</h2>{profile.positioning && <p>{profile.positioning}</p>}<div className="profileContactActions" style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 16 }}>{whatsappContact && <a href={`https://wa.me/${whatsappContact}`} target="_blank" rel="noreferrer" className="primaryButton">◉ WhatsApp</a>}{phoneContact && <a href={`tel:+${phoneContact}`} className="secondaryButton">☎ Ligar</a>}</div><small style={{ display: "block", marginTop: 14, color: "#777168", lineHeight: 1.5 }}>Os canais acima foram informados pela própria anunciante e ficam sujeitos às regras de uso do Pecatho.</small></section>}
+      {(whatsappContact || phoneContact || profile.positioning) && <section className="profileContact card"><div className="eyebrow">CONTATO</div><h2>Contato e atendimento</h2>{profile.positioning && <p>{profile.positioning}</p>}<div className="profileContactActions" style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 16 }}>{whatsappContact && <a href={`https://wa.me/${whatsappContact}`} target="_blank" rel="noreferrer" className="primaryButton">◉ WhatsApp</a>}{phoneContact && <a href={`tel:+${phoneContact}`} className="secondaryButton">☎ Ligar</a>}</div><small style={{ display: "block", marginTop: 14, color: "#777168", lineHeight: 1.5 }}>Os canais acima foram informados pela própria acompanhante e ficam sujeitos às regras de uso do Pecatho.</small></section>}
 
       {profile.availability && <section className="profileAvailability card"><div className="eyebrow">DISPONIBILIDADE</div><h2>Horários de atendimento</h2><p>{profile.availability}</p></section>}
 
       <section id="galeria" className="profileMediaSection">
         <div className="sectionHeading"><div><div className="eyebrow">GALERIA</div><h2>Fotos e vídeos</h2><p>Conteúdo público e conteúdo exclusivo com acesso pago definido pela própria anunciante.</p></div><div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", justifyContent: "flex-end" }}><Link href="/conteudos/minhas-compras" className="secondaryButton" style={{ textDecoration: "none" }}>Minhas compras</Link><div className="mediaTabs"><button className={mediaTab === "all" ? "active" : ""} onClick={() => setMediaTab("all")}>Tudo</button><button className={mediaTab === "image" ? "active" : ""} onClick={() => setMediaTab("image")}>Fotos</button><button className={mediaTab === "video" ? "active" : ""} onClick={() => setMediaTab("video")}>Vídeos</button></div></div></div>
         {notice && <div className="mediaNotice">{notice}</div>}
-        {filteredMedia.length === 0 ? <div className="emptyDiscovery"><h2>Galeria em preparação</h2><p>Esta anunciante ainda não publicou mídia aprovada nesta categoria.</p></div> : <div className="profileGallery">{filteredMedia.map((item) => {
+        {filteredMedia.length === 0 ? <div className="emptyDiscovery"><h2>Galeria em preparação</h2><p>Esta acompanhante ainda não publicou mídia aprovada nesta categoria.</p></div> : <div className="profileGallery">{filteredMedia.map((item) => {
           const unlocked = Boolean(item.unlockedUrl);
           const isVideo = item.kind === "video";
           const src = unlocked ? item.unlockedUrl : item.url || item.previewUrl; const blurPreview = item.access_type === "paid" && !unlocked; const mediaRatio = item.width && item.height ? item.width / item.height : isVideo ? 16 / 9 : 1;
@@ -445,7 +445,7 @@ export default function PublicAdvertiserPage() {
       </section>
 
       <section className="profileContentGrid">
-        <article className="card profileAbout"><div className="eyebrow">SOBRE</div><h2>{profile.display_name || "Anunciante"}</h2><p>{profile.description || "A anunciante ainda não adicionou uma apresentação detalhada."}</p>{socialLinks.length > 0 && <div className="profileLinks"><strong>Redes e presença digital</strong>{socialLinks.map(([label, url]) => <a href={url} target="_blank" rel="noopener noreferrer" key={label}>{label}</a>)}</div>}{fans && <div className="fansCta"><div><span>PECATHO FANS</span><strong>{fans.display_name}</strong><p>{fans.bio || "Conteúdo exclusivo diretamente no ecossistema Pecatho."}</p></div><Link href={`/fans/${fans.slug}`} className="primaryButton">Ver conteúdo exclusivo</Link></div>}</article>
+        <article className="card profileAbout"><div className="eyebrow">SOBRE</div><h2>{profile.display_name || "Acompanhante"}</h2><p>{profile.description || "A acompanhante ainda não adicionou uma apresentação detalhada."}</p>{socialLinks.length > 0 && <div className="profileLinks"><strong>Redes e presença digital</strong>{socialLinks.map(([label, url]) => <a href={url} target="_blank" rel="noopener noreferrer" key={label}>{label}</a>)}</div>}{fans && <div className="fansCta"><div><span>PECATHO FANS</span><strong>{fans.display_name}</strong><p>{fans.bio || "Conteúdo exclusivo diretamente no ecossistema Pecatho."}</p></div><Link href={`/fans/${fans.slug}`} className="primaryButton">Ver conteúdo exclusivo</Link></div>}</article>
         <ApproximateLocationMap latitude={address?.public_latitude ?? null} longitude={address?.public_longitude ?? null} label="Localização aproximada do anúncio" />
       </section>
 
@@ -455,7 +455,7 @@ export default function PublicAdvertiserPage() {
         href={`https://wa.me/${whatsappContact}?text=${encodeURIComponent("Olá! Encontrei seu perfil no Pecatho e gostaria de conversar sobre os serviços anunciados. Este contato foi realizado por intermédio do Pecatho.")}`}
         target="_blank"
         rel="noreferrer"
-        aria-label="Conversar com a anunciante pelo WhatsApp"
+        aria-label="Conversar com a acompanhante pelo WhatsApp"
         title="Conversar pelo WhatsApp"
         style={{ position: "fixed", right: 20, bottom: 20, zIndex: 60, display: "inline-flex", alignItems: "center", gap: 9, padding: "13px 17px", borderRadius: 999, background: "#25D366", color: "#fff", textDecoration: "none", fontWeight: 800, boxShadow: "0 14px 35px rgba(0,0,0,.22)", border: "2px solid rgba(255,255,255,.9)" }}
       >
@@ -474,10 +474,10 @@ export default function PublicAdvertiserPage() {
           </button>
         )}
         <a href="#conteudo-exclusivo" className="secondaryButton">Conteúdo</a>
-        <GiftButton recipientType="advertiser" recipientId={profile.id} recipientName={profile.display_name || profile.title || "este anunciante"} compact />
+        <GiftButton recipientType="advertiser" recipientId={profile.id} recipientName={profile.display_name || profile.title || "esta acompanhante"} compact />
       </div>
 
-      <footer><span>Pecatho · experiência pública da anunciante</span><Link href="/anunciantes">Voltar para a busca</Link></footer>
+      <footer><span>Pecatho · experiência pública da acompanhante</span><Link href="/anunciantes">Voltar para a busca de acompanhantes</Link></footer>
     </main>
   );
 }
