@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 const categories = [
-  ["01", "Anunciantes", "Perfis, categorias, localização, características, serviços e disponibilidade."],
+  ["01", "Acompanhantes", "Perfis, categorias, localização, características, serviços e disponibilidade."],
   ["02", "Pecatho Fans", "Criadores, publicações, assinaturas e experiências exclusivas."],
   ["03", "Conexões", "Mensagens, avaliações, favoritos e relacionamento em um só ecossistema."],
   ["04", "Confiança", "Verificação, moderação, privacidade e ferramentas de proteção."],
@@ -70,26 +70,26 @@ export default function HomePage() {
       <div className="pWrap">
         <nav className="pNav">
           <Link href="/" className="pBrand"><span className="pLogo">P</span><span>Pecatho</span></Link>
-          <div className="pNavLinks"><Link href="/anunciantes">Anunciantes</Link><Link href="/parceiros">Parceiros</Link><Link href="/fans">Fans</Link><Link href="/como-funciona">Como funciona</Link><Link href="/login" className="pNavCta">Entrar</Link></div>
+          <div className="pNavLinks"><Link href="/anunciantes">Acompanhantes</Link><Link href="/parceiros">Parceiros</Link><Link href="/fans">Fans</Link><Link href="/como-funciona">Como funciona</Link><Link href="/login" className="pNavCta">Entrar</Link></div>
         </nav>
 
         <section className="pHero">
           <div>
             <div className="pEyebrow">PECATHO · CONEXÕES QUE DESPERTAM</div>
             <h1>Descubra. <em>Conecte.</em><br />Viva Pecatho.</h1>
-            <p className="pLead">Uma experiência adulta moderna para descobrir anunciantes, conhecer criadores, acompanhar conteúdos e estabelecer conexões com mais liberdade, informação e confiança.</p>
-            <div className="pActions"><Link className="pPrimary" href="/anunciantes">Explorar anunciantes ↗</Link><Link className="pSecondary" href="/fans">Conhecer Pecatho Fans</Link><Link className="pSecondary" href="/parceiros">Anunciar minha casa</Link><Link className="pSecondary" href="/cadastro">Criar minha conta</Link></div>
+            <p className="pLead">Uma experiência adulta moderna para descobrir acompanhantes, conhecer criadores, acompanhar conteúdos e estabelecer conexões com mais liberdade, informação e confiança.</p>
+            <div className="pActions"><Link className="pPrimary" href="/anunciantes">Explorar acompanhantes ↗</Link><Link className="pSecondary" href="/fans">Conhecer Pecatho Fans</Link><Link className="pSecondary" href="/parceiros">Anunciar minha casa</Link><Link className="pSecondary" href="/cadastro">Criar minha conta</Link></div>
           </div>
           <aside className="pShowcase">
             <div className="pShowTop"><span>EXPERIÊNCIA PECATHO</span><span className="pStatus"><i className="pDot" /> ONLINE</span></div>
             <h2>O seu próximo encontro começa com uma descoberta.</h2>
             <p>Uma plataforma pensada para valorizar perfis, conteúdo, autonomia e relacionamento — em uma experiência elegante e responsiva.</p>
             <div className="pMiniGrid"><div className="pMini"><span>01 · CATÁLOGO</span><strong>Perfis e descobertas</strong></div><div className="pMini"><span>02 · CONTEÚDO</span><strong>Fans e criadores</strong></div></div>
-            <div className="pShowLinks"><Link href="/anunciantes"><span>01</span> Explorar catálogo <span>→</span></Link><Link href="/cadastro"><span>02</span> Criar perfil <span>→</span></Link><Link href="/fans"><span>03</span> Entrar no universo Fans <span>→</span></Link></div>
+            <div className="pShowLinks"><Link href="/anunciantes"><span>01</span> Explorar acompanhantes <span>→</span></Link><Link href="/cadastro"><span>02</span> Criar perfil <span>→</span></Link><Link href="/fans"><span>03</span> Entrar no universo Fans <span>→</span></Link></div>
           </aside>
         </section>
 
-        <section className="pSection"><div className="pSectionHead"><div><div className="pEyebrow">UM ECOSSISTEMA COMPLETO</div><h2>Mais do que um catálogo.</h2></div><p>Descoberta, relacionamento, conteúdo e estrutura comercial em uma experiência contínua, construída para anunciantes, criadores e usuários.</p></div><div className="pCategoryGrid">{categories.map(([no,title,text])=><article className="pCategory" key={title}><div className="pCategoryNo">{no}</div><h3>{title}</h3><p>{text}</p></article>)}</div></section>
+        <section className="pSection"><div className="pSectionHead"><div><div className="pEyebrow">UM ECOSSISTEMA COMPLETO</div><h2>Mais do que um catálogo.</h2></div><p>Descoberta, relacionamento, conteúdo e estrutura comercial em uma experiência contínua, construída para acompanhantes, criadores e usuários.</p></div><div className="pCategoryGrid">{categories.map(([no,title,text])=><article className="pCategory" key={title}><div className="pCategoryNo">{no}</div><h3>{title}</h3><p>{text}</p></article>)}</div></section>
 
         <section className="pExperience"><div className="pExperienceGrid"><div><div className="pEyebrow">EVOLUÇÃO CONTÍNUA</div><h2>Construído para ser melhor, não apenas diferente.</h2><p className="pExperienceIntro">O Pecatho preserva a profundidade funcional já construída e transforma a apresentação em uma experiência mais atraente: navegação clara, perfis valorizados, segurança, moderação, pagamentos, notificações e novas possibilidades comerciais.</p></div><div className="pHighlightGrid">{highlights.map(([title,text])=><article className="pHighlight" key={title}><strong>{title}</strong><p>{text}</p></article>)}</div></div></section>
 
