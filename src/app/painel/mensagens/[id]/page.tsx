@@ -13,6 +13,7 @@ type FansConversation = { id: string; creator_id: string; buyer_user_id: string;
 type LiveOffer = { id: string; creator_id: string; title: string; description: string | null; duration_minutes: number; price: number; currency: string; status: string };
 type LiveSession = { id: string; offer_id: string; creator_id: string; buyer_user_id: string; conversation_id: string | null; order_id: string | null; title: string; duration_minutes: number; amount: number; currency: string; status: string; paid_at: string | null; scheduled_for: string | null; confirmed_at: string | null; rejection_reason: string | null; created_at: string };
 type LiveTip = { id: string; session_id: string | null; amount: number; creator_amount: number; currency: string; message: string | null; status: string; paid_at: string | null; created_at: string };
+type CustomerReputation = { average_rating: number | null; review_count: number; trust_badge: boolean };
 
 export default function ConversationPage() {
   const params = useParams<{ id: string }>();
@@ -23,6 +24,7 @@ export default function ConversationPage() {
   const [offers, setOffers] = useState<LiveOffer[]>([]);
   const [sessions, setSessions] = useState<LiveSession[]>([]);
   const [tips, setTips] = useState<LiveTip[]>([]);
+  const [customerReputation, setCustomerReputation] = useState<CustomerReputation | null>(null);
   const sessionIdsRef = useRef<Set<string>>(new Set());
   const [userId, setUserId] = useState<string | null>(null);
   const [body, setBody] = useState("");
@@ -130,6 +132,13 @@ export default function ConversationPage() {
     if (messageResult.error) throw messageResult.error;
     setProfile((profileResult.data as Profile | null) || null);
     setMessages((messageResult.data ?? []) as Message[]);
+    const reputationResponse = await fetch("/api/clientes/reputacao/context?conversation_id=" + encodeURIComponent(params.id), { cache: "no-store" });
+    if (reputationResponse.ok) {
+      const reputationBody = await reputationResponse.json();
+      setCustomerReputation(reputationBody.reputation ?? null);
+    } else {
+      setCustomerReputation(null);
+    }
     await markAsRead(supabase, authData.user.id);
     await loadCommercialContext(supabase, authData.user.id);
   }
@@ -458,6 +467,25 @@ export default function ConversationPage() {
               )}
 
               {commercialError && <p className="fieldNote" style={{ marginTop: 12, color: "#f87171" }}>{commercialError}</p>}
+            </section>
+          )}
+
+          {customerReputation && (
+            <section className="card" style={{ marginTop: 24, borderColor: "rgba(231,195,63,.24)" }}>
+              <div className="eyebrow">CONFIANÇA DO CLIENTE</div>
+              <h2 style={{ marginTop: 8 }}>Reputação verificada</h2>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
+                <strong style={{ fontSize: 24, color: "#E7C33F" }}>
+                  {customerReputation.average_rating !== null ? "★ " + customerReputation.average_rating.toFixed(1) + " / 5" : "Sem avaliações"}
+                </strong>
+                <span className="fieldNote">
+                  {customerReputation.review_count
+                    ? customerReputation.review_count + (customerReputation.review_count === 1 ? " avaliação verificada" : " avaliações verificadas")
+                    : "Ainda não há avaliações verificadas para este cliente."}
+                </span>
+                {customerReputation.trust_badge && <span style={{ border: "1px solid rgba(16,185,129,.28)", background: "rgba(16,185,129,.08)", color: "#6ee7b7", borderRadius: 999, padding: "5px 9px", fontSize: 11, fontWeight: 800 }}>✓ Histórico verificado</span>}
+              </div>
+              <p className="fieldNote" style={{ marginTop: 10 }}>A reputação é calculada somente a partir de interações verificadas. Nenhum dado pessoal do cliente é exibido nesta área.</p>
             </section>
           )}
 
