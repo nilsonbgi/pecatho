@@ -98,7 +98,7 @@ export default function DigitalContentShowcase({
   if (!loading && products.length === 0) return null;
 
   const visible = compact ? products.slice(0, 3) : products;
-  const sellerLabel = ownerType === "creator" ? "criador" : "anunciante";
+  const sellerLabel = ownerType === "creator" ? "criador" : "acompanhante";
 
   return (
     <section
