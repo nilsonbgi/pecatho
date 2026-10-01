@@ -489,3 +489,39 @@
 .digitalSaleStatus{font-size:.72rem;letter-spacing:.08em}
 .digitalSaleStatus-paid{color:#65d68a}.digitalSaleStatus-refunded,.digitalSaleStatus-chargeback{color:#e8a36b}
 @media (max-width:800px){.digitalSaleRow{grid-template-columns:1fr 1fr}.digitalSaleRow>div:first-child{grid-column:1/-1}}
+
+
+/* Pecatho dashboard UX — responsive navigation and content density */
+.advertiserDashboard{max-width:1440px}
+.advertiserDashboard .hero{max-width:none;padding-top:72px}
+.advertiserDashboard .pillars{grid-template-columns:repeat(4,minmax(0,1fr))}
+.dashboardQuickLinks{display:flex;flex-wrap:wrap;gap:8px;margin:30px 0 22px}
+.dashboardQuickLinks a{display:inline-flex;align-items:center;min-height:40px;padding:9px 13px;border:1px solid rgba(255,255,255,.11);border-radius:999px;color:#cbd0db;text-decoration:none;background:rgba(255,255,255,.025);font-size:12px;font-weight:750;transition:background .18s ease,border-color .18s ease,color .18s ease,transform .18s ease}
+.dashboardQuickLinks a:hover{background:rgba(255,255,255,.07);border-color:rgba(231,195,63,.32);color:#fff;transform:translateY(-1px)}
+.dashboardMobileNav{display:none}
+.dashboardSectionNav{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 22px;padding:8px;border:1px solid rgba(255,255,255,.08);border-radius:15px;background:rgba(255,255,255,.025);position:sticky;top:12px;z-index:20;backdrop-filter:blur(14px)}
+.dashboardSectionNav a{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 12px;border-radius:10px;color:#aeb3c2;text-decoration:none;font-size:12px;font-weight:750}
+.dashboardSectionNav a:hover{background:rgba(255,255,255,.06);color:#fff}
+@media(max-width:1100px){.advertiserDashboard .pillars{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){
+ .advertiserDashboard{padding:0 14px 105px}
+ .advertiserDashboard .topbar{height:auto;min-height:68px;padding:10px 4px;gap:10px}
+ .advertiserDashboard .navLinks{display:flex;overflow-x:auto;max-width:100%;gap:7px;scrollbar-width:none}
+ .advertiserDashboard .navLinks::-webkit-scrollbar{display:none}
+ .advertiserDashboard .navLinks a{display:inline-flex;white-space:nowrap;font-size:11px;padding:8px 10px;border:1px solid rgba(255,255,255,.09);border-radius:9px}
+ .advertiserDashboard .navLinks a:not(.navCta){display:inline-flex}
+ .advertiserDashboard .hero{padding:48px 0 40px}
+ .advertiserDashboard .hero h1{font-size:clamp(42px,12vw,60px);margin-bottom:18px}
+ .advertiserDashboard .heroCopy{font-size:16px;line-height:1.55}
+ .advertiserDashboard .pillars{grid-template-columns:1fr;gap:10px}
+ .advertiserDashboard .card{min-height:0;padding:18px}
+ .advertiserDashboard .card h2{margin-top:18px}
+ .dashboardQuickLinks{display:none}
+ .dashboardSectionNav{overflow-x:auto;flex-wrap:nowrap;margin:0 -2px 18px;scrollbar-width:none;position:static}
+ .dashboardSectionNav::-webkit-scrollbar{display:none}
+ .dashboardSectionNav a{flex:0 0 auto;white-space:nowrap}
+ .dashboardMobileNav{position:fixed;left:10px;right:10px;bottom:10px;z-index:60;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:7px;border:1px solid rgba(255,255,255,.12);border-radius:18px;background:rgba(12,14,20,.94);box-shadow:0 16px 45px rgba(0,0,0,.38);backdrop-filter:blur(16px)}
+ .dashboardMobileNav a{min-height:44px;display:flex;align-items:center;justify-content:center;text-align:center;padding:6px 4px;border-radius:11px;color:#aeb3c2;text-decoration:none;font-size:10px;font-weight:800}
+ .dashboardMobileNav a.active,.dashboardMobileNav a:hover{background:rgba(255,255,255,.08);color:#fff}
+}
+@media(max-width:420px){.dashboardMobileNav{grid-template-columns:repeat(3,1fr)}.dashboardMobileNav a:nth-child(4){display:none}.dashboardMobileNav a{font-size:10px}}
