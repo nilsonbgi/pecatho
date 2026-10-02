@@ -121,7 +121,7 @@ export default function AcompanhantesPage() {
 
       const ids = rows.map((x) => x.id);
       const [{ data: mr }, { data: pm }] = await Promise.all([
-        s.from("profile_media").select("profile_id,storage_bucket,storage_path,kind,is_primary,is_public").in("profile_id", ids).eq("is_public", true).eq("moderation_status", "approved").order("is_primary", { ascending: false }).order("sort_order"),
+        s.from("profile_media").select("profile_id,preview_storage_bucket,preview_storage_path,storage_bucket,storage_path,kind,is_primary,is_public,show_in_cards").in("profile_id", ids).eq("is_public", true).eq("moderation_status", "approved").order("is_primary", { ascending: false }).order("sort_order"),
         s.from("advertiser_profiles").select("id,availability").in("id", ids)
       ]);
       const byProfile = new Map<string, Media>();
@@ -135,7 +135,7 @@ export default function AcompanhantesPage() {
         const m = byProfile.get(x.id);
         return {
           ...x,
-          imageUrl: m ? s.storage.from(m.storage_bucket).getPublicUrl(m.storage_path).data.publicUrl || null : null,
+          imageUrl: m?.preview_storage_bucket && m?.preview_storage_path ? s.storage.from(m.preview_storage_bucket).getPublicUrl(m.preview_storage_path).data.publicUrl || null : null,
           mediaCount: mediaCounts.get(x.id) || 0,
           availability: availabilityMap.get(x.id) || null
         };
@@ -146,7 +146,7 @@ export default function AcompanhantesPage() {
       setHasMore(advertisers.length + rows.length < matchingCount);
     } catch (e) {
       console.error(e);
-      setError("Não foi possível carregar mais anunciantes.");
+      setError("Não foi possível carregar mais acompanhantes.");
     } finally {
       setLoadingMore(false);
     }
