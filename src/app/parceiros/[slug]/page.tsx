@@ -12,7 +12,7 @@ function dateTime(value:string){return new Intl.DateTimeFormat("pt-BR",{dateStyl
 
 export default async function ParceiroDetalhe({params}:{params:Promise<{slug:string}>}){
  const {slug}=await params;const supabase=await createClient();
- const {data:v}=await supabase.from("partner_venues").select("*").eq("slug",slug).eq("status","published").maybeSingle();
+ const {data:v}=await supabase.rpc("get_public_partner_venues",{p_slug:slug}).maybeSingle();
  if(!v)notFound();
  let city="",state="";
  if(v.city_id){const {data}=await supabase.from("cities").select("name,state_id").eq("id",v.city_id).maybeSingle();city=data?.name||"";if(data?.state_id){const {data:s}=await supabase.from("states").select("name,uf").eq("id",data.state_id).maybeSingle();state=s?.uf||s?.name||"";}}
