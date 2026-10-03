@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/browser";
 
 type JsonObject = Record<string, unknown>;
-type Media = { id: string; kind: string; original_filename: string | null; storage_bucket: string; storage_path: string; moderation_status: string; access_type: string; is_public: boolean; is_primary: boolean; price: number | null; preview_url?: string };
+type Media = { id: string; kind: string; original_filename: string | null; storage_bucket: string; storage_path: string; moderation_status: string; access_type: string; is_public: boolean; is_primary: boolean; is_featured: boolean; price: number | null; preview_url?: string };
 type Attribute = { id: string; name: string; slug: string; value: unknown };
 type Service = { id: string; name: string; selected: boolean; notes: string | null };
 
