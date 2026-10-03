@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import LeadForm from "./LeadForm";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
+type PublicPartnerVenue={id:string;name:string;slug:string;venue_type:string;description:string|null;phone:string|null;website_url:string|null;instagram_url:string|null;state_id:number|null;city_id:number|null;tagline:string|null;highlights:string|null;recruitment_enabled:boolean;recruitment_title:string|null;recruitment_description:string|null;recruitment_contact_phone:string|null;recruitment_contact_email:string|null;recruitment_contact_whatsapp:string|null};
 const types:Record<string,string>={nightclub:"Casa noturna",club:"Boate / clube",bar:"Bar",lounge:"Lounge",event_space:"Espaço para eventos",other:"Outro"};
 const dayNames=["Domingo","Segunda-feira","Terça-feira","Quarta-feira","Quinta-feira","Sexta-feira","Sábado"];
 export const dynamic="force-dynamic";
@@ -12,7 +13,8 @@ function dateTime(value:string){return new Intl.DateTimeFormat("pt-BR",{dateStyl
 
 export default async function ParceiroDetalhe({params}:{params:Promise<{slug:string}>}){
  const {slug}=await params;const supabase=await createClient();
- const {data:v}=await supabase.rpc("get_public_partner_venues",{p_slug:slug}).maybeSingle();
+ const {data:vData}=await supabase.rpc("get_public_partner_venues",{p_slug:slug});
+ const v=(vData as PublicPartnerVenue[]|null)?.[0]||null;
  if(!v)notFound();
  let city="",state="";
  if(v.city_id){const {data}=await supabase.from("cities").select("name,state_id").eq("id",v.city_id).maybeSingle();city=data?.name||"";if(data?.state_id){const {data:s}=await supabase.from("states").select("name,uf").eq("id",data.state_id).maybeSingle();state=s?.uf||s?.name||"";}}
