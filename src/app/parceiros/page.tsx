@@ -6,7 +6,7 @@ const types:Record<string,string>={nightclub:"Casa noturna",club:"Boate / clube"
 
 export default async function ParceirosPage(){
  const supabase=await createClient();
- const {data:venues}=await supabase.from("partner_venues").select("id,name,slug,venue_type,description,city_id,state_id").eq("status","published").order("name");
+ const {data:venues}=await supabase.rpc("get_public_partner_venues",{p_slug:null});
  const ids=[...(venues||[]).map(v=>v.city_id).filter(Boolean)];
  const {data:cities}=ids.length?await supabase.from("cities").select("id,name").in("id",ids):{data:[]};
  const cityMap=new Map((cities||[]).map(c=>[c.id,c.name]));
