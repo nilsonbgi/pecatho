@@ -2,11 +2,14 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic="force-dynamic";
+type PublicPartnerVenue={id:string;name:string;slug:string;venue_type:string;description:string|null;phone:string|null;website_url:string|null;instagram_url:string|null;state_id:number|null;city_id:number|null;tagline:string|null;highlights:string|null;recruitment_enabled:boolean;recruitment_title:string|null;recruitment_description:string|null;recruitment_contact_phone:string|null;recruitment_contact_email:string|null;recruitment_contact_whatsapp:string|null};
+
 const types:Record<string,string>={nightclub:"Casa noturna",club:"Boate / clube",bar:"Bar",lounge:"Lounge",event_space:"Espaço para eventos",other:"Outro"};
 
 export default async function ParceirosPage(){
  const supabase=await createClient();
- const {data:venues}=await supabase.rpc("get_public_partner_venues",{p_slug:null});
+ const {data:venuesData}=await supabase.rpc("get_public_partner_venues",{p_slug:null});
+ const venues=(venuesData||[]) as PublicPartnerVenue[];
  const ids=[...(venues||[]).map(v=>v.city_id).filter(Boolean)];
  const {data:cities}=ids.length?await supabase.from("cities").select("id,name").in("id",ids):{data:[]};
  const cityMap=new Map((cities||[]).map(c=>[c.id,c.name]));
