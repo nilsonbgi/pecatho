@@ -106,8 +106,8 @@ export default function PublicAdvertiserPage() {
         typed.category_id ? supabase.from("category_services").select("id,name,slug,description,sort_order").eq("category_id", typed.category_id).eq("display_public", true).order("sort_order") : Promise.resolve({ data: [], error: null }),
         supabase.from("profile_services").select("service_id,selected,notes").eq("profile_id", typed.id).eq("selected", true),
         supabase.rpc("get_public_profile_media", { p_profile_ids: [typed.id] }),
-        supabase.from("profile_feedback").select("id,rating,comment,created_at,experience_verified").eq("profile_id", typed.id).eq("status", "approved").eq("experience_verified", true).order("created_at", { ascending: false }).limit(12),
-        supabase.from("fans_creators").select("slug,display_name,bio,status").eq("advertiser_profile_id", typed.id).eq("status", "active").maybeSingle(),
+        supabase.rpc("get_public_profile_feedback", { p_profile_id: typed.id, p_limit: 12 }),
+        supabase.rpc("get_public_fans_creator", { p_advertiser_profile_id: typed.id }).maybeSingle(),
       ]);
       const gallery = ((mediaResult.data ?? []) as Media[]).filter((item) => item.moderation_status === "approved" && item.show_in_gallery !== false).map((item) => ({
         ...item,
