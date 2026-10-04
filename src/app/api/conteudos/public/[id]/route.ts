@@ -39,15 +39,64 @@ export async function GET(
     );
   }
 
-  let owner_name = product.owner_type === "creator" ? "Criador" : "Anunciante";
+  let owner_name = "";
   let owner_slug = "";
 
   if (product.owner_type === "advertiser") {
-    const { data: owner } = await admin.from("advertiser_profiles").select("display_name,title,slug").eq("id", product.owner_id).eq("status", "published").maybeSingle();
-    if (owner) { owner_name = owner.display_name || owner.title || owner_name; owner_slug = owner.slug || ""; }
+    const { data: owner, error: ownerError } = await admin
+      .from("advertiser_profiles")
+      .select("display_name,title,slug")
+      .eq("id", product.owner_id)
+      .eq("status", "published")
+      .maybeSingle();
+
+    if (ownerError) {
+      console.error(ownerError);
+      return NextResponse.json(
+        { error: "Não foi possível validar o vendedor." },
+        { status: 500 },
+      );
+    }
+
+    if (!owner) {
+      return NextResponse.json(
+        { error: "Conteúdo não encontrado." },
+        { status: 404 },
+      );
+    }
+
+    owner_name = owner.display_name || owner.title || "Anunciante";
+    owner_slug = owner.slug || "";
+  } else if (product.owner_type === "creator") {
+    const { data: owner, error: ownerError } = await admin
+      .from("fans_creators")
+      .select("display_name,slug")
+      .eq("id", product.owner_id)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (ownerError) {
+      console.error(ownerError);
+      return NextResponse.json(
+        { error: "Não foi possível validar o vendedor." },
+        { status: 500 },
+      );
+    }
+
+    if (!owner) {
+      return NextResponse.json(
+        { error: "Conteúdo não encontrado." },
+        { status: 404 },
+      );
+    }
+
+    owner_name = owner.display_name || "Criador";
+    owner_slug = owner.slug || "";
   } else {
-    const { data: owner } = await admin.from("fans_creators").select("display_name,slug").eq("id", product.owner_id).eq("status", "active").maybeSingle();
-    if (owner) { owner_name = owner.display_name || owner_name; owner_slug = owner.slug || ""; }
+    return NextResponse.json(
+      { error: "Conteúdo não encontrado." },
+      { status: 404 },
+    );
   }
 
   let cover_url: string | null = null;
