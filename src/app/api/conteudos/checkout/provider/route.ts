@@ -32,6 +32,25 @@ export async function POST(request: Request) {
   if (payment.status === "paid") return NextResponse.json({ error: "Este pedido já foi pago." }, { status: 409 });
   if (payment.provider_payment_id) return NextResponse.json({ error: "Este pedido já possui transação no provedor." }, { status: 409 });
 
+  const rawReference =
+    payment.raw_reference && typeof payment.raw_reference === "object" && !Array.isArray(payment.raw_reference)
+      ? payment.raw_reference as Record<string, unknown>
+      : {};
+  if (
+    payment.provider === "mercadopago" &&
+    typeof rawReference.preference_id === "string" &&
+    typeof rawReference.checkout_url === "string" &&
+    rawReference.checkout_url.length > 0
+  ) {
+    return NextResponse.json({
+      provider: "mercadopago",
+      preference_id: rawReference.preference_id,
+      checkout_url: rawReference.checkout_url,
+      sandbox: rawReference.sandbox === true,
+      reused: true,
+    });
+  }
+
   try {
     const preference = await createMercadoPagoPreference({
       orderId: order.id,
@@ -53,6 +72,8 @@ export async function POST(request: Request) {
         channel: productType === "profile_media" ? "pecatho_profile_media" : "pecatho_digital_content",
         provider: "mercadopago",
         preference_id: preference.id,
+        checkout_url: preference.init_point ?? preference.sandbox_init_point ?? null,
+        sandbox: !preference.init_point && Boolean(preference.sandbox_init_point),
         order_id: order.id,
       },
       updated_at: new Date().toISOString(),
