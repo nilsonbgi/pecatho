@@ -104,6 +104,7 @@ export default async function ConteudosPage({ searchParams }: Props) {
   const scoped = Boolean(ownerType && ownerId);
   let sellerName = "";
   let sellerProfileHref = "";
+  let scopedOwnerIsPublic = !scoped;
 
   if (scoped && ownerType === "advertiser" && ownerId) {
     const { data: owner } = await admin
@@ -112,6 +113,7 @@ export default async function ConteudosPage({ searchParams }: Props) {
       .eq("id", ownerId)
       .eq("status", "published")
       .maybeSingle();
+    scopedOwnerIsPublic = Boolean(owner);
     sellerName = owner?.display_name || owner?.title || "Anunciante";
     sellerProfileHref = owner?.slug ? `/anunciantes/${owner.slug}` : "";
   } else if (scoped && ownerType === "creator" && ownerId) {
@@ -121,6 +123,7 @@ export default async function ConteudosPage({ searchParams }: Props) {
       .eq("id", ownerId)
       .eq("status", "active")
       .maybeSingle();
+    scopedOwnerIsPublic = Boolean(owner);
     sellerName = owner?.display_name || "Criador";
     sellerProfileHref = owner?.slug ? `/fans/${owner.slug}` : "";
   }
@@ -304,6 +307,12 @@ export default async function ConteudosPage({ searchParams }: Props) {
     }
   }
 
+  const visibleProducts = scoped
+    ? scopedOwnerIsPublic
+      ? productsWithCovers
+      : []
+    : productsWithCovers.filter((product) => sellerMap.has(product.owner_id));
+
   return (
     <main className="min-h-screen bg-[#f5f5f7] px-4 py-8 text-slate-950">
       <section className="mx-auto max-w-7xl">
@@ -351,8 +360,8 @@ export default async function ConteudosPage({ searchParams }: Props) {
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div className="text-xs font-bold text-slate-500">
             {scoped
-              ? `${productsWithCovers.length} conteúdo(s) deste vendedor`
-              : `${productsWithCovers.length} conteúdo(s) disponíveis`}
+              ? `${visibleProducts.length} conteúdo(s) deste vendedor`
+              : `${visibleProducts.length} conteúdo(s) disponíveis`}
           </div>
           {!scoped ? (
             <div className="text-xs text-slate-400">
@@ -362,7 +371,7 @@ export default async function ConteudosPage({ searchParams }: Props) {
         </div>
 
         <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {productsWithCovers.map((p) => {
+          {visibleProducts.map((p) => {
             const seller = sellerMap.get(p.owner_id);
             return (
               <article
