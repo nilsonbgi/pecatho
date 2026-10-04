@@ -47,9 +47,53 @@ export default async function ConteudosPage({ searchParams }: Props) {
   }
 
   const { data: products } = await query;
+  const publishedProducts = products ?? [];
+
+  // A product being marked as published is not enough: its seller must also
+  // remain publicly available. Validate seller status before issuing any
+  // temporary cover URL so inactive/unpublished profiles cannot leak listings.
+  const advertiserIds = [
+    ...new Set(
+      publishedProducts
+        .filter((product) => product.owner_type === "advertiser")
+        .map((product) => product.owner_id),
+    ),
+  ];
+  const creatorIds = [
+    ...new Set(
+      publishedProducts
+        .filter((product) => product.owner_type === "creator")
+        .map((product) => product.owner_id),
+    ),
+  ];
+
+  const [{ data: publishedAdvertisers }, { data: activeCreators }] = await Promise.all([
+    advertiserIds.length
+      ? admin
+          .from("advertiser_profiles")
+          .select("id")
+          .in("id", advertiserIds)
+          .eq("status", "published")
+      : Promise.resolve({ data: [] as Array<{ id: string }> }),
+    creatorIds.length
+      ? admin
+          .from("fans_creators")
+          .select("id")
+          .in("id", creatorIds)
+          .eq("status", "active")
+      : Promise.resolve({ data: [] as Array<{ id: string }> }),
+  ]);
+
+  const visibleAdvertiserIds = new Set((publishedAdvertisers ?? []).map((owner) => owner.id));
+  const visibleCreatorIds = new Set((activeCreators ?? []).map((owner) => owner.id));
+  const visibleProducts = publishedProducts.filter((product) =>
+    product.owner_type === "advertiser"
+      ? visibleAdvertiserIds.has(product.owner_id)
+      : product.owner_type === "creator" && visibleCreatorIds.has(product.owner_id),
+  );
 
   const productsWithCovers = await Promise.all(
-    (products ?? []).map(async (product) => {
+    visibleProducts.map(async (product) => {
       let coverUrl: string | null = null;
 
       if (product.cover_bucket && product.cover_path) {
