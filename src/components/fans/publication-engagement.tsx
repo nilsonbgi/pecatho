@@ -19,19 +19,17 @@ export default function PublicationEngagement({ postId, creatorName }: Props) {
   const [message, setMessage] = useState("");
 
   async function load() {
-    const [{ count }, { data: commentRows }, { data: auth }] = await Promise.all([
-      supabase.from("fans_likes").select("post_id", { count: "exact", head: true }).eq("post_id", postId),
+    const [{ data: likeSummary }, { data: commentRows }, { data: auth }] = await Promise.all([
+      supabase.rpc("get_public_fans_like_summary", { p_post_id: postId }),
       supabase.rpc("get_public_fans_comments", { p_post_id: postId }),
       supabase.auth.getUser(),
     ]);
     const currentUserId = auth.user?.id ?? null;
     setUserId(currentUserId);
-    setLikes(count ?? 0);
+    const likeSummaryRow = Array.isArray(likeSummary) ? likeSummary[0] : null;
+    setLikes(Number(likeSummaryRow?.likes_count ?? 0));
+    setLiked(currentUserId ? Boolean(likeSummaryRow?.viewer_liked) : false);
     setComments((commentRows ?? []) as Comment[]);
-    if (currentUserId) {
-      const { data: ownLike } = await supabase.from("fans_likes").select("post_id").eq("post_id", postId).eq("user_id", currentUserId).maybeSingle();
-      setLiked(!!ownLike);
-    } else setLiked(false);
     setLoading(false);
   }
 
