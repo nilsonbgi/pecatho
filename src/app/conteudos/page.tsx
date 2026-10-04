@@ -87,14 +87,14 @@ export default async function ConteudosPage({ searchParams }: Props) {
 
   const visibleAdvertiserIds = new Set((publishedAdvertisers ?? []).map((owner) => owner.id));
   const visibleCreatorIds = new Set((activeCreators ?? []).map((owner) => owner.id));
-  const visibleProducts = publishedProducts.filter((product) =>
+  const eligibleProducts = publishedProducts.filter((product) =>
     product.owner_type === "advertiser"
       ? visibleAdvertiserIds.has(product.owner_id)
       : product.owner_type === "creator" && visibleCreatorIds.has(product.owner_id),
   );
 
   const productsWithCovers = await Promise.all(
-    visibleProducts.map(async (product) => {
+    eligibleProducts.map(async (product) => {
       const coverUrl = await getPublicDigitalContentCover(admin, product);
 
       return { ...product, coverUrl };
