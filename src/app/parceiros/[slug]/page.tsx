@@ -2,9 +2,9 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import LeadForm from "./LeadForm";
-import { createClient as createAdminClient } from "@supabase/supabase-js";
 
 type PublicPartnerVenue={id:string;name:string;slug:string;venue_type:string;description:string|null;phone:string|null;website_url:string|null;instagram_url:string|null;state_id:number|null;city_id:number|null;tagline:string|null;highlights:string|null;recruitment_enabled:boolean;recruitment_title:string|null;recruitment_description:string|null;recruitment_contact_phone:string|null;recruitment_contact_email:string|null;recruitment_contact_whatsapp:string|null};
+type PublicPartnerVenueMedia={id:string;kind:string;preview_storage_bucket:string|null;preview_storage_path:string|null;original_filename:string|null;is_primary:boolean;sort_order:number;width:number|null;height:number|null};
 const types:Record<string,string>={nightclub:"Casa noturna",club:"Boate / clube",bar:"Bar",lounge:"Lounge",event_space:"Espaço para eventos",other:"Outro"};
 const dayNames=["Domingo","Segunda-feira","Terça-feira","Quarta-feira","Quinta-feira","Sexta-feira","Sábado"];
 export const dynamic="force-dynamic";
@@ -26,8 +26,8 @@ export default async function ParceiroDetalhe({params}:{params:Promise<{slug:str
   supabase.from("partner_venue_amenities").select("id,name,description,icon_key").eq("venue_id",v.id).eq("active",true).order("sort_order"),
   supabase.from("partner_venue_rates").select("id,period_type,label,price,minimum_nights,notes").eq("venue_id",v.id).eq("active",true).order("sort_order")
  ]);
- const admin=process.env.SUPABASE_SERVICE_ROLE_KEY?createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{autoRefreshToken:false,persistSession:false}}):null;
- const gallery=(media||[]).map(m=>{const previewUrl=m.preview_storage_bucket&&m.preview_storage_path?supabase.storage.from(m.preview_storage_bucket).getPublicUrl(m.preview_storage_path).data.publicUrl||null:null;return previewUrl?{...m,url:previewUrl}:null;}).filter((m):m is NonNullable<typeof m>=>m!==null);
+ const publicMedia=(media||[]) as PublicPartnerVenueMedia[];
+ const gallery=publicMedia.map(m=>{const previewUrl=m.preview_storage_bucket&&m.preview_storage_path?supabase.storage.from(m.preview_storage_bucket).getPublicUrl(m.preview_storage_path).data.publicUrl||null:null;return previewUrl?{...m,url:previewUrl}:null;}).filter((m):m is NonNullable<typeof m>=>m!==null);
  const location=city+(state?" · "+state:""); const recruitmentWhatsapp=v.recruitment_contact_whatsapp?String(v.recruitment_contact_whatsapp).replace(/\D/g,""): ""; const partnerWhatsapp=v.phone?String(v.phone).replace(/\D/g,""): "";
  return <main className="shell partnerDetail">
   <nav className="topbar"><Link className="brand" href="/"><span className="brandMark">P</span><span>Pecatho</span></Link><div className="navLinks"><Link href="/parceiros">Parceiros</Link><Link href="/anunciantes">Anunciantes</Link><Link href="/fans">Fans</Link></div></nav>
