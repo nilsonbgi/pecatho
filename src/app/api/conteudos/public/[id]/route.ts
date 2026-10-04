@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getPublicDigitalContentCover } from "@/lib/digital-content/public-cover";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ export async function GET(
   const { data: product, error } = await admin
     .from("digital_content_products")
     .select(
-      "id,title,description,product_type,price,currency,status,owner_type,owner_id,cover_bucket,cover_path",
+      "id,title,description,product_type,price,currency,status,owner_type,owner_id,owner_user_id,cover_bucket,cover_path",
     )
     .eq("id", id)
     .eq("status", "published")
@@ -99,15 +100,7 @@ export async function GET(
     );
   }
 
-  let cover_url: string | null = null;
-
-  if (product.cover_bucket && product.cover_path) {
-    const { data: signed } = await admin.storage
-      .from(product.cover_bucket)
-      .createSignedUrl(product.cover_path, 300);
-
-    cover_url = signed?.signedUrl ?? null;
-  }
+  const cover_url = await getPublicDigitalContentCover(admin, product);
 
   const { data: items, error: itemsError } = await admin
     .from("digital_content_product_items")
