@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -32,10 +31,9 @@ export default async function ConteudosPage({ searchParams }: Props) {
       ? params.owner_id
       : null;
 
-  const supabase = await createClient();
   const admin = createAdminClient();
 
-  let query = supabase
+  let query = admin
     .from("digital_content_products")
     .select(
       "id,title,description,product_type,price,currency,owner_type,owner_id,cover_bucket,cover_path",
@@ -70,7 +68,7 @@ export default async function ConteudosPage({ searchParams }: Props) {
   let sellerProfileHref = "";
 
   if (scoped && ownerType === "advertiser" && ownerId) {
-    const { data: owner } = await supabase
+    const { data: owner } = await admin
       .from("advertiser_profiles")
       .select("display_name,title,slug")
       .eq("id", ownerId)
@@ -79,7 +77,7 @@ export default async function ConteudosPage({ searchParams }: Props) {
     sellerName = owner?.display_name || owner?.title || "Anunciante";
     sellerProfileHref = owner?.slug ? `/anunciantes/${owner.slug}` : "";
   } else if (scoped && ownerType === "creator" && ownerId) {
-    const { data: owner } = await supabase
+    const { data: owner } = await admin
       .from("fans_creators")
       .select("display_name,slug")
       .eq("id", ownerId)
