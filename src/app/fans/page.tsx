@@ -15,11 +15,13 @@ export default async function FansPage() {
   let postsCount = 0;
 
   const [
-    { data: creators, count: creatorsTotal },
+    { data: creators },
+    { data: creatorsTotal },
     { data: creatorPlans },
     { data: creatorOffers },
   ] = await Promise.all([
-    supabase.from("fans_creators").select("id,slug,display_name,bio,avatar_url,status", { count: "exact" }).eq("status", "active").order("display_name", { ascending: true }).limit(24),
+    supabase.rpc("get_public_fans_creators", { p_limit: 24 }),
+    supabase.rpc("get_public_fans_creators_count"),
     supabase.from("fans_plans").select("creator_id").eq("status", "active"),
     supabase.from("fans_live_offers").select("creator_id").eq("status", "active"),
   ]);
