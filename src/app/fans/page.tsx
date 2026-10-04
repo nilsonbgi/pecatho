@@ -3,6 +3,15 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+type PublicFansCreator = {
+  id: string;
+  slug: string;
+  display_name: string;
+  bio: string | null;
+  status: string;
+  avatar_url: string | null;
+};
+
 export default async function FansPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -26,7 +35,8 @@ export default async function FansPage() {
     supabase.from("fans_live_offers").select("creator_id").eq("status", "active"),
   ]);
 
-  const creatorIds = (creators || []).map((item) => item.id);
+  const publicCreators = (creators ?? []) as PublicFansCreator[];
+  const creatorIds = publicCreators.map((item) => item.id);
   const planMap = new Map<string, number>();
   const offerMap = new Map<string, number>();
 
@@ -47,8 +57,8 @@ export default async function FansPage() {
     postsCount = posts || 0;
   }
 
-  const featuredCreators = (creators || []).slice(0, 6);
-  const discoveryCreators = (creators || []).slice(0, 12);
+  const featuredCreators = publicCreators.slice(0, 6);
+  const discoveryCreators = publicCreators.slice(0, 12);
   const heroCreator = featuredCreators[0] || null;
   const creatorCountLabel = creatorsTotal && creatorsTotal > 0 ? creatorsTotal.toLocaleString("pt-BR") : "0";
   const userInitial = user?.email?.slice(0, 1).toUpperCase() || "F";
