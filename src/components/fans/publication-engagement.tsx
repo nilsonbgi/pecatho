@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 interface Props { postId: string; creatorName: string; }
-type Comment = { id: string; body: string; created_at: string; user_id: string };
+type Comment = { id: string; body: string; created_at: string };
 
 export default function PublicationEngagement({ postId, creatorName }: Props) {
   const supabase = createClient();
@@ -21,7 +21,7 @@ export default function PublicationEngagement({ postId, creatorName }: Props) {
   async function load() {
     const [{ count }, { data: commentRows }, { data: auth }] = await Promise.all([
       supabase.from("fans_likes").select("post_id", { count: "exact", head: true }).eq("post_id", postId),
-      supabase.from("fans_comments").select("id,body,created_at,user_id").eq("post_id", postId).eq("status", "visible").order("created_at", { ascending: false }).limit(20),
+      supabase.rpc("get_public_fans_comments", { p_post_id: postId }),
       supabase.auth.getUser(),
     ]);
     const currentUserId = auth.user?.id ?? null;
@@ -60,7 +60,7 @@ export default function PublicationEngagement({ postId, creatorName }: Props) {
     if (body.length > 1000) { setMessage("O comentário deve ter no máximo 1.000 caracteres."); return; }
     if (commenting) return;
     setCommenting(true);
-    const { data, error } = await supabase.from("fans_comments").insert({ post_id: postId, user_id: userId, body }).select("id,body,created_at,user_id").single();
+    const { data, error } = await supabase.from("fans_comments").insert({ post_id: postId, user_id: userId, body }).select("id,body,created_at").single();
     if (error) setMessage("Não foi possível publicar o comentário.");
     else { setComments(current => [data as Comment, ...current]); setCommentText(""); }
     setCommenting(false);
