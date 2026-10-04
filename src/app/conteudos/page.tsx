@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getPublicDigitalContentCover } from "@/lib/digital-content/public-cover";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,7 @@ export default async function ConteudosPage({ searchParams }: Props) {
   let query = admin
     .from("digital_content_products")
     .select(
-      "id,title,description,product_type,price,currency,owner_type,owner_id,cover_bucket,cover_path",
+      "id,title,description,product_type,price,currency,owner_type,owner_id,owner_user_id,cover_bucket,cover_path",
     )
     .eq("status", "published")
     .order("created_at", { ascending: false })
@@ -94,14 +95,7 @@ export default async function ConteudosPage({ searchParams }: Props) {
 
   const productsWithCovers = await Promise.all(
     visibleProducts.map(async (product) => {
-      let coverUrl: string | null = null;
-
-      if (product.cover_bucket && product.cover_path) {
-        const { data: signed } = await admin.storage
-          .from(product.cover_bucket)
-          .createSignedUrl(product.cover_path, 300);
-        coverUrl = signed?.signedUrl ?? null;
-      }
+      const coverUrl = await getPublicDigitalContentCover(admin, product);
 
       return { ...product, coverUrl };
     }),
