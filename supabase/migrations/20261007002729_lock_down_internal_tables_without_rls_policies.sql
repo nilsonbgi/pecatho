@@ -1,0 +1,9 @@
+-- Keep internal tables inaccessible through the public Data API.
+-- Applied to the production Supabase database as migration 20261007002729.
+REVOKE ALL PRIVILEGES ON TABLE public.content_seller_reviews FROM PUBLIC, anon, authenticated;
+REVOKE ALL PRIVILEGES ON TABLE public.customer_reviews FROM PUBLIC, anon, authenticated;
+REVOKE ALL PRIVILEGES ON TABLE public.fans_fee_rules FROM PUBLIC, anon, authenticated;
+REVOKE ALL PRIVILEGES ON TABLE public.fans_financial_ledger FROM PUBLIC, anon, authenticated;
+REVOKE ALL PRIVILEGES ON TABLE public.fans_live_reconciliation_log FROM PUBLIC, anon, authenticated;
+REVOKE ALL PRIVILEGES ON TABLE public.fans_live_refund_attempts FROM PUBLIC, anon, authenticated;
+REVOKE ALL PRIVILEGES ON TABLE public.registration_intents FROM PUBLIC, anon, authenticated;
