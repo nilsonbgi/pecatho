@@ -25,7 +25,7 @@ type FinancialSummary = {
   gross: number; platformFees: number; net: number; outstanding: number; paidOut: number; available: number;
 };
 type ParticipantSummary = {
-  participant_type: "fans" | "content"; participant_id: string; user_id: string; display_name: string;
+  participant_type: "unified"; participant_id: string; user_id: string; display_name: string;
   gross_sales: number; platform_fees: number; provider_fees: number; net_earned: number;
   outstanding_payouts: number; paid_out: number; available: number;
 };
@@ -82,14 +82,16 @@ export default function AdminPayoutsPage() {
 
     const summaryRows = (overview || []) as ParticipantSummary[];
     setParticipants(summaryRows);
-    const fansRows = summaryRows.filter((row) => row.participant_type === "fans");
-    const sellerRows = summaryRows.filter((row) => row.participant_type === "content");
     const sum = (rows: ParticipantSummary[], key: keyof ParticipantSummary) => rows.reduce((total, row) => total + Number(row[key] || 0), 0);
+    const fansGross = summaryRows.reduce((total, row) => total + Number(row.fans_gross_sales || 0), 0);
+    const fansPlatformFees = summaryRows.reduce((total, row) => total + Number(row.fans_platform_fees || 0), 0);
+    const sellerGross = summaryRows.reduce((total, row) => total + Number(row.content_gross_sales || 0), 0);
+    const sellerPlatformFees = summaryRows.reduce((total, row) => total + Number(row.content_platform_fees || 0), 0);
     const outstanding = rows.filter((row) => ["requested", "approved", "processing"].includes(row.status)).reduce((total, row) => total + Number(row.amount), 0);
     const paidOut = rows.filter((row) => row.status === "paid").reduce((total, row) => total + Number(row.amount), 0);
     setFinancial({
-      fansGross: sum(fansRows, "gross_sales"), fansPlatformFees: sum(fansRows, "platform_fees"),
-      sellerGross: sum(sellerRows, "gross_sales"), sellerPlatformFees: sum(sellerRows, "platform_fees"),
+      fansGross, fansPlatformFees,
+      sellerGross, sellerPlatformFees,
       gross: sum(summaryRows, "gross_sales"), platformFees: sum(summaryRows, "platform_fees"),
       net: sum(summaryRows, "net_earned"), outstanding, paidOut, available: sum(summaryRows, "available"),
     });
@@ -293,7 +295,7 @@ export default function AdminPayoutsPage() {
             <tbody>{participants.map((participant) => (
               <tr key={participant.participant_type + ":" + participant.participant_id} style={{ borderTop: "1px solid #e5e7eb" }}>
                 <td style={{ padding: "12px 8px" }}><strong>{participant.display_name}</strong></td>
-                <td style={{ padding: "12px 8px" }}>{participant.participant_type === "fans" ? "Acompanhante / Fans" : "Vendedor de conteúdo"}</td>
+                <td style={{ padding: "12px 8px" }}>{"Acompanhante / Fans + Conteúdo"}</td>
                 <td style={{ padding: "12px 8px" }}>{money.format(Number(participant.gross_sales))}</td>
                 <td style={{ padding: "12px 8px" }}>{money.format(Number(participant.platform_fees))}</td>
                 <td style={{ padding: "12px 8px" }}>{money.format(Number(participant.net_earned))}</td>
