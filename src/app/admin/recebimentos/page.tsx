@@ -21,15 +21,13 @@ type Payout = {
 type Creator = { id: string; display_name: string; slug: string; user_id: string };
 type Profile = { id: string; display_name: string | null; email: string | null };
 type FinancialSummary = {
-  fansGross: number;
-  fansPlatformFees: number;
-  fansNet: number;
-  sellerGross: number;
-  sellerPlatformFees: number;
-  sellerNet: number;
-  outstanding: number;
-  paidOut: number;
-  available: number;
+  fansGross: number; fansPlatformFees: number; sellerGross: number; sellerPlatformFees: number;
+  gross: number; platformFees: number; net: number; outstanding: number; paidOut: number; available: number;
+};
+type ParticipantSummary = {
+  participant_type: "fans" | "content"; participant_id: string; user_id: string; display_name: string;
+  gross_sales: number; platform_fees: number; provider_fees: number; net_earned: number;
+  outstanding_payouts: number; paid_out: number; available: number;
 };
 
 const statusLabel: Record<string, string> = {
@@ -55,16 +53,10 @@ export default function AdminPayoutsPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [financial, setFinancial] = useState<FinancialSummary>({
-    fansGross: 0,
-    fansPlatformFees: 0,
-    fansNet: 0,
-    sellerGross: 0,
-    sellerPlatformFees: 0,
-    sellerNet: 0,
-    outstanding: 0,
-    paidOut: 0,
-    available: 0,
+    fansGross: 0, fansPlatformFees: 0, sellerGross: 0, sellerPlatformFees: 0,
+    gross: 0, platformFees: 0, net: 0, outstanding: 0, paidOut: 0, available: 0,
   });
+  const [participants, setParticipants] = useState<ParticipantSummary[]>([]);
 
   async function load() {
     setError("");
@@ -82,71 +74,24 @@ export default function AdminPayoutsPage() {
     const rows = (data || []) as Payout[];
     setPayouts(rows);
 
-    const [
-      { data: fansLedger },
-      { data: sellerLedger },
-      { data: digitalSales },
-    ] = await Promise.all([
-      supabase
-        .from("fans_financial_ledger")
-        .select("amount,entry_type,direction")
-        .eq("status", "posted"),
-      supabase
-        .from("ledger_entries")
-        .select("user_id,amount,entry_type"),
-      supabase
-        .from("digital_content_sales")
-        .select("amount,platform_fee,owner_amount,status"),
-    ]);
+    const { data: overview, error: overviewError } = await supabase.rpc("admin_fans_financial_overview");
+    if (overviewError) {
+      setError(overviewError.message);
+      return;
+    }
 
-    const fansRows = fansLedger || [];
-    const sellerRows = sellerLedger || [];
-    const contentRows = digitalSales || [];
-
-    const fansGross = fansRows
-      .filter((row) => row.direction === "credit" && row.entry_type === "sale_gross")
-      .reduce((sum, row) => sum + Number(row.amount || 0), 0);
-    const fansPlatformFees = fansRows
-      .filter((row) => row.direction === "debit" && row.entry_type === "platform_fee")
-      .reduce((sum, row) => sum + Number(row.amount || 0), 0);
-    const fansNet = fansRows
-      .reduce((sum, row) => sum + (row.direction === "credit" ? 1 : -1) * Number(row.amount || 0), 0);
-
-    const sellerGross = sellerRows
-      .filter((row) => row.entry_type === "credit")
-      .reduce((sum, row) => sum + Number(row.amount || 0), 0);
-    const sellerDebits = sellerRows
-      .filter((row) => row.entry_type !== "credit" && row.entry_type !== "adjustment")
-      .reduce((sum, row) => sum + Number(row.amount || 0), 0);
-    const sellerNet = sellerGross - sellerDebits;
-
-    const sellerContentGross = contentRows
-      .filter((row) => row.status === "paid")
-      .reduce((sum, row) => sum + Number(row.amount || 0), 0);
-    const sellerContentFees = contentRows
-      .filter((row) => row.status === "paid")
-      .reduce((sum, row) => sum + Number(row.platform_fee || 0), 0);
-    const sellerContentNet = contentRows
-      .filter((row) => row.status === "paid")
-      .reduce((sum, row) => sum + Number(row.owner_amount || 0), 0);
-
-    const outstanding = rows
-      .filter((row) => ["requested", "approved", "processing"].includes(row.status))
-      .reduce((sum, row) => sum + Number(row.amount), 0);
-    const paidOut = rows
-      .filter((row) => row.status === "paid")
-      .reduce((sum, row) => sum + Number(row.amount), 0);
-
+    const summaryRows = (overview || []) as ParticipantSummary[];
+    setParticipants(summaryRows);
+    const fansRows = summaryRows.filter((row) => row.participant_type === "fans");
+    const sellerRows = summaryRows.filter((row) => row.participant_type === "content");
+    const sum = (rows: ParticipantSummary[], key: keyof ParticipantSummary) => rows.reduce((total, row) => total + Number(row[key] || 0), 0);
+    const outstanding = rows.filter((row) => ["requested", "approved", "processing"].includes(row.status)).reduce((total, row) => total + Number(row.amount), 0);
+    const paidOut = rows.filter((row) => row.status === "paid").reduce((total, row) => total + Number(row.amount), 0);
     setFinancial({
-      fansGross,
-      fansPlatformFees,
-      fansNet,
-      sellerGross: Math.max(sellerGross, sellerContentGross),
-      sellerPlatformFees: Math.max(sellerDebits, sellerContentFees),
-      sellerNet: Math.max(sellerNet, sellerContentNet),
-      outstanding,
-      paidOut,
-      available: Math.max(fansNet + sellerNet - outstanding, 0),
+      fansGross: sum(fansRows, "gross_sales"), fansPlatformFees: sum(fansRows, "platform_fees"),
+      sellerGross: sum(sellerRows, "gross_sales"), sellerPlatformFees: sum(sellerRows, "platform_fees"),
+      gross: sum(summaryRows, "gross_sales"), platformFees: sum(summaryRows, "platform_fees"),
+      net: sum(summaryRows, "net_earned"), outstanding, paidOut, available: sum(summaryRows, "available"),
     });
 
     const creatorIds = [...new Set(rows.map((row) => row.creator_id).filter((id): id is string => Boolean(id)))];
@@ -334,6 +279,31 @@ export default function AdminPayoutsPage() {
               ))}
             </select>
           </label>
+        </div>
+
+        <div className="authCard" style={{ overflowX: "auto", marginBottom: 20 }}>
+          <h2 style={{ marginTop: 0 }}>Posição financeira por participante</h2>
+          <p style={{ marginTop: 0 }}>Valores líquidos após comissão do Pecatho, taxas do provedor, estornos e solicitações já reservadas.</p>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1250 }}>
+            <thead><tr>
+              <th align="left">Participante</th><th align="left">Origem</th><th align="left">Vendas brutas</th>
+              <th align="left">Comissão Pecatho</th><th align="left">Líquido</th><th align="left">Em solicitação</th>
+              <th align="left">Já pago</th><th align="left">Disponível</th>
+            </tr></thead>
+            <tbody>{participants.map((participant) => (
+              <tr key={participant.participant_type + ":" + participant.participant_id} style={{ borderTop: "1px solid #e5e7eb" }}>
+                <td style={{ padding: "12px 8px" }}><strong>{participant.display_name}</strong></td>
+                <td style={{ padding: "12px 8px" }}>{participant.participant_type === "fans" ? "Acompanhante / Fans" : "Vendedor de conteúdo"}</td>
+                <td style={{ padding: "12px 8px" }}>{money.format(Number(participant.gross_sales))}</td>
+                <td style={{ padding: "12px 8px" }}>{money.format(Number(participant.platform_fees))}</td>
+                <td style={{ padding: "12px 8px" }}>{money.format(Number(participant.net_earned))}</td>
+                <td style={{ padding: "12px 8px" }}>{money.format(Number(participant.outstanding_payouts))}</td>
+                <td style={{ padding: "12px 8px" }}>{money.format(Number(participant.paid_out))}</td>
+                <td style={{ padding: "12px 8px" }}><strong>{money.format(Number(participant.available))}</strong></td>
+              </tr>
+            ))}</tbody>
+          </table>
+          {!participants.length && <p>Nenhum participante com movimentação financeira registrada.</p>}
         </div>
 
         <div className="authCard" style={{ overflowX: "auto" }}>
