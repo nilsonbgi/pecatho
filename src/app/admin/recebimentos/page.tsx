@@ -28,6 +28,7 @@ type ParticipantSummary = {
   participant_type: "unified"; participant_id: string; user_id: string; display_name: string;
   gross_sales: number; platform_fees: number; provider_fees: number; net_earned: number;
   outstanding_payouts: number; paid_out: number; available: number;
+  fans_gross_sales: number; fans_platform_fees: number; content_gross_sales: number; content_platform_fees: number;
 };
 
 const statusLabel: Record<string, string> = {
