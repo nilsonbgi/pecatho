@@ -20,6 +20,17 @@ type Payout = {
 
 type Creator = { id: string; display_name: string; slug: string; user_id: string };
 type Profile = { id: string; display_name: string | null; email: string | null };
+type FinancialSummary = {
+  fansGross: number;
+  fansPlatformFees: number;
+  fansNet: number;
+  sellerGross: number;
+  sellerPlatformFees: number;
+  sellerNet: number;
+  outstanding: number;
+  paidOut: number;
+  available: number;
+};
 
 const statusLabel: Record<string, string> = {
   requested: "Solicitado",
@@ -43,6 +54,17 @@ export default function AdminPayoutsPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [financial, setFinancial] = useState<FinancialSummary>({
+    fansGross: 0,
+    fansPlatformFees: 0,
+    fansNet: 0,
+    sellerGross: 0,
+    sellerPlatformFees: 0,
+    sellerNet: 0,
+    outstanding: 0,
+    paidOut: 0,
+    available: 0,
+  });
 
   async function load() {
     setError("");
@@ -59,6 +81,73 @@ export default function AdminPayoutsPage() {
 
     const rows = (data || []) as Payout[];
     setPayouts(rows);
+
+    const [
+      { data: fansLedger },
+      { data: sellerLedger },
+      { data: digitalSales },
+    ] = await Promise.all([
+      supabase
+        .from("fans_financial_ledger")
+        .select("amount,entry_type,direction")
+        .eq("status", "posted"),
+      supabase
+        .from("ledger_entries")
+        .select("user_id,amount,entry_type"),
+      supabase
+        .from("digital_content_sales")
+        .select("amount,platform_fee,owner_amount,status"),
+    ]);
+
+    const fansRows = fansLedger || [];
+    const sellerRows = sellerLedger || [];
+    const contentRows = digitalSales || [];
+
+    const fansGross = fansRows
+      .filter((row) => row.direction === "credit" && row.entry_type === "sale_gross")
+      .reduce((sum, row) => sum + Number(row.amount || 0), 0);
+    const fansPlatformFees = fansRows
+      .filter((row) => row.direction === "debit" && row.entry_type === "platform_fee")
+      .reduce((sum, row) => sum + Number(row.amount || 0), 0);
+    const fansNet = fansRows
+      .reduce((sum, row) => sum + (row.direction === "credit" ? 1 : -1) * Number(row.amount || 0), 0);
+
+    const sellerGross = sellerRows
+      .filter((row) => row.entry_type === "credit")
+      .reduce((sum, row) => sum + Number(row.amount || 0), 0);
+    const sellerDebits = sellerRows
+      .filter((row) => row.entry_type !== "credit" && row.entry_type !== "adjustment")
+      .reduce((sum, row) => sum + Number(row.amount || 0), 0);
+    const sellerNet = sellerGross - sellerDebits;
+
+    const sellerContentGross = contentRows
+      .filter((row) => row.status === "paid")
+      .reduce((sum, row) => sum + Number(row.amount || 0), 0);
+    const sellerContentFees = contentRows
+      .filter((row) => row.status === "paid")
+      .reduce((sum, row) => sum + Number(row.platform_fee || 0), 0);
+    const sellerContentNet = contentRows
+      .filter((row) => row.status === "paid")
+      .reduce((sum, row) => sum + Number(row.owner_amount || 0), 0);
+
+    const outstanding = rows
+      .filter((row) => ["requested", "approved", "processing"].includes(row.status))
+      .reduce((sum, row) => sum + Number(row.amount), 0);
+    const paidOut = rows
+      .filter((row) => row.status === "paid")
+      .reduce((sum, row) => sum + Number(row.amount), 0);
+
+    setFinancial({
+      fansGross,
+      fansPlatformFees,
+      fansNet,
+      sellerGross: Math.max(sellerGross, sellerContentGross),
+      sellerPlatformFees: Math.max(sellerDebits, sellerContentFees),
+      sellerNet: Math.max(sellerNet, sellerContentNet),
+      outstanding,
+      paidOut,
+      available: Math.max(fansNet + sellerNet - outstanding, 0),
+    });
 
     const creatorIds = [...new Set(rows.map((row) => row.creator_id).filter((id): id is string => Boolean(id)))];
     if (creatorIds.length) {
@@ -213,12 +302,28 @@ export default function AdminPayoutsPage() {
 
         <div className="formGrid" style={{ marginBottom: 20 }}>
           <div className="publicationBox">
-            <strong>Em aberto</strong>
-            <div style={{ fontSize: 24, marginTop: 6 }}>{money.format(totals.requested)}</div>
+            <strong>Saldo disponível para repasse</strong>
+            <div style={{ fontSize: 24, marginTop: 6 }}>{money.format(financial.available)}</div>
+            <small>Após comissões e solicitações em aberto</small>
           </div>
           <div className="publicationBox">
-            <strong>Total pago</strong>
-            <div style={{ fontSize: 24, marginTop: 6 }}>{money.format(totals.paid)}</div>
+            <strong>Aguardando liberação</strong>
+            <div style={{ fontSize: 24, marginTop: 6 }}>{money.format(financial.outstanding)}</div>
+            <small>Solicitado, aprovado ou em processamento</small>
+          </div>
+          <div className="publicationBox">
+            <strong>Comissões Pecatho · Fans</strong>
+            <div style={{ fontSize: 24, marginTop: 6 }}>{money.format(financial.fansPlatformFees)}</div>
+            <small>Valores registrados no ledger</small>
+          </div>
+          <div className="publicationBox">
+            <strong>Comissões Pecatho · Conteúdo</strong>
+            <div style={{ fontSize: 24, marginTop: 6 }}>{money.format(financial.sellerPlatformFees)}</div>
+            <small>Vendas de conteúdo pagas</small>
+          </div>
+          <div className="publicationBox">
+            <strong>Total já repassado</strong>
+            <div style={{ fontSize: 24, marginTop: 6 }}>{money.format(financial.paidOut)}</div>
           </div>
           <label>
             Filtrar status
