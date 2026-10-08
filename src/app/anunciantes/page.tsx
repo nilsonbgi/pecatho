@@ -121,7 +121,7 @@ export default function AcompanhantesPage() {
 
       const ids = rows.map((x) => x.id);
       const [{ data: mr }, { data: pm }] = await Promise.all([
-        s.from("profile_media").select("profile_id,preview_storage_bucket,preview_storage_path,storage_bucket,storage_path,kind,is_primary,is_public,show_in_cards").in("profile_id", ids).eq("is_public", true).eq("moderation_status", "approved").order("is_primary", { ascending: false }).order("sort_order"),
+        s.from("profile_media").select("profile_id,preview_storage_bucket,preview_storage_path,storage_bucket,storage_path,kind,access_type,price,is_primary,is_public,show_in_cards").in("profile_id", ids).eq("is_public", true).eq("moderation_status", "approved").order("is_primary", { ascending: false }).order("sort_order"),
         s.from("advertiser_profiles").select("id,availability").in("id", ids)
       ]);
       const byProfile = new Map<string, Media>();
@@ -198,7 +198,7 @@ export default function AcompanhantesPage() {
       <div className="commercialActions">{item.slug && <Link className="primaryButton commercialPrimary" href={`/anunciantes/${item.slug}`}>Ver perfil <span>↗</span></Link>}{item.paidMediaCount > 0 && item.slug && <Link className="secondaryButton commercialContentCta" href={`/anunciantes/${item.slug}#conteudo-exclusivo`}>Conteúdo exclusivo</Link>}</div>
     </div>
   </article>;
-})}</div></div>{hasMore && <div className="discoveryLoadMore"><button type="button" className="secondaryButton" onClick={loadMore} disabled={loadingMore}>{loadingMore ? "Carregando mais perfis..." : "Carregar mais perfis"}</button></div>}</>}
+})}</div>{hasMore && <div className="discoveryLoadMore"><button type="button" className="secondaryButton" onClick={loadMore} disabled={loadingMore}>{loadingMore ? "Carregando mais perfis..." : "Carregar mais perfis"}</button></div>}</>}
     </section>
     <nav className="discoveryMobileBar" aria-label="Ações rápidas"><a href="#resultados">Ver resultados</a><button type="button" onClick={() => setAdvancedOpen((x) => !x)}>Filtros{activeFilterCount ? ` (${activeFilterCount})` : ""}</button></nav>
   </main>;
