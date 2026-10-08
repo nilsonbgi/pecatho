@@ -525,3 +525,45 @@
  .dashboardMobileNav a.active,.dashboardMobileNav a:hover{background:rgba(255,255,255,.08);color:#fff}
 }
 @media(max-width:420px){.dashboardMobileNav{grid-template-columns:repeat(3,1fr)}.dashboardMobileNav a:nth-child(4){display:none}.dashboardMobileNav a{font-size:10px}}
+
+
+/* Pecatho — cards comerciais da descoberta pública */
+.commercialAdvertiserCard{overflow:hidden;border-color:rgba(255,255,255,.09);background:linear-gradient(180deg,#111214,#0d0e11);transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease}
+.commercialAdvertiserCard:hover{transform:translateY(-4px);border-color:rgba(231,195,63,.30);box-shadow:0 22px 50px rgba(0,0,0,.28)}
+.commercialAdvertiserVisual{height:330px;min-height:330px;background:#08090c;overflow:hidden;position:relative}
+.commercialAdvertiserVisual>img{transition:transform .45s ease}
+.commercialAdvertiserCard:hover .commercialAdvertiserVisual>img{transform:scale(1.035)}
+.commercialVisualTop{position:absolute;left:14px;right:14px;top:14px;display:flex;align-items:center;justify-content:space-between;gap:8px;z-index:2}
+.commercialCategory{padding:7px 10px;border-radius:999px;background:rgba(7,8,11,.78);border:1px solid rgba(255,255,255,.10);color:#eee9df;font-size:9px;font-weight:900;letter-spacing:.13em;backdrop-filter:blur(10px)}
+.commercialVisualTop .verifiedMark{position:static}
+.commercialVisualBottom{position:absolute;left:14px;right:14px;bottom:14px;display:flex;gap:7px;flex-wrap:wrap;z-index:2}
+.commercialVisualBottom span{padding:7px 9px;border-radius:999px;background:rgba(7,8,11,.78);border:1px solid rgba(255,255,255,.09);color:#ddd7cc;font-size:9px;font-weight:800;backdrop-filter:blur(10px)}
+.commercialVisualBottom .paidContentBadge{border-color:rgba(231,195,63,.30);color:#f1cd5a;background:rgba(48,38,7,.84)}
+.commercialAdvertiserBody{padding:18px 18px 19px}
+.commercialTitleRow{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.commercialTitleRow h3{margin:0;font-size:20px;letter-spacing:-.035em;color:#f3efe7;line-height:1.1}
+.commercialTrust{flex:0 0 auto;padding:5px 7px;border:1px solid rgba(16,185,129,.24);border-radius:999px;background:rgba(16,185,129,.08);color:#7de2ae;font-size:8px;font-weight:900;letter-spacing:.04em}
+.commercialAdvertiserBody .advertiserName{margin:5px 0 0;color:#b1a99b;font-size:11px}
+.commercialAdvertiserBody .advertiserLocation{margin-top:12px}
+.commercialAdvertiserBody .advertiserSummary{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:36px}
+.commercialSignalRow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:13px;color:#777f8e;font-size:9px;font-weight:750}
+.commercialSignalRow span{padding:6px 8px;border-radius:8px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.055)}
+.commercialSignalRow .signalAvailable{color:#9ce5ba;border-color:rgba(16,185,129,.18);background:rgba(16,185,129,.055)}
+.commercialPrice{margin:14px 0 14px;padding:12px 13px}
+.commercialPrice>div{display:grid;gap:2px}
+.commercialPrice small{color:#696f7d;font-size:8px;text-transform:uppercase;letter-spacing:.12em}
+.commercialActions{display:grid;grid-template-columns:1fr auto;gap:8px}
+.commercialActions .commercialPrimary{justify-content:center;text-decoration:none}
+.commercialContentCta{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;white-space:nowrap;border-color:rgba(124,58,237,.32);color:#c4b5fd;background:rgba(124,58,237,.07)}
+.commercialContentCta:hover{border-color:rgba(167,139,250,.55);background:rgba(124,58,237,.12)}
+@media(max-width:700px){
+ .commercialAdvertiserVisual{height:300px;min-height:300px}
+ .commercialActions{grid-template-columns:1fr}
+ .commercialContentCta{min-height:42px}
+}
+@media(max-width:420px){
+ .commercialAdvertiserVisual{height:275px;min-height:275px}
+ .commercialAdvertiserBody{padding:16px}
+ .commercialTitleRow h3{font-size:18px}
+ .commercialTrust{display:none}
+}
