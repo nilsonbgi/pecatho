@@ -363,7 +363,7 @@ export default function MinhasComprasClient() {
             </Link>
           </div>
         ) : (
-          {filteredPurchases.length === 0 ? (
+          filteredPurchases.length === 0 ? (
             <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-8 text-center">
               <div className="text-3xl">⌕</div>
               <h2 className="mt-3 text-lg font-black">Nenhum conteúdo corresponde aos filtros</h2>
@@ -616,7 +616,7 @@ export default function MinhasComprasClient() {
               <div className="p-4">
                 <div className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-300">COMPRA CONFIRMADA</div>
                 <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <div className="font-black">{item.profile.display_name || "Anunciante Pecatho"}</div>
+                  <div className="font-black">{item.profile.display_name || "Acompanhante Pecatho"}</div>
                   {item.profile.seller_reputation?.trust_badge ? (
                     <span className="inline-flex items-center rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.1em] text-emerald-300">
                       ✓ Verificado
