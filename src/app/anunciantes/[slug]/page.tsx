@@ -148,6 +148,7 @@ export default function PublicAdvertiserPage() {
   const averageRating = reviews.length ? reviews.reduce((sum, item) => sum + Number(item.rating || 0), 0) / reviews.length : 0;
   const publicImages = media.filter((item) => item.kind === "image" && item.show_in_gallery !== false).length;
   const publicVideos = media.filter((item) => item.kind === "video" && item.show_in_gallery !== false).length;
+  const exclusiveMediaCount = media.filter((item) => item.access_type === "paid" && item.show_in_gallery !== false).length;
   const socialLinks = Object.entries(profile?.social_links || {}).map(([label, value]) => { const url = safeExternalUrl(value); return url ? [label, url] as const : null; }).filter((entry): entry is readonly [string, string] => entry !== null);
   const paymentMethods = (() => {
     const methods = profile?.payment_options?.methods;
@@ -298,7 +299,7 @@ export default function PublicAdvertiserPage() {
       )}
       <nav className="topbar"><Link href="/" className="brand"><span className="brandMark">P</span><span>Pecatho</span></Link><Link href="/anunciantes" className="navCta">Ver acompanhantes</Link></nav>
 
-      <nav className="profileSectionNav" aria-label="Navegação comercial do perfil" style={{ position: "sticky", top: 12, zIndex: 20, display: "flex", flexWrap: "wrap", gap: 8, margin: "12px 0 18px", padding: 8, border: "1px solid rgba(231,195,63,.22)", borderRadius: 16, background: "rgba(255,255,255,.92)", backdropFilter: "blur(14px)", boxShadow: "0 12px 30px rgba(15,23,42,.06)" }}>
+      <nav className="profileSectionNav" aria-label="Navegação comercial do perfil">
         <a href="#conteudo-exclusivo" className="secondaryButton" style={{ textDecoration: "none" }}>Conteúdo exclusivo</a>
         {selectedServices.length > 0 && <a href="#servicos" className="secondaryButton" style={{ textDecoration: "none" }}>Serviços</a>}
         {validPrices.length > 0 && <a href="#valores" className="secondaryButton" style={{ textDecoration: "none" }}>Valores</a>}
@@ -308,7 +309,7 @@ export default function PublicAdvertiserPage() {
 
       <section className="publicProfileHero" style={{padding:0,overflow:"hidden"}}>
         <div className="advertiserHeroGrid">
-          <div style={{position:"relative",minHeight:360,background:"#0b0b12"}}>
+          <div className="profileHeroMedia">
             {primaryMedia?.url || primaryMedia?.previewUrl ? (
               primaryMedia.kind === "video" ? <video src={primaryMedia.url || primaryMedia.previewUrl || undefined} muted playsInline controls style={{width:"100%",height:"100%",minHeight:360,objectFit:"cover"}} /> :
               <img src={primaryMedia.url || primaryMedia.previewUrl || undefined} alt={profile.title || profile.display_name || "Perfil Pecatho"} style={{width:"100%",height:"100%",minHeight:360,objectFit:"cover"}} />
@@ -327,7 +328,7 @@ export default function PublicAdvertiserPage() {
               <span style={{padding:"8px 11px",borderRadius:999,background:"rgba(0,0,0,.68)",color:"#fff",fontSize:11,fontWeight:800}}>★ {reviews.length} avaliações</span>
             </div>
           </div>
-          <div style={{padding:"30px 28px",display:"flex",flexDirection:"column",justifyContent:"center",background:"linear-gradient(160deg,#11111a,#21183a)",color:"#fff"}}>
+          <div className="profileHeroCopy">
             <div className="eyebrow" style={{color:"#c4b5fd"}}>{category?.name || "ANUNCIANTE"}</div>
             <h1 style={{fontSize:"clamp(2rem,4vw,3.5rem)",lineHeight:1,margin:"10px 0",letterSpacing:"-.05em"}}>{profile.title || profile.display_name || "Perfil Pecatho"}</h1>
             {age && <div style={{fontSize:14,fontWeight:800,color:"#ddd6fe"}}>{age} anos{city?.name ? ` · ${city.name}` : ""}{state?.uf ? ` · ${state.uf}` : ""}</div>}
@@ -359,6 +360,26 @@ export default function PublicAdvertiserPage() {
         <article className="card" style={{ padding: 18, border: "1px solid rgba(15,23,42,.08)", background: "#fff" }}>
           <div className="eyebrow">CONTATO</div><strong style={{ display: "block", fontSize: 20, marginTop: 5 }}>{whatsappContact ? "WhatsApp disponível" : "Atendimento pelo Pecatho"}</strong><p style={{ margin: "7px 0 12px", color: "#64748b", lineHeight: 1.5 }}>O primeiro contato informa que você chegou até este anúncio por intermédio do Pecatho.</p>{whatsappContact ? <a href={whatsappUrl("Olá! Encontrei seu perfil no Pecatho e gostaria de conversar sobre os serviços anunciados. Este contato ocorreu por intermédio do Pecatho.") || "#"} target="_blank" rel="noreferrer" className="primaryButton" style={{ textDecoration: "none" }}>Falar pelo WhatsApp</a> : <button type="button" className="primaryButton" onClick={() => void startConversation("Olá! Encontrei seu perfil no Pecatho e gostaria de conversar sobre os serviços anunciados. Este contato ocorreu por intermédio do Pecatho.")} disabled={conversationBusy}>{conversationBusy ? "Abrindo conversa..." : "Enviar mensagem"}</button>}
         </article>
+      </section>
+
+      <section className="profileTrustRail" aria-label="Resumo de confiança e proposta do perfil">
+        <div className="profileTrustIntro">
+          <span className="eyebrow">POR QUE ESTE PERFIL</span>
+          <strong>Uma experiência Pecatho completa</strong>
+          <p>Descoberta, atendimento, serviços e conteúdo exclusivo reunidos em um único lugar.</p>
+        </div>
+        <div className="profileTrustItem">
+          <span className="profileTrustIcon">✓</span>
+          <div><strong>{profile.verification_status === "verified" ? "Identidade verificada" : "Perfil publicado"}</strong><small>{profile.verification_status === "verified" ? "Sinal de confiança do catálogo Pecatho." : "Perfil sujeito às regras de publicação e moderação."}</small></div>
+        </div>
+        <div className="profileTrustItem">
+          <span className="profileTrustIcon">★</span>
+          <div><strong>{reviews.length > 0 ? `${averageRating.toFixed(1)} · ${reviews.length} avaliações` : "Ainda sem avaliações"}</strong><small>Experiências verificadas aparecem no perfil público.</small></div>
+        </div>
+        <div className="profileTrustItem profileTrustAccent">
+          <span className="profileTrustIcon">✦</span>
+          <div><strong>{exclusiveMediaCount > 0 ? `${exclusiveMediaCount} itens exclusivos` : "Conteúdo exclusivo"}</strong><small>{exclusiveMediaCount > 0 ? "Venda digital integrada ao perfil." : "A vitrine digital pode aparecer aqui quando publicada."}</small></div>
+        </div>
       </section>
       <DigitalContentShowcase ownerType="advertiser" ownerId={profile.id} compact />
 
