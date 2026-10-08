@@ -99,6 +99,17 @@ export default function DigitalContentShowcase({
 
   const visible = compact ? products.slice(0, 3) : products;
   const sellerLabel = ownerType === "creator" ? "criador" : "acompanhante";
+  const packageCount = products.filter((product) => product.product_type === "package").length;
+  const videoCount = products.filter((product) => product.product_type === "single_video").length;
+  const imageCount = products.filter((product) => product.product_type === "single_image").length;
+  const lowestPrice = products.reduce<number | null>((lowest, product) => {
+    const price = Number(product.price);
+    if (!Number.isFinite(price)) return lowest;
+    return lowest === null || price < lowest ? price : lowest;
+  }, null);
+  const currency = products[0]?.currency || "BRL";
+  const money = (value: number) =>
+    new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(value);
 
   return (
     <section
@@ -142,8 +153,11 @@ export default function DigitalContentShowcase({
             ) : null}
 
             <h2 className="mt-3 text-3xl font-black tracking-[-.06em] sm:text-4xl">
-              Conteúdo exclusivo
+              Uma loja exclusiva dentro do perfil
             </h2>
+            <p className="mt-2 text-sm font-bold text-violet-200/80">
+              Fotos, vídeos e pacotes selecionados — compre diretamente de quem você acompanha.
+            </p>
 
             <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
               Materiais exclusivos disponibilizados diretamente por este {sellerLabel}.
@@ -168,7 +182,30 @@ export default function DigitalContentShowcase({
           ) : null}
         </div>
 
-        <div className="mt-7 grid gap-4 md:grid-cols-3">
+        <div className="mt-7 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-2xl border border-white/10 bg-white/[.045] p-4">
+            <span className="text-[9px] font-black tracking-[.16em] text-white/40">CATÁLOGO</span>
+            <strong className="mt-1 block text-2xl font-black">{products.length}</strong>
+            <span className="text-[10px] font-bold text-white/45">opções disponíveis</span>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[.045] p-4">
+            <span className="text-[9px] font-black tracking-[.16em] text-white/40">PACOTES</span>
+            <strong className="mt-1 block text-2xl font-black">{packageCount}</strong>
+            <span className="text-[10px] font-bold text-white/45">seleções completas</span>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[.045] p-4">
+            <span className="text-[9px] font-black tracking-[.16em] text-white/40">VARIEDADE</span>
+            <strong className="mt-1 block text-2xl font-black">{imageCount + videoCount}</strong>
+            <span className="text-[10px] font-bold text-white/45">{imageCount} fotos · {videoCount} vídeos</span>
+          </div>
+          <div className="rounded-2xl border border-violet-300/15 bg-violet-400/[.07] p-4">
+            <span className="text-[9px] font-black tracking-[.16em] text-violet-200/70">A PARTIR DE</span>
+            <strong className="mt-1 block text-xl font-black">{lowestPrice === null ? "Consulte" : money(lowestPrice)}</strong>
+            <span className="text-[10px] font-bold text-white/45">acesso individual ou pacote</span>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-4 md:grid-cols-3">
           {loading
             ? [1, 2, 3].map((item) => (
                 <div
@@ -196,6 +233,18 @@ export default function DigitalContentShowcase({
                   </div>
 
                   <div className="relative flex min-h-72 flex-col justify-between p-5">
+                    <div className="flex items-center gap-2">
+                      {product.product_type === "package" ? (
+                        <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-2.5 py-1 text-[9px] font-black tracking-[.12em] text-amber-200">
+                          MELHOR PARA CONHECER
+                        </span>
+                      ) : null}
+                      {reputation?.trust_badge ? (
+                        <span className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2.5 py-1 text-[9px] font-black tracking-[.1em] text-emerald-200">
+                          ✓ VENDEDOR VERIFICADO
+                        </span>
+                      ) : null}
+                    </div>
                     <div className="flex items-start justify-between gap-3">
                       <span className="rounded-full border border-violet-300/25 bg-violet-400/10 px-2.5 py-1 text-[9px] font-black tracking-[.12em] text-violet-100 backdrop-blur">
                         {typeLabel[product.product_type]}
@@ -229,7 +278,7 @@ export default function DigitalContentShowcase({
                             : "Acesso individual"}
                         </span>
                         <span className="text-violet-200 transition group-hover:translate-x-1">
-                          Ver e comprar →
+                          {product.product_type === "package" ? "Escolher pacote →" : "Ver e comprar →"}
                         </span>
                       </div>
                     </div>
