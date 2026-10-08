@@ -362,8 +362,7 @@ export default function MinhasComprasClient() {
               Ver conteúdos
             </Link>
           </div>
-        ) : (
-          filteredPurchases.length === 0 ? (
+        ) : filteredPurchases.length === 0 ? (
             <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-8 text-center">
               <div className="text-3xl">⌕</div>
               <h2 className="mt-3 text-lg font-black">Nenhum conteúdo corresponde aos filtros</h2>
@@ -598,7 +597,6 @@ export default function MinhasComprasClient() {
               )}
             </section>
           </div>
-          )}
         )}
 
         <section className="mt-8 rounded-3xl border border-white/10 bg-white/[0.05] p-6 sm:p-7">
