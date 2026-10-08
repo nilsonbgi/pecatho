@@ -19,7 +19,7 @@ export default async function ClientePainel() {
   if (profile?.account_type !== "customer") redirect("/painel");
 
   const admin = createAdminClient();
-  const [{ data: sales }, { count: mediaPurchases }, { count: followingCount }, { count: conversationCount }, { count: unreadNotifications }, { data: reviews }, { data: gifts }] = await Promise.all([
+  const [{ data: sales }, { count: mediaPurchases }, { count: followingCount }, { count: conversationCount }, { count: unreadNotifications }, { data: reviews }, { data: gifts }, { data: pointAccount }, { data: pointHistory }] = await Promise.all([
     admin.from("digital_content_sales").select("amount,status").eq("buyer_user_id", user.id),
     admin.from("profile_media_purchases").select("id", { count: "exact", head: true }).eq("buyer_user_id", user.id).eq("status", "paid"),
     admin.from("user_follows").select("profile_id", { count: "exact", head: true }).eq("follower_id", user.id),
@@ -27,6 +27,8 @@ export default async function ClientePainel() {
     admin.from("fans_notifications").select("id", { count: "exact", head: true }).eq("user_id", user.id).is("read_at", null),
     admin.from("customer_reviews").select("id,rating,comment,source_type,created_at").eq("customer_user_id", user.id).eq("status", "approved").eq("verified_interaction", true).order("created_at", { ascending: false }).limit(8),
     admin.from("pecatho_gifts").select("id,amount,status,recipient_type,recipient_id,created_at").eq("buyer_user_id", user.id).order("created_at", { ascending: false }).limit(8),
+    admin.from("pecatho_user_points").select("balance,updated_at").eq("user_id", user.id).maybeSingle(),
+    admin.from("pecatho_points_ledger").select("id,points,description,created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(6),
   ]);
 
   const paidSales = (sales ?? []).filter((sale) => sale.status === "paid");
@@ -50,8 +52,10 @@ export default async function ClientePainel() {
           <article className="card"><div className="cardIcon">M</div><h2>Mensagens</h2><p>{conversationCount ?? 0} {(conversationCount ?? 0) === 1 ? "conversa ativa" : "conversas ativas"}.</p><Link className="secondaryButton" href="/painel/mensagens">Abrir mensagens</Link></article>
           <article className="card"><div className="cardIcon">♥</div><h2>Perfis acompanhados</h2><p>{followingCount ?? 0} {(followingCount ?? 0) === 1 ? "perfil" : "perfis"} acompanhados.</p><Link className="secondaryButton" href="/painel/seguindo">Ver acompanhamentos</Link></article>
           <article className="card"><div className="cardIcon">N</div><h2>Notificações</h2><p>{unreadNotifications ?? 0} não lida{unreadNotifications === 1 ? "" : "s"}.</p><Link className="secondaryButton" href="/painel/notificacoes">Abrir central</Link></article>
+          <article className="card"><div className="cardIcon">✦</div><h2>Pontos Pecatho</h2><p className="financeBig">{Number(pointAccount?.balance ?? 0)}</p><p>Você acumula pontos com avaliações de interações realmente verificadas.</p><p className="fieldNote">A pontuação não depende da nota dada e não é liberada para avaliações sem comprovação.</p></article>
           <article className="card"><div className="cardIcon">P</div><h2>Meu cadastro</h2><p>Identidade e localização permanecem privadas. O rating não expõe seus dados pessoais.</p><Link className="secondaryButton" href="/painel/perfil">Editar cadastro</Link></article>
         </section>
+        <section id="pontuacao" className="card"><div className="eyebrow">PONTUAÇÃO PECATHO</div><h2>Seu saldo de confiança</h2><p>Os pontos são registrados automaticamente quando uma avaliação sua é aprovada e vinculada a uma interação verificada. A pontuação é igual para a participação válida, independentemente de você dar uma nota alta ou baixa.</p>{pointHistory?.length ? <div className="financeHistory">{pointHistory.map((entry) => <article key={entry.id}><div><strong>{entry.points > 0 ? "+" : ""}{entry.points} pontos</strong><small>{new Date(entry.created_at).toLocaleString("pt-BR")}</small></div><span className="financeStatus">{entry.description}</span></article>)}</div> : <p className="fieldNote">Você ainda não possui lançamentos de pontos. Quando participar de uma avaliação verificada, o lançamento aparecerá aqui.</p>}</section>
         <section id="reputacao" className="card"><div className="eyebrow">REPUTAÇÃO DO CLIENTE</div><h2>Seu histórico de confiança</h2>{reviews?.length ? <div className="financeHistory">{reviews.map((review) => <article key={review.id}><div><strong className="text-amber-300">{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</strong><small>{review.source_type === "digital_content" ? "Compra de conteúdo" : review.source_type === "profile_media" ? "Compra de mídia exclusiva" : "Experiência de serviço"} · {new Date(review.created_at).toLocaleString("pt-BR")}</small></div>{review.comment ? <p>{review.comment}</p> : <span className="financeStatus">Interação verificada</span>}</article>)}</div> : <p className="fieldNote">Ainda não há avaliações verificadas. Elas aparecerão conforme vendedores e acompanhantes registrarem experiências reais com você.</p>}</section>
         <section id="avaliacoes"><CustomerProfessionalReviews /></section>
 
