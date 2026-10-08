@@ -121,6 +121,18 @@ export default function MinhasComprasClient() {
   const [typeFilter, setTypeFilter] = useState<"all" | "package" | "single_image" | "single_video">("all");
   const [sellerFilter, setSellerFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [discoveryProducts, setDiscoveryProducts] = useState<Array<{
+    id: string;
+    title: string;
+    description: string | null;
+    product_type: string;
+    price: number | string;
+    currency: string;
+    cover_url: string | null;
+    owner_name: string;
+    owner_slug: string;
+  }>>([]);
+  const [discoveryLoading, setDiscoveryLoading] = useState(false);
 
   const sellerOptions = useMemo(() => {
     const map = new Map<string, string>();
@@ -154,6 +166,43 @@ export default function MinhasComprasClient() {
     () => purchases.find((purchase) => purchase.id === selectedSale) ?? null,
     [purchases, selectedSale],
   );
+
+  useEffect(() => {
+    const owner = selectedPurchase?.product;
+    if (!owner?.owner_type || !owner.owner_id) {
+      setDiscoveryProducts([]);
+      return;
+    }
+
+    let cancelled = false;
+    setDiscoveryLoading(true);
+
+    fetch(
+      `/api/conteudos/public?owner_type=${encodeURIComponent(owner.owner_type)}&owner_id=${encodeURIComponent(owner.owner_id)}`,
+      { cache: "no-store" },
+    )
+      .then(async (response) => {
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.error || "Não foi possível carregar novas recomendações.");
+        if (!cancelled) {
+          setDiscoveryProducts(
+            (body.products ?? [])
+              .filter((product: { id: string }) => product.id !== owner.id)
+              .slice(0, 4),
+          );
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setDiscoveryProducts([]);
+      })
+      .finally(() => {
+        if (!cancelled) setDiscoveryLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedPurchase]);
 
   async function loadDownloads(saleId: string) {
     setSelectedSale(saleId);
@@ -518,6 +567,93 @@ export default function MinhasComprasClient() {
                       {selectedPurchase.product.description}
                     </p>
                   ) : null}
+
+                  <div className="mt-6 rounded-3xl border border-violet-400/10 bg-violet-500/[0.04] p-5">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                      <div>
+                        <div className="text-[10px] font-black uppercase tracking-[0.18em] text-violet-300">
+                          CONTINUE CONECTADO
+                        </div>
+                        <h3 className="mt-1 text-lg font-black tracking-[-0.03em]">
+                          Mais conteúdos de {selectedPurchase.product.seller?.name ?? "quem você acompanha"}
+                        </h3>
+                        <p className="mt-1 text-xs leading-5 text-white/45">
+                          Você já conhece este vendedor. Descubra outros conteúdos sem perder o caminho de volta ao perfil.
+                        </p>
+                      </div>
+                      <Link
+                        href={`/conteudos?owner_type=${selectedPurchase.product.owner_type}&owner_id=${selectedPurchase.product.owner_id}`}
+                        className="shrink-0 text-xs font-black text-violet-300 hover:text-violet-200"
+                      >
+                        Ver loja completa →
+                      </Link>
+                    </div>
+
+                    {discoveryLoading ? (
+                      <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-xs text-white/40">
+                        Carregando recomendações…
+                      </div>
+                    ) : discoveryProducts.length > 0 ? (
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                        {discoveryProducts.map((product) => (
+                          <Link
+                            key={product.id}
+                            href={`/conteudos/${product.id}`}
+                            className="group overflow-hidden rounded-2xl border border-white/10 bg-black/25 transition hover:border-violet-400/30 hover:bg-violet-500/[0.06]"
+                          >
+                            <div className="flex min-h-[112px]">
+                              <div className="w-28 shrink-0 overflow-hidden bg-white/[0.04]">
+                                {product.cover_url ? (
+                                  <img
+                                    src={product.cover_url}
+                                    alt=""
+                                    className="h-full min-h-[112px] w-full object-cover transition duration-300 group-hover:scale-105"
+                                  />
+                                ) : (
+                                  <div className="grid h-full min-h-[112px] place-items-center text-xl text-white/20">◈</div>
+                                )}
+                              </div>
+                              <div className="min-w-0 p-3">
+                                <div className="text-[8px] font-black uppercase tracking-[0.14em] text-violet-300">
+                                  {typeLabel(product.product_type)}
+                                </div>
+                                <div className="mt-1 line-clamp-2 text-sm font-black text-white">
+                                  {product.title}
+                                </div>
+                                <div className="mt-3 text-sm font-black text-white">
+                                  {money(Number(product.price), product.currency)}
+                                </div>
+                                <div className="mt-1 text-[9px] font-black uppercase tracking-[0.1em] text-white/30">
+                                  Ver conteúdo →
+                                </div>
+                              </div>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-xs leading-5 text-white/40">
+                        Este vendedor ainda não publicou outros conteúdos disponíveis. Você pode visitar o perfil para continuar descobrindo.
+                      </div>
+                    )}
+
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      {selectedPurchase.product.seller?.href ? (
+                        <Link
+                          href={selectedPurchase.product.seller.href}
+                          className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-black text-white/70 hover:text-white"
+                        >
+                          Voltar ao perfil →
+                        </Link>
+                      ) : null}
+                      <Link
+                        href="/conteudos"
+                        className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-black text-white/70 hover:text-white"
+                      >
+                        Explorar marketplace →
+                      </Link>
+                    </div>
+                  </div>
 
                   <div className="mt-6 grid grid-cols-2 gap-3">
                     <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
