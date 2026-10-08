@@ -5,7 +5,14 @@ import { getPublicDigitalContentCover } from "@/lib/digital-content/public-cover
 export const dynamic = "force-dynamic";
 
 type Props = {
-  searchParams: Promise<{ owner_type?: string; owner_id?: string }>;
+  searchParams: Promise<{
+    owner_type?: string;
+    owner_id?: string;
+    q?: string;
+    type?: string;
+    sort?: string;
+    max?: string;
+  }>;
 };
 
 function formatPrice(value: number | string | null | undefined) {
@@ -31,6 +38,19 @@ export default async function ConteudosPage({ searchParams }: Props) {
     typeof params.owner_id === "string" && /^[0-9a-f-]{36}$/i.test(params.owner_id)
       ? params.owner_id
       : null;
+  const search = typeof params.q === "string" ? params.q.trim().slice(0, 80) : "";
+  const productType =
+    params.type === "package" || params.type === "single_video" || params.type === "single_image"
+      ? params.type
+      : null;
+  const sort =
+    params.sort === "price_asc" || params.sort === "price_desc" || params.sort === "oldest"
+      ? params.sort
+      : "featured";
+  const maxPrice = (() => {
+    const value = Number(params.max);
+    return Number.isFinite(value) && value > 0 && value <= 100000 ? value : null;
+  })();
 
   const admin = createAdminClient();
 
@@ -41,7 +61,7 @@ export default async function ConteudosPage({ searchParams }: Props) {
     )
     .eq("status", "published")
     .order("created_at", { ascending: false })
-    .limit(60);
+    .limit(120);
 
   if (ownerType && ownerId) {
     query = query.eq("owner_type", ownerType).eq("owner_id", ownerId);
@@ -307,11 +327,76 @@ export default async function ConteudosPage({ searchParams }: Props) {
     }
   }
 
+  const marketplaceProducts = productsWithCovers
+    .filter((product) => sellerMap.has(product.owner_id))
+    .filter((product) => {
+      if (!search) return true;
+      const seller = sellerMap.get(product.owner_id);
+      const haystack = [
+        product.title,
+        product.description ?? "",
+        seller?.name ?? "",
+        product.product_type === "package" ? "pacote" : "",
+        product.product_type === "single_video" ? "vídeo video" : "",
+        product.product_type === "single_image" ? "foto imagem" : "",
+      ].join(" ").toLocaleLowerCase("pt-BR");
+      return haystack.includes(search.toLocaleLowerCase("pt-BR"));
+    })
+    .filter((product) => !productType || product.product_type === productType)
+    .filter((product) => maxPrice === null || Number(product.price) <= maxPrice);
+
+  const sortedMarketplaceProducts = [...marketplaceProducts].sort((a, b) => {
+    if (sort === "price_asc") return Number(a.price) - Number(b.price);
+    if (sort === "price_desc") return Number(b.price) - Number(a.price);
+    return 0;
+  });
+
   const visibleProducts = scoped
-    ? scopedOwnerIsPublic
-      ? productsWithCovers
-      : []
-    : productsWithCovers.filter((product) => sellerMap.has(product.owner_id));
+    ? scopedOwnerIsPublic ? productsWithCovers : []
+    : sortedMarketplaceProducts;
+
+  const packageProducts = visibleProducts
+    .filter((product) => product.product_type === "package")
+    .sort((a, b) => Number(a.price) - Number(b.price))
+    .slice(0, 4);
+
+  const sellerHighlights = !scoped
+    ? [...new Set(visibleProducts.map((product) => product.owner_id))]
+        .map((ownerId) => {
+          const seller = sellerMap.get(ownerId);
+          if (!seller) return null;
+          const sellerProducts = visibleProducts.filter((product) => product.owner_id === ownerId);
+          const reputation = reputationMap.get(sellerProducts[0]?.owner_type + ":" + ownerId);
+          return {
+            ownerId,
+            ...seller,
+            productCount: sellerProducts.length,
+            packageCount: sellerProducts.filter((product) => product.product_type === "package").length,
+            reputation,
+          };
+        })
+        .filter((seller): seller is NonNullable<typeof seller> => Boolean(seller))
+        .sort((a, b) => {
+          const trustA = a.reputation?.verified_sales_count ?? 0;
+          const trustB = b.reputation?.verified_sales_count ?? 0;
+          return trustB - trustA || b.productCount - a.productCount;
+        })
+        .slice(0, 4)
+    : [];
+
+  const buildFilterHref = (changes: Record<string, string | null>) => {
+    const next = new URLSearchParams();
+    if (search) next.set("q", search);
+    if (productType) next.set("type", productType);
+    if (sort !== "featured") next.set("sort", sort);
+    if (maxPrice !== null) next.set("max", String(maxPrice));
+    for (const [key, value] of Object.entries(changes)) {
+      if (value === null || value === "") next.delete(key);
+      else next.set(key, value);
+    }
+    const query = next.toString();
+    return query ? "/conteudos?" + query : "/conteudos";
+  };
 
   return (
     <main className="min-h-screen bg-[#f5f5f7] px-4 py-8 text-slate-950">
@@ -357,6 +442,110 @@ export default async function ConteudosPage({ searchParams }: Props) {
           </div>
         </div>
 
+        {!scoped ? (
+          <>
+            <section className="contentMarketplaceIntro mt-5">
+              <div>
+                <span className="contentMarketplaceEyebrow">PECATHO FANS · MARKETPLACE</span>
+                <h2>Descubra conteúdo antes mesmo de escolher um perfil.</h2>
+                <p>
+                  Uma vitrine própria para fotos, vídeos e pacotes. Explore por interesse,
+                  compare ofertas e entre no perfil quando quiser conhecer quem está por trás do conteúdo.
+                </p>
+              </div>
+              <div className="contentMarketplaceTrust">
+                <span>✓</span>
+                <div>
+                  <strong>Compra protegida</strong>
+                  <small>O acesso ao arquivo é liberado somente após a confirmação do pagamento.</small>
+                </div>
+              </div>
+            </section>
+
+            <form method="get" className="contentMarketplaceFilters">
+              <div className="contentSearchField">
+                <span>⌕</span>
+                <input name="q" defaultValue={search} placeholder="Buscar por conteúdo ou vendedor..." maxLength={80} aria-label="Buscar conteúdo ou vendedor" />
+              </div>
+              <select name="type" defaultValue={productType ?? ""} aria-label="Tipo de conteúdo">
+                <option value="">Todos os formatos</option>
+                <option value="package">Pacotes</option>
+                <option value="single_video">Vídeos</option>
+                <option value="single_image">Fotos</option>
+              </select>
+              <select name="sort" defaultValue={sort} aria-label="Ordenar conteúdo">
+                <option value="featured">Em destaque</option>
+                <option value="price_asc">Menor preço</option>
+                <option value="price_desc">Maior preço</option>
+              </select>
+              <select name="max" defaultValue={maxPrice !== null ? String(maxPrice) : ""} aria-label="Preço máximo">
+                <option value="">Qualquer preço</option>
+                <option value="30">Até R$ 30</option>
+                <option value="50">Até R$ 50</option>
+                <option value="100">Até R$ 100</option>
+                <option value="200">Até R$ 200</option>
+                <option value="500">Até R$ 500</option>
+              </select>
+              <button type="submit">Explorar</button>
+              {(search || productType || sort !== "featured" || maxPrice !== null) ? <Link href="/conteudos" className="contentFilterClear">Limpar filtros</Link> : null}
+            </form>
+
+            {packageProducts.length > 0 ? (
+              <section className="contentMarketplaceSection">
+                <div className="contentMarketplaceSectionHead">
+                  <div><span>PARA QUEM QUER MAIS</span><h2>Pacotes em destaque</h2></div>
+                  <Link href={buildFilterHref({ type: "package", sort: "price_asc" })}>Ver todos os pacotes →</Link>
+                </div>
+                <div className="contentPackageRail">
+                  {packageProducts.map((product) => {
+                    const seller = sellerMap.get(product.owner_id);
+                    const reputation = reputationMap.get(product.owner_type + ":" + product.owner_id);
+                    return (
+                      <Link key={product.id} href={"/conteudos/" + product.id} className="contentPackageCard">
+                        <div className="contentPackageMedia">
+                          {product.coverUrl ? <img src={product.coverUrl} alt="" /> : <div className="contentPackageFallback">PACOTE</div>}
+                          <span>MELHOR PARA CONHECER</span>
+                        </div>
+                        <div className="contentPackageBody">
+                          <strong>{product.title}</strong>
+                          <small>{seller?.name || "Vendedor Pecatho"}</small>
+                          <div><b>{formatPrice(product.price)}</b>{reputation?.trust_badge ? <span>✓ verificado</span> : null}</div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </section>
+            ) : null}
+
+            {sellerHighlights.length > 0 ? (
+              <section className="contentMarketplaceSection contentSellerSection">
+                <div className="contentMarketplaceSectionHead">
+                  <div><span>QUEM ESTÁ POR TRÁS DO CONTEÚDO</span><h2>Vendedores em evidência</h2></div>
+                  <Link href="/anunciantes">Explorar acompanhantes →</Link>
+                </div>
+                <div className="contentSellerRail">
+                  {sellerHighlights.map((seller) => (
+                    <article key={seller.ownerId} className="contentSellerCard">
+                      <div className="contentSellerAvatar">{seller.name.slice(0, 1).toUpperCase()}</div>
+                      <div className="contentSellerCopy">
+                        <div className="contentSellerNameRow"><strong>{seller.name}</strong>{seller.reputation?.trust_badge ? <span>✓</span> : null}</div>
+                        <small>{seller.productCount} {seller.productCount === 1 ? "conteúdo" : "conteúdos"}{seller.packageCount > 0 ? " · " + seller.packageCount + " pacote(s)" : ""}</small>
+                        {seller.reputation?.average_rating !== null && seller.reputation?.average_rating !== undefined ? (
+                          <span className="contentSellerRating">★ {seller.reputation.average_rating.toFixed(1)} · {seller.reputation.review_count} avaliações</span>
+                        ) : seller.reputation?.verified_sales_count ? (
+                          <span className="contentSellerRating">{seller.reputation.verified_sales_count} vendas confirmadas</span>
+                        ) : null}
+                      </div>
+                      {seller.href ? <Link href={seller.href} aria-label={"Ver perfil de " + seller.name}>→</Link> : null}
+                    </article>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+          </>
+        ) : null}
+
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div className="text-xs font-bold text-slate-500">
             {scoped
@@ -370,7 +559,14 @@ export default async function ConteudosPage({ searchParams }: Props) {
           ) : null}
         </div>
 
-        <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="contentMarketplaceResults mt-6">
+          {!scoped ? (
+            <div className="contentMarketplaceResultsHead">
+              <div><span>CATÁLOGO PECATHO</span><h2>{search || productType || maxPrice !== null ? "Resultados para sua busca" : "Conteúdo para descobrir agora"}</h2></div>
+              <strong>{visibleProducts.length}</strong>
+            </div>
+          ) : null}
+          <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {visibleProducts.map((p) => {
             const seller = sellerMap.get(p.owner_id);
             return (
@@ -473,7 +669,16 @@ export default async function ConteudosPage({ searchParams }: Props) {
             </article>
             );
           })}
+          </div>
         </div>
+
+        {visibleProducts.length === 0 && productsWithCovers.length > 0 && !scoped ? (
+          <div className="mt-6 rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center">
+            <h2 className="text-lg font-black text-slate-900">Nenhum conteúdo encontrado.</h2>
+            <p className="mt-2 text-sm text-slate-500">Ajuste os filtros ou procure por outro vendedor, foto, vídeo ou pacote.</p>
+            <Link href="/conteudos" className="mt-5 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-xs font-black text-white no-underline">Ver catálogo completo →</Link>
+          </div>
+        ) : null}
 
         {productsWithCovers.length === 0 && (
           <div className="mt-6 rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center">
