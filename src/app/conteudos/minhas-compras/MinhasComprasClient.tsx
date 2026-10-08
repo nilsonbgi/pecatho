@@ -117,6 +117,10 @@ export default function MinhasComprasClient() {
   }>>([]);
   const [mediaLoading, setMediaLoading] = useState(true);
   const [mediaError, setMediaError] = useState("");
+  const [libraryFilter, setLibraryFilter] = useState<"all" | "paid" | "history">("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | "package" | "single_image" | "single_video">("all");
+  const [sellerFilter, setSellerFilter] = useState("all");
+  const [search, setSearch] = useState("");
 
   const sellerOptions = useMemo(() => {
     const map = new Map<string, string>();
