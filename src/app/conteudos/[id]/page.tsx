@@ -60,6 +60,9 @@ export default function DigitalContentProductPage() {
   const [error, setError] = useState("");
   const [reputation, setReputation] = useState<SellerReputation | null>(null);
   const [reputationLoading, setReputationLoading] = useState(true);
+  const [relatedProducts, setRelatedProducts] = useState<Array<{
+    id: string; title: string; product_type: string; price: number | string; currency: string; cover_url: string | null;
+  }>>([]);
 
   useEffect(() => {
     let active = true;
@@ -122,6 +125,26 @@ export default function DigitalContentProductPage() {
     return () => {
       active = false;
     };
+  }, [product]);
+
+  useEffect(() => {
+    if (!product) return;
+    let active = true;
+    fetch(
+      `/api/conteudos/public?owner_type=${encodeURIComponent(product.owner_type)}&owner_id=${encodeURIComponent(product.owner_id)}`,
+      { cache: "no-store" },
+    )
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Não foi possível carregar outros conteúdos.");
+        return response.json() as Promise<{ products?: Array<{
+          id: string; title: string; product_type: string; price: number | string; currency: string; cover_url: string | null;
+        }> }>;
+      })
+      .then((body) => {
+        if (active) setRelatedProducts((body.products ?? []).filter((item) => item.id !== product.id).slice(0, 4));
+      })
+      .catch(() => { if (active) setRelatedProducts([]); });
+    return () => { active = false; };
   }, [product]);
 
   async function buy() {
@@ -337,6 +360,27 @@ export default function DigitalContentProductPage() {
               </div>
             )}
 
+            <section className="mt-7">
+              <div className="mb-3 text-[10px] font-black uppercase tracking-[.16em] text-white/40">O que você recebe</div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl border border-white/10 bg-white/[.025] p-4">
+                  <span className="text-lg">✦</span>
+                  <p className="mt-2 text-xs font-black text-white">Conteúdo exclusivo</p>
+                  <p className="mt-1 text-[11px] leading-5 text-slate-500">{product.product_type === "package" ? product.file_count + " arquivos reunidos em um único pacote." : "Acesso ao conteúdo digital adquirido."}</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/[.025] p-4">
+                  <span className="text-lg">↧</span>
+                  <p className="mt-2 text-xs font-black text-white">Acesso após o pagamento</p>
+                  <p className="mt-1 text-[11px] leading-5 text-slate-500">O arquivo original não é exposto antes da confirmação.</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/[.025] p-4">
+                  <span className="text-lg">♡</span>
+                  <p className="mt-2 text-xs font-black text-white">Fica na sua conta</p>
+                  <p className="mt-1 text-[11px] leading-5 text-slate-500">Depois da compra, você encontra o acesso em Minhas compras.</p>
+                </div>
+              </div>
+            </section>
+
             <div className="mt-8 rounded-3xl border border-white/10 bg-black/20 p-5">
               <div className="flex items-end justify-between gap-5">
                 <div>
@@ -402,6 +446,32 @@ export default function DigitalContentProductPage() {
           </div>
         </div>
       </section>
+      {relatedProducts.length > 0 ? (
+        <section className="mx-auto mt-6 max-w-6xl rounded-[30px] border border-white/10 bg-white/[.035] p-6 shadow-2xl sm:p-8">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <span className="text-[9px] font-black uppercase tracking-[.18em] text-violet-300">CONTINUE EXPLORANDO</span>
+              <h2 className="mt-2 text-2xl font-black tracking-[-.035em] text-white sm:text-3xl">Mais conteúdos de {product.owner_name}</h2>
+              <p className="mt-2 max-w-2xl text-xs leading-5 text-slate-500">Gostou deste conteúdo? Descubra outras publicações do mesmo vendedor e continue sua jornada no Pecatho.</p>
+            </div>
+            <Link href={"/conteudos?owner_type=" + product.owner_type + "&owner_id=" + encodeURIComponent(product.owner_id)} className="rounded-xl border border-white/10 bg-white/[.04] px-4 py-2.5 text-[10px] font-black text-white no-underline transition hover:border-violet-300/30 hover:bg-violet-400/10">Ver loja completa →</Link>
+          </div>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {relatedProducts.map((item) => (
+              <Link key={item.id} href={"/conteudos/" + item.id} className="group overflow-hidden rounded-2xl border border-white/10 bg-black/20 no-underline transition hover:-translate-y-1 hover:border-violet-300/25 hover:bg-white/[.045]">
+                <div className="relative aspect-[1.18] overflow-hidden bg-slate-950">
+                  {item.cover_url ? <img src={item.cover_url} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" /> : <div className="grid h-full place-items-center bg-gradient-to-br from-violet-950 to-slate-950 text-[10px] font-black tracking-[.15em] text-violet-200">CONTEÚDO</div>}
+                  <span className="absolute left-2.5 top-2.5 rounded-full bg-black/65 px-2.5 py-1.5 text-[8px] font-black tracking-[.1em] text-white backdrop-blur">{productLabel(item.product_type)}</span>
+                </div>
+                <div className="p-3.5">
+                  <strong className="block overflow-hidden text-xs font-black leading-5 text-white [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">{item.title}</strong>
+                  <div className="mt-3 flex items-center justify-between gap-2"><span className="text-sm font-black text-white">{formatPrice(item.price, item.currency)}</span><span className="text-[9px] font-black text-violet-300">Ver →</span></div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </main>
   );
 }
