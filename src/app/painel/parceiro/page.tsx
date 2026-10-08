@@ -3,7 +3,7 @@ import { FormEvent,useEffect,useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/browser";
 
-const types=[["nightclub","Casa noturna"],["club","Boate / clube"],["bar","Bar"],["lounge","Lounge"],["event_space","Espaço para eventos"],["other","Outro"]];
+const types=[["nightclub","Casa noturna"],["cabaret","Cabaré"],["club","Boate / clube"],["bar","Bar"],["lounge","Lounge"],["event_space","Espaço para eventos"],["other","Outro"]];
 
 function slugify(v:string){return v.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,130)}
 async function uniqueSlug(supabase:ReturnType<typeof createClient>,raw:string,currentId:string){const base=slugify(raw);if(base.length<3)throw new Error("Informe um nome ou slug com pelo menos 3 caracteres.");let candidate=base;for(let i=2;i<=50;i++){const query=supabase.from("partner_venues").select("id").eq("slug",candidate);const {data,error}=currentId?await query.neq("id",currentId).maybeSingle():await query.maybeSingle();if(error)throw error;if(!data)return candidate;const suffix=`-${i}`;candidate=`${base.slice(0,140-suffix.length)}${suffix}`}throw new Error("Não foi possível gerar um endereço público único para esta casa.")}
