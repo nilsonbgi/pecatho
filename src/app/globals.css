@@ -567,3 +567,166 @@
  .commercialTitleRow h3{font-size:18px}
  .commercialTrust{display:none}
 }
+
+
+/* Pecatho — perfil público 360° */
+.publicProfile .profileSectionNav{
+  position:sticky;
+  top:12px;
+  z-index:20;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin:12px 0 18px;
+  padding:8px;
+  border:1px solid rgba(231,195,63,.22);
+  border-radius:16px;
+  background:rgba(255,255,255,.92);
+  backdrop-filter:blur(14px);
+  box-shadow:0 12px 30px rgba(15,23,42,.06);
+}
+.publicProfile .advertiserHeroGrid{
+  display:grid;
+  grid-template-columns:minmax(0,1.12fr) minmax(360px,.88fr);
+  overflow:hidden;
+  border-radius:28px;
+  border:1px solid rgba(15,23,42,.09);
+  box-shadow:0 28px 80px rgba(15,23,42,.12);
+}
+.publicProfile .profileHeroMedia{
+  position:relative;
+  min-height:520px;
+  background:#0b0b12;
+  overflow:hidden;
+}
+.publicProfile .profileHeroMedia img,
+.publicProfile .profileHeroMedia video{
+  width:100%;
+  height:100%;
+  min-height:520px;
+  object-fit:cover;
+  display:block;
+}
+.publicProfile .profileHeroMedia:after{
+  content:"";
+  position:absolute;
+  inset:auto 0 0;
+  height:32%;
+  background:linear-gradient(transparent,rgba(0,0,0,.42));
+  pointer-events:none;
+}
+.publicProfile .profileHeroCopy{
+  padding:42px 34px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  background:
+    radial-gradient(circle at 88% 12%,rgba(124,58,237,.25),transparent 34%),
+    linear-gradient(160deg,#11111a,#21183a);
+  color:#fff;
+}
+.publicProfile .advertiserCommercialStrip{
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+}
+.publicProfile .profileTrustRail{
+  display:grid;
+  grid-template-columns:minmax(230px,1.25fr) repeat(3,minmax(0,1fr));
+  gap:10px;
+  margin:14px 0 18px;
+  padding:10px;
+  border:1px solid rgba(15,23,42,.08);
+  border-radius:22px;
+  background:linear-gradient(135deg,#fff,#f8fafc);
+  box-shadow:0 14px 40px rgba(15,23,42,.055);
+}
+.publicProfile .profileTrustIntro{
+  padding:14px 16px;
+}
+.publicProfile .profileTrustIntro strong{
+  display:block;
+  margin-top:4px;
+  color:#111827;
+  font-size:18px;
+  letter-spacing:-.035em;
+}
+.publicProfile .profileTrustIntro p{
+  margin:6px 0 0;
+  color:#64748b;
+  font-size:11px;
+  line-height:1.5;
+}
+.publicProfile .profileTrustItem{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+  padding:13px;
+  border:1px solid #e8edf3;
+  border-radius:15px;
+  background:#fff;
+}
+.publicProfile .profileTrustIcon{
+  flex:0 0 auto;
+  width:32px;
+  height:32px;
+  display:grid;
+  place-items:center;
+  border-radius:10px;
+  background:#f1f5f9;
+  color:#475569;
+  font-size:14px;
+  font-weight:950;
+}
+.publicProfile .profileTrustItem strong,
+.publicProfile .profileTrustItem small{
+  display:block;
+}
+.publicProfile .profileTrustItem strong{
+  color:#172033;
+  font-size:11px;
+  line-height:1.25;
+}
+.publicProfile .profileTrustItem small{
+  margin-top:4px;
+  color:#7b8798;
+  font-size:9px;
+  line-height:1.4;
+}
+.publicProfile .profileTrustAccent{
+  border-color:rgba(124,58,237,.18);
+  background:linear-gradient(135deg,rgba(124,58,237,.055),#fff);
+}
+.publicProfile .profileTrustAccent .profileTrustIcon{
+  background:rgba(124,58,237,.09);
+  color:#7c3aed;
+}
+@media(max-width:900px){
+  .publicProfile .advertiserHeroGrid{grid-template-columns:1fr}
+  .publicProfile .profileHeroMedia,
+  .publicProfile .profileHeroMedia img,
+  .publicProfile .profileHeroMedia video{min-height:440px}
+  .publicProfile .profileHeroCopy{padding:30px 26px}
+  .publicProfile .advertiserCommercialStrip{grid-template-columns:1fr 1fr !important}
+  .publicProfile .profileTrustRail{grid-template-columns:1fr 1fr}
+  .publicProfile .profileTrustIntro{grid-column:1/-1}
+}
+@media(max-width:620px){
+  .publicProfile .profileSectionNav{
+    position:static;
+    overflow-x:auto;
+    flex-wrap:nowrap;
+    margin-left:-2px;
+    margin-right:-2px;
+    scrollbar-width:none;
+  }
+  .publicProfile .profileSectionNav::-webkit-scrollbar{display:none}
+  .publicProfile .profileSectionNav a{flex:0 0 auto;white-space:nowrap}
+  .publicProfile .advertiserHeroGrid{border-radius:20px}
+  .publicProfile .profileHeroMedia,
+  .publicProfile .profileHeroMedia img,
+  .publicProfile .profileHeroMedia video{min-height:360px}
+  .publicProfile .profileHeroCopy{padding:25px 20px}
+  .publicProfile .advertiserCommercialStrip{grid-template-columns:1fr !important}
+  .publicProfile .profileTrustRail{grid-template-columns:1fr;margin-top:12px}
+  .publicProfile .profileTrustIntro{grid-column:auto}
+}
