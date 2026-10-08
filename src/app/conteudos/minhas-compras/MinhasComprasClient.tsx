@@ -118,6 +118,34 @@ export default function MinhasComprasClient() {
   const [mediaLoading, setMediaLoading] = useState(true);
   const [mediaError, setMediaError] = useState("");
 
+  const sellerOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const purchase of purchases) {
+      const seller = purchase.product.seller;
+      if (seller) map.set(purchase.product.owner_id, seller.name);
+    }
+    return [...map.entries()].sort((a, b) => a[1].localeCompare(b[1], "pt-BR"));
+  }, [purchases]);
+
+  const filteredPurchases = useMemo(() => {
+    const normalizedSearch = search.trim().toLocaleLowerCase("pt-BR");
+    return purchases.filter((purchase) => {
+      if (libraryFilter === "paid" && purchase.status !== "paid") return false;
+      if (libraryFilter === "history" && purchase.status === "paid") return false;
+      if (typeFilter !== "all" && purchase.product.product_type !== typeFilter) return false;
+      if (sellerFilter !== "all" && purchase.product.owner_id !== sellerFilter) return false;
+      if (
+        normalizedSearch &&
+        ![
+          purchase.product.title,
+          purchase.product.description ?? "",
+          purchase.product.seller?.name ?? "",
+        ].some((value) => value.toLocaleLowerCase("pt-BR").includes(normalizedSearch))
+      ) return false;
+      return true;
+    });
+  }, [purchases, libraryFilter, typeFilter, sellerFilter, search]);
+
   const selectedPurchase = useMemo(
     () => purchases.find((purchase) => purchase.id === selectedSale) ?? null,
     [purchases, selectedSale],
@@ -235,6 +263,83 @@ export default function MinhasComprasClient() {
           </div>
         ) : null}
 
+        {!loading && !error && purchases.length > 0 ? (
+          <div className="mb-6 rounded-3xl border border-white/10 bg-white/[0.04] p-4 sm:p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-[0.18em] text-violet-300">
+                  SUA BIBLIOTECA
+                </div>
+                <div className="mt-1 text-sm font-bold text-white/80">
+                  {filteredPurchases.length} {filteredPurchases.length === 1 ? "item encontrado" : "itens encontrados"}
+                </div>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-[minmax(180px,1fr)_150px_150px] lg:w-[650px]">
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Buscar por conteúdo ou vendedor…"
+                  className="h-10 rounded-xl border border-white/10 bg-black/20 px-3 text-xs font-semibold text-white outline-none placeholder:text-white/25 focus:border-violet-400/50"
+                />
+                <select
+                  value={typeFilter}
+                  onChange={(event) => setTypeFilter(event.target.value as typeof typeFilter)}
+                  className="h-10 rounded-xl border border-white/10 bg-black/20 px-3 text-xs font-semibold text-white outline-none focus:border-violet-400/50"
+                >
+                  <option value="all">Todos os formatos</option>
+                  <option value="package">Pacotes</option>
+                  <option value="single_image">Fotos</option>
+                  <option value="single_video">Vídeos</option>
+                </select>
+                <select
+                  value={sellerFilter}
+                  onChange={(event) => setSellerFilter(event.target.value)}
+                  className="h-10 rounded-xl border border-white/10 bg-black/20 px-3 text-xs font-semibold text-white outline-none focus:border-violet-400/50"
+                >
+                  <option value="all">Todos os vendedores</option>
+                  {sellerOptions.map(([id, name]) => (
+                    <option key={id} value={id}>{name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {([
+                ["all", "Todos"],
+                ["paid", "Com acesso"],
+                ["history", "Histórico"],
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setLibraryFilter(value)}
+                  className={`rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.1em] transition ${
+                    libraryFilter === value
+                      ? "border-violet-400/50 bg-violet-500/15 text-violet-200"
+                      : "border-white/10 bg-white/[0.03] text-white/45 hover:text-white"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+              {(search || typeFilter !== "all" || sellerFilter !== "all" || libraryFilter !== "all") ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch("");
+                    setTypeFilter("all");
+                    setSellerFilter("all");
+                    setLibraryFilter("all");
+                  }}
+                  className="rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.1em] text-white/35 hover:text-white"
+                >
+                  Limpar filtros
+                </button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
         {loading ? (
           <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-8 text-sm text-white/60">
             Carregando sua biblioteca…
@@ -258,9 +363,18 @@ export default function MinhasComprasClient() {
             </Link>
           </div>
         ) : (
+          {filteredPurchases.length === 0 ? (
+            <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-8 text-center">
+              <div className="text-3xl">⌕</div>
+              <h2 className="mt-3 text-lg font-black">Nenhum conteúdo corresponde aos filtros</h2>
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-white/45">
+                Ajuste a busca ou limpe os filtros para reencontrar uma compra da sua biblioteca.
+              </p>
+            </div>
+          ) : (
           <div className="grid gap-6 lg:grid-cols-[1.05fr_.95fr]">
             <div className="space-y-3">
-              {purchases.map((purchase) => {
+              {filteredPurchases.map((purchase) => {
                 const active = purchase.id === selectedSale;
                 return (
                   <button
@@ -484,17 +598,18 @@ export default function MinhasComprasClient() {
               )}
             </section>
           </div>
+          )}
         )}
 
         <section className="mt-8 rounded-3xl border border-white/10 bg-white/[0.05] p-6 sm:p-7">
           <div>
             <div className="text-[10px] font-black tracking-[0.2em] text-violet-300">GALERIA ADQUIRIDA</div>
             <h2 className="mt-2 text-2xl font-black tracking-[-0.04em]">Fotos e vídeos comprados</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/45">Conteúdos pagos diretamente no perfil das anunciantes também ficam reunidos aqui. Os arquivos permanecem privados e cada visualização gera um link temporário.</p>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/45">Conteúdos pagos diretamente nos perfis das Acompanhantes também ficam reunidos aqui. Os arquivos permanecem privados e cada visualização gera um link temporário.</p>
           </div>
           {mediaLoading ? <div className="mt-5 rounded-2xl bg-white/[0.04] p-4 text-sm text-white/55">Carregando sua galeria adquirida…</div>
           : mediaError ? <div className="mt-5 rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm text-red-200">{mediaError}</div>
-          : mediaPurchases.length === 0 ? <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-5 text-sm text-white/45">Você ainda não comprou fotos ou vídeos exclusivos diretamente de uma anunciante.</div>
+          : mediaPurchases.length === 0 ? <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-5 text-sm text-white/45">Você ainda não comprou fotos ou vídeos exclusivos diretamente de uma Acompanhante.</div>
           : <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{mediaPurchases.map((item) => (
             <article key={item.id} className="overflow-hidden rounded-2xl border border-white/10 bg-black/25">
               <div className="aspect-[4/5] bg-black">{item.kind === "video" ? <video src={item.url} controls playsInline preload="metadata" className="h-full w-full object-cover" /> : <img src={item.url} alt={item.profile.display_name ? `Conteúdo comprado de ${item.profile.display_name}` : "Conteúdo comprado"} className="h-full w-full object-cover" />}</div>
