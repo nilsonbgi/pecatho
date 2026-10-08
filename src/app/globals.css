@@ -730,3 +730,24 @@
   .publicProfile .profileTrustRail{grid-template-columns:1fr;margin-top:12px}
   .publicProfile .profileTrustIntro{grid-column:auto}
 }
+
+/* Pecatho — premium digital storefront */
+#conteudo-exclusivo .storefrontMetric{
+  min-height:76px;
+  transition:transform .2s ease,border-color .2s ease,background .2s ease;
+}
+#conteudo-exclusivo .storefrontMetric:hover{
+  transform:translateY(-2px);
+  border-color:rgba(167,139,250,.28);
+  background:rgba(255,255,255,.065);
+}
+#conteudo-exclusivo a.group{
+  box-shadow:0 14px 40px rgba(0,0,0,.18);
+}
+#conteudo-exclusivo a.group:hover{
+  box-shadow:0 22px 55px rgba(124,58,237,.2);
+}
+@media(max-width:640px){
+  #conteudo-exclusivo{border-radius:24px;padding:20px}
+  #conteudo-exclusivo a.group{min-height:300px}
+}
