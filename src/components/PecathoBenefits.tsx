@@ -64,8 +64,9 @@ export default function PecathoBenefits({ initialPoints = 0 }: { initialPoints?:
 
   const load = useCallback(async () => {
     const supabase = createClient();
+    const now = new Date().toISOString();
     const [{ data: benefitRows, error: benefitError }, { data: couponRows, error: couponError }, { data: pointRow }, { data: venueRows }] = await Promise.all([
-      supabase.from("pecatho_reward_benefits").select("id,name,description,points_cost,discount_type,discount_value,partner_venue_id,max_redemptions,redeemed_count,starts_at,ends_at").eq("active", true).order("points_cost", { ascending: true }),
+      supabase.from("pecatho_reward_benefits").select("id,name,description,points_cost,discount_type,discount_value,partner_venue_id,max_redemptions,redeemed_count,starts_at,ends_at").eq("active", true).lte("starts_at", now).or("ends_at.is.null,ends_at.gt." + now).order("points_cost", { ascending: true }),
       supabase.from("pecatho_user_coupons").select("id,benefit_id,coupon_code,points_spent,issued_at,redeemed_at").order("issued_at", { ascending: false }).limit(30),
       supabase.from("pecatho_user_points").select("balance").maybeSingle(),
       supabase.from("partner_venues").select("id,name").eq("status", "published"),
@@ -108,7 +109,7 @@ export default function PecathoBenefits({ initialPoints = 0 }: { initialPoints?:
     <section className="card" id="beneficios">
       <div className="eyebrow">PROGRAMA DE BENEFÍCIOS</div>
       <h2>Troque pontos por vantagens reais</h2>
-      <p>Os pontos vêm de avaliações aprovadas de interações verificadas. A nota atribuída não altera a pontuação. Os benefícios têm custo, validade e limite definidos antes do resgate.</p>
+      <p>Cada avaliação aprovada de uma interação verificada rende 10 pontos, seja a nota alta ou baixa. Os pontos não são concedidos por avaliações sem comprovação e podem ser estornados se a avaliação perder a elegibilidade. Os benefícios exibidos estão dentro do período de validade e têm custo e limite definidos antes do resgate.</p>
       <div className="pillars" style={{ marginTop: 18 }}>
         <article className="card">
           <div className="cardIcon">✦</div>
