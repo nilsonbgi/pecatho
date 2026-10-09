@@ -11,8 +11,8 @@ type Props={searchParams:Promise<{q?:string;type?:string;city?:string;vagas?:str
 
 export default async function ParceirosPage({searchParams}:Props){
  const params=await searchParams;
- const normalizeSearch=(value:string)=>value.normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLocaleLowerCase("pt-BR");
- const qTokens=normalizeSearch((params.q||"").trim()).split(/\\s+/).filter(Boolean);
+ const normalizeSearch=(value:string)=>value.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("pt-BR");
+ const qTokens=normalizeSearch((params.q||"").trim()).split(/\s+/).filter(Boolean);
  const typeFilter=params.type||"";
  const cityFilter=params.city||"";
  const vacanciesOnly=params.vagas==="1";
