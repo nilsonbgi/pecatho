@@ -31,19 +31,22 @@ export default async function ParceirosPage({searchParams}:Props){
   supabase.from("partner_venue_events").select("venue_id,title,description,starts_at,price_from").in("venue_id",venueIds).eq("status","published").gte("starts_at",new Date().toISOString()).order("starts_at").limit(60)
  ]):[{data:[]},{data:[]},{data:[]},{data:[]},{data:[]}];
  const amenitiesMap=new Map<string,string[]>();
- (amenities||[]).forEach(a=>{const list=amenitiesMap.get(a.venue_id)||[];if(list.length<3)list.push(a.name);amenitiesMap.set(a.venue_id,list)});
+ const amenitySearchMap=new Map<string,string[]>();
+ (amenities||[]).forEach(a=>{const all=amenitySearchMap.get(a.venue_id)||[];all.push(a.name);amenitySearchMap.set(a.venue_id,all);const list=amenitiesMap.get(a.venue_id)||[];if(list.length<3)list.push(a.name);amenitiesMap.set(a.venue_id,list)});
  const rateMap=new Map<string,{price:number;period_type:string}>();
  (rates||[]).forEach(r=>{if(!rateMap.has(r.venue_id))rateMap.set(r.venue_id,{price:Number(r.price),period_type:r.period_type})});
  const roomMap=new Map<string,number>();
  (roomRows||[]).forEach(r=>{const slots=Math.max(0,Number(r.available_slots||0));if(slots>0)roomMap.set(r.venue_id,(roomMap.get(r.venue_id)||0)+slots)});
  const serviceMap=new Map<string,{name:string;description:string|null;price_from:number|null}>();
- (services||[]).forEach(s=>{if(!serviceMap.has(s.venue_id))serviceMap.set(s.venue_id,{name:s.name,description:s.description,price_from:s.price_from==null?null:Number(s.price_from)})});
+ const serviceSearchMap=new Map<string,string[]>();
+ (services||[]).forEach(s=>{const searchable=serviceSearchMap.get(s.venue_id)||[];searchable.push(s.name,s.description||"");serviceSearchMap.set(s.venue_id,searchable);if(!serviceMap.has(s.venue_id))serviceMap.set(s.venue_id,{name:s.name,description:s.description,price_from:s.price_from==null?null:Number(s.price_from)})});
  const eventMap=new Map<string,{title:string;description:string|null;starts_at:string;price_from:number|null}>();
- (events||[]).forEach(e=>{if(!eventMap.has(e.venue_id))eventMap.set(e.venue_id,{title:e.title,description:e.description,starts_at:e.starts_at,price_from:e.price_from==null?null:Number(e.price_from)})});
+ const eventSearchMap=new Map<string,string[]>();
+ (events||[]).forEach(e=>{const searchable=eventSearchMap.get(e.venue_id)||[];searchable.push(e.title,e.description||"");eventSearchMap.set(e.venue_id,searchable);if(!eventMap.has(e.venue_id))eventMap.set(e.venue_id,{title:e.title,description:e.description,starts_at:e.starts_at,price_from:e.price_from==null?null:Number(e.price_from)})});
  const filteredVenues=venues.filter(v=>{
   const matchesType=!typeFilter||v.venue_type===typeFilter;
   const matchesCity=!cityFilter||String(v.city_id||"")===cityFilter;
-  const searchableCommercial=[serviceMap.get(v.id)?.name,serviceMap.get(v.id)?.description,eventMap.get(v.id)?.title,...(amenitiesMap.get(v.id)||[])];
+  const searchableCommercial=[...(serviceSearchMap.get(v.id)||[]),...(eventSearchMap.get(v.id)||[]),...(amenitySearchMap.get(v.id)||[])];
   const haystack=normalizeSearch([v.name,v.description,v.tagline,v.highlights,cityMap.get(v.city_id)||"",types[v.venue_type]||"",...searchableCommercial].filter(Boolean).join(" "));
   const matchesSearch=!qTokens.length||qTokens.every(term=>haystack.includes(term));
   return matchesType&&matchesCity&&matchesSearch&&(!vacanciesOnly||(roomMap.get(v.id)||0)>0);
