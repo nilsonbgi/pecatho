@@ -126,7 +126,7 @@ export default function AdminBenefitsPage() {
             <label>Custo em pontos<input required type="number" min="1" max="1000000" value={pointsCost} onChange={(e) => setPointsCost(e.target.value)} /></label>
             <label>Tipo de desconto<select value={discountType} onChange={(e) => setDiscountType(e.target.value as "fixed" | "percentage")}><option value="percentage">Percentual (%)</option><option value="fixed">Valor fixo (R$)</option></select></label>
             <label>Valor do desconto<input required inputMode="decimal" value={discountValue} onChange={(e) => setDiscountValue(e.target.value)} /></label>
-            <label>Parceiro (opcional)<select value={venueId} onChange={(e) => setVenueId(e.target.value)}><option value="">Benefício geral</option>{venues.map((venue) => <option key={venue.id} value={venue.id}>{venue.name}</option>)}</select></label>
+            <label>Parceiro responsável<select required value={venueId} onChange={(e) => setVenueId(e.target.value)}><option value="">Selecione uma casa publicada</option>{venues.map((venue) => <option key={venue.id} value={venue.id}>{venue.name}</option>)}</select></label>
             <label>Limite total de resgates<input type="number" min="1" value={limit} onChange={(e) => setLimit(e.target.value)} placeholder="Sem limite" /></label>
             <label>Início da oferta<input type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} /></label>
             <label>Fim da oferta<input type="datetime-local" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} /></label>
