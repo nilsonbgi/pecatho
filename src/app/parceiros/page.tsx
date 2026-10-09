@@ -42,7 +42,8 @@ export default async function ParceirosPage({searchParams}:Props){
  const filteredVenues=venues.filter(v=>{
   const matchesType=!typeFilter||v.venue_type===typeFilter;
   const matchesCity=!cityFilter||String(v.city_id||"")===cityFilter;
-  const haystack=[v.name,v.description,v.tagline,v.highlights,cityMap.get(v.city_id)||"",types[v.venue_type]||""].filter(Boolean).join(" ").toLocaleLowerCase("pt-BR");
+  const searchableCommercial=[serviceMap.get(v.id)?.name,serviceMap.get(v.id)?.description,eventMap.get(v.id)?.title,...(amenitiesMap.get(v.id)||[])];
+  const haystack=[v.name,v.description,v.tagline,v.highlights,cityMap.get(v.city_id)||"",types[v.venue_type]||"",...searchableCommercial].filter(Boolean).join(" ").toLocaleLowerCase("pt-BR");
   return matchesType&&matchesCity&&(!q||haystack.includes(q))&&(!vacanciesOnly||(roomMap.get(v.id)||0)>0);
  });
  const cityOptions=[...new Map(venues.filter(v=>v.city_id&&cityMap.has(v.city_id)).map(v=>[String(v.city_id),cityMap.get(v.city_id)!])).entries()].sort((a,b)=>a[1].localeCompare(b[1],"pt-BR"));
