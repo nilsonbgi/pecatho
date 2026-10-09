@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import CustomerProfessionalReviews from "@/components/CustomerProfessionalReviews";
+import PecathoBenefits from "@/components/PecathoBenefits";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,7 @@ export default async function ClientePainel() {
           <article className="card"><div className="cardIcon">P</div><h2>Meu cadastro</h2><p>Identidade e localização permanecem privadas. O rating não expõe seus dados pessoais.</p><Link className="secondaryButton" href="/painel/perfil">Editar cadastro</Link></article>
         </section>
         <section id="pontuacao" className="card"><div className="eyebrow">PONTUAÇÃO PECATHO</div><h2>Seu saldo de confiança</h2><p>Os pontos são registrados automaticamente quando uma avaliação sua é aprovada e vinculada a uma interação verificada. A pontuação é igual para a participação válida, independentemente de você dar uma nota alta ou baixa.</p>{pointHistory?.length ? <div className="financeHistory">{pointHistory.map((entry) => <article key={entry.id}><div><strong>{entry.points > 0 ? "+" : ""}{entry.points} pontos</strong><small>{new Date(entry.created_at).toLocaleString("pt-BR")}</small></div><span className="financeStatus">{entry.description}</span></article>)}</div> : <p className="fieldNote">Você ainda não possui lançamentos de pontos. Quando participar de uma avaliação verificada, o lançamento aparecerá aqui.</p>}</section>
+        <PecathoBenefits initialPoints={Number(pointAccount?.balance ?? 0)} />
         <section id="reputacao" className="card"><div className="eyebrow">REPUTAÇÃO DO CLIENTE</div><h2>Seu histórico de confiança</h2>{reviews?.length ? <div className="financeHistory">{reviews.map((review) => <article key={review.id}><div><strong className="text-amber-300">{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</strong><small>{review.source_type === "digital_content" ? "Compra de conteúdo" : review.source_type === "profile_media" ? "Compra de mídia exclusiva" : "Experiência de serviço"} · {new Date(review.created_at).toLocaleString("pt-BR")}</small></div>{review.comment ? <p>{review.comment}</p> : <span className="financeStatus">Interação verificada</span>}</article>)}</div> : <p className="fieldNote">Ainda não há avaliações verificadas. Elas aparecerão conforme vendedores e acompanhantes registrarem experiências reais com você.</p>}</section>
         <section id="avaliacoes"><CustomerProfessionalReviews /></section>
 
