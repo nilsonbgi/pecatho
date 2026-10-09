@@ -11,7 +11,8 @@ type Props={searchParams:Promise<{q?:string;type?:string;city?:string;vagas?:str
 
 export default async function ParceirosPage({searchParams}:Props){
  const params=await searchParams;
- const q=(params.q||"").trim().toLocaleLowerCase("pt-BR");
+ const normalizeSearch=(value:string)=>value.normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLocaleLowerCase("pt-BR");
+ const qTokens=normalizeSearch((params.q||"").trim()).split(/\\s+/).filter(Boolean);
  const typeFilter=params.type||"";
  const cityFilter=params.city||"";
  const vacanciesOnly=params.vagas==="1";
@@ -43,8 +44,9 @@ export default async function ParceirosPage({searchParams}:Props){
   const matchesType=!typeFilter||v.venue_type===typeFilter;
   const matchesCity=!cityFilter||String(v.city_id||"")===cityFilter;
   const searchableCommercial=[serviceMap.get(v.id)?.name,serviceMap.get(v.id)?.description,eventMap.get(v.id)?.title,...(amenitiesMap.get(v.id)||[])];
-  const haystack=[v.name,v.description,v.tagline,v.highlights,cityMap.get(v.city_id)||"",types[v.venue_type]||"",...searchableCommercial].filter(Boolean).join(" ").toLocaleLowerCase("pt-BR");
-  return matchesType&&matchesCity&&(!q||haystack.includes(q))&&(!vacanciesOnly||(roomMap.get(v.id)||0)>0);
+  const haystack=normalizeSearch([v.name,v.description,v.tagline,v.highlights,cityMap.get(v.city_id)||"",types[v.venue_type]||"",...searchableCommercial].filter(Boolean).join(" "));
+  const matchesSearch=!qTokens.length||qTokens.every(term=>haystack.includes(term));
+  return matchesType&&matchesCity&&matchesSearch&&(!vacanciesOnly||(roomMap.get(v.id)||0)>0);
  });
  const cityOptions=[...new Map(venues.filter(v=>v.city_id&&cityMap.has(v.city_id)).map(v=>[String(v.city_id),cityMap.get(v.city_id)!])).entries()].sort((a,b)=>a[1].localeCompare(b[1],"pt-BR"));
  const coverEntries=await Promise.all(filteredVenues.map(async venue=>{
