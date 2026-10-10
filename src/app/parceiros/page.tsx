@@ -19,10 +19,10 @@ export default async function ParceirosPage({searchParams}:Props){
  const cityFilter=params.city||"";
  const vacanciesOnly=params.vagas==="1";
  const supabase=await createClient();
- const {data:venuesData}=await supabase.rpc("get_public_partner_venues",{p_slug:null}).throwOnError();
+ const {data:venuesData}=await supabase.rpc("get_public_partner_venues",{p_slug:null});
  const venues=(venuesData||[]) as PublicPartnerVenue[];
  const ids=[...(venues||[]).map(v=>v.city_id).filter(Boolean)];
- const {data:cities}=ids.length?await supabase.from("cities").select("id,name").in("id",ids).throwOnError():{data:[]};
+ const {data:cities}=ids.length?await supabase.from("cities").select("id,name").in("id",ids):{data:[]};
  const cityMap=new Map((cities||[]).map(c=>[c.id,c.name]));
  const baseVenues=venues.filter(v=>(!typeFilter||v.venue_type===typeFilter)&&(!cityFilter||String(v.city_id||"")===cityFilter));
  const venueIds=baseVenues.map(v=>v.id);
@@ -53,7 +53,7 @@ export default async function ParceirosPage({searchParams}:Props){
   return matchesSearch&&(!vacanciesOnly||(roomMap.get(v.id)||0)>0);
  });
  const cityOptions=[...new Map(venues.filter(v=>v.city_id&&cityMap.has(v.city_id)).map(v=>[String(v.city_id),cityMap.get(v.city_id)!])).entries()].sort((a,b)=>a[1].localeCompare(b[1],"pt-BR"));
- const {data:coverData}=filteredVenues.length?await supabase.rpc("get_public_partner_venue_covers",{p_venue_ids:filteredVenues.map(venue=>venue.id)}).throwOnError():{data:[]};
+ const {data:coverData}=filteredVenues.length?await supabase.rpc("get_public_partner_venue_covers",{p_venue_ids:filteredVenues.map(venue=>venue.id)}):{data:[]};
  const coverMedia=(coverData||[]) as PublicPartnerVenueCover[];
  const coverUrls=await createPartnerMediaSignedUrlMap(coverMedia);
  const coverMap=new Map<string,string|null>(filteredVenues.map(venue=>[venue.id,null]));
