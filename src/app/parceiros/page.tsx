@@ -24,7 +24,8 @@ export default async function ParceirosPage({searchParams}:Props){
  const ids=[...(venues||[]).map(v=>v.city_id).filter(Boolean)];
  const {data:cities}=ids.length?await supabase.from("cities").select("id,name").in("id",ids):{data:[]};
  const cityMap=new Map((cities||[]).map(c=>[c.id,c.name]));
- const venueIds=(venues||[]).map(v=>v.id);
+ const baseVenues=venues.filter(v=>(!typeFilter||v.venue_type===typeFilter)&&(!cityFilter||String(v.city_id||"")===cityFilter));
+ const venueIds=baseVenues.map(v=>v.id);
  const [{data:amenities},{data:rates},{data:roomRows},{data:services},{data:events}]=venueIds.length?await Promise.all([
   supabase.from("partner_venue_amenities").select("venue_id,name").in("venue_id",venueIds).eq("active",true).order("sort_order"),
   supabase.from("partner_venue_rates").select("venue_id,price,period_type").in("venue_id",venueIds).eq("active",true).order("price",{ascending:true}),
@@ -45,13 +46,11 @@ export default async function ParceirosPage({searchParams}:Props){
  const eventMap=new Map<string,{title:string;description:string|null;starts_at:string;price_from:number|null}>();
  const eventSearchMap=new Map<string,string[]>();
  (events||[]).forEach(e=>{const searchable=eventSearchMap.get(e.venue_id)||[];searchable.push(e.title,e.description||"");eventSearchMap.set(e.venue_id,searchable);if(!eventMap.has(e.venue_id))eventMap.set(e.venue_id,{title:e.title,description:e.description,starts_at:e.starts_at,price_from:e.price_from==null?null:Number(e.price_from)})});
- const filteredVenues=venues.filter(v=>{
-  const matchesType=!typeFilter||v.venue_type===typeFilter;
-  const matchesCity=!cityFilter||String(v.city_id||"")===cityFilter;
+ const filteredVenues=baseVenues.filter(v=>{
   const searchableCommercial=[...(serviceSearchMap.get(v.id)||[]),...(eventSearchMap.get(v.id)||[]),...(amenitySearchMap.get(v.id)||[])];
   const haystack=normalizeSearch([v.name,v.description,v.tagline,v.highlights,cityMap.get(v.city_id)||"",types[v.venue_type]||"",...searchableCommercial].filter(Boolean).join(" "));
   const matchesSearch=!qTokens.length||qTokens.every(term=>haystack.includes(term));
-  return matchesType&&matchesCity&&matchesSearch&&(!vacanciesOnly||(roomMap.get(v.id)||0)>0);
+  return matchesSearch&&(!vacanciesOnly||(roomMap.get(v.id)||0)>0);
  });
  const cityOptions=[...new Map(venues.filter(v=>v.city_id&&cityMap.has(v.city_id)).map(v=>[String(v.city_id),cityMap.get(v.city_id)!])).entries()].sort((a,b)=>a[1].localeCompare(b[1],"pt-BR"));
  const {data:coverData}=filteredVenues.length?await supabase.rpc("get_public_partner_venue_covers",{p_venue_ids:filteredVenues.map(venue=>venue.id)}):{data:[]};
