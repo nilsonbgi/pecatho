@@ -11,7 +11,7 @@ export default function LeadForm({venueId,serviceId,eventId,source="profile"}:{v
    const {error}=await supabase.rpc("create_partner_venue_lead",{p_venue_id:venueId,p_name:name,p_email:email||null,p_phone:phone||null,p_message:message||null,p_source:source,p_service_id:serviceId||null,p_event_id:eventId||null});
    if(error)throw error;
    setDone(true);setName("");setEmail("");setPhone("");setMessage("");
-  }catch(err){setError(err instanceof Error?err.message:"Não foi possível enviar sua solicitação.");}
+  }catch{setError("Não foi possível enviar sua solicitação agora. Confira os dados e tente novamente. Se o problema persistir, entre em contato com o suporte Pecatho.");}
   finally{setLoading(false);}
  }
  return <form onSubmit={submit} className="authCard" style={{display:"grid",gap:12}}>
