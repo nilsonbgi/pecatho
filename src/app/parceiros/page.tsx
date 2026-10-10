@@ -30,7 +30,7 @@ export default async function ParceirosPage({searchParams}:Props){
   supabase.from("partner_venue_rates").select("venue_id,price,period_type").in("venue_id",venueIds).eq("active",true).order("price",{ascending:true}),
   supabase.from("partner_venue_rooms").select("venue_id,available_slots").in("venue_id",venueIds).eq("active",true).eq("status","published"),
   supabase.from("partner_venue_services").select("venue_id,name,description,price_from").in("venue_id",venueIds).eq("active",true).order("sort_order"),
-  supabase.from("partner_venue_events").select("venue_id,title,description,starts_at,price_from").in("venue_id",venueIds).eq("status","published").gte("starts_at",new Date().toISOString()).order("starts_at").limit(60)
+  (async()=>{const allEvents:Array<{venue_id:string;title:string;description:string|null;starts_at:string;price_from:number|null}>=[];for(let offset=0;;offset+=500){const {data,error}=await supabase.from("partner_venue_events").select("venue_id,title,description,starts_at,price_from").in("venue_id",venueIds).eq("status","published").gte("starts_at",new Date().toISOString()).order("starts_at").range(offset,offset+499);if(error)throw error;const page=data||[];allEvents.push(...page);if(page.length<500)break;}return {data:allEvents};})()
  ]):[{data:[]},{data:[]},{data:[]},{data:[]},{data:[]}];
  const amenitiesMap=new Map<string,string[]>();
  const amenitySearchMap=new Map<string,string[]>();
