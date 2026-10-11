@@ -99,12 +99,12 @@ export default function FinanceiroPage() {
         <section className="card financeRequestCard">
           <div className="eyebrow">RECEBIMENTO</div>
           <h2>Solicitar recebimento</h2>
-          <p>O valor mínimo é de R$ 20,00. A solicitação não é paga automaticamente: ela passa pelo fluxo de análise e processamento do Pecatho.</p>
+          <p id="finance-minimum-note">O valor mínimo é de R$ 50,00. A solicitação não é paga automaticamente: ela passa pelo fluxo de análise e processamento do Pecatho.</p>
           <form onSubmit={requestPayout} className="financeRequestForm">
             <label>Valor do recebimento
-              <input value={amount} onChange={(event) => setAmount(event.target.value.replace(/[^0-9,.]/g, ""))} inputMode="decimal" placeholder="0,00" />
+              <input value={amount} onChange={(event) => setAmount(event.target.value.replace(/[^0-9,.]/g, ""))} inputMode="decimal" min="50" step="0.01" placeholder="50,00" aria-describedby="finance-minimum-note" />
             </label>
-            <button className="primaryButton" disabled={busy || loading || summary.available < 20}>{busy ? "Solicitando..." : "Solicitar recebimento"}</button>
+            <button className="primaryButton" disabled={busy || loading || summary.available < 50}>{busy ? "Solicitando..." : "Solicitar recebimento"}</button>
           </form>
         </section>
 
