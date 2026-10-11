@@ -38,25 +38,64 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "É necessário estar autenticado." }, { status: 401 });
 
-  const [{ data: ledger, error: ledgerError }, { data: payouts, error: payoutError }] = await Promise.all([
-    supabase.from("ledger_entries")
+  type LedgerRow = {
+    id: string;
+    order_id: string | null;
+    payment_id: string | null;
+    entry_type: string;
+    amount: number | string | null;
+    currency: string;
+    description: string | null;
+    idempotency_key: string | null;
+    metadata: Record<string, unknown> | null;
+    created_at: string;
+  };
+  type PayoutRow = {
+    id: string;
+    amount: number | string;
+    currency: string;
+    status: string;
+    requested_at: string;
+    processed_at: string | null;
+    rejection_reason: string | null;
+    provider: string | null;
+    provider_reference: string | null;
+    idempotency_key: string | null;
+  };
+
+  const entries: LedgerRow[] = [];
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await supabase.from("ledger_entries")
       .select("id,order_id,payment_id,entry_type,amount,currency,description,idempotency_key,metadata,created_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
-      .limit(100),
-    supabase.from("fans_payout_requests")
+      .order("id", { ascending: false })
+      .range(offset, offset + 999);
+    if (error) {
+      return NextResponse.json({ error: "Não foi possível carregar o extrato financeiro da conta." }, { status: 500 });
+    }
+    const batch = (data || []) as LedgerRow[];
+    entries.push(...batch);
+    if (batch.length < 1000) break;
+  }
+
+  const payoutRows: PayoutRow[] = [];
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await supabase.from("fans_payout_requests")
       .select("id,amount,currency,status,requested_at,processed_at,rejection_reason,provider,provider_reference,idempotency_key")
       .eq("seller_user_id", user.id)
       .order("requested_at", { ascending: false })
-      .limit(50),
-  ]);
-
-  if (ledgerError || payoutError) {
-    return NextResponse.json({ error: "Não foi possível carregar o financeiro da conta." }, { status: 500 });
+      .order("id", { ascending: false })
+      .range(offset, offset + 999);
+    if (error) {
+      return NextResponse.json({ error: "Não foi possível carregar as solicitações de recebimento." }, { status: 500 });
+    }
+    const batch = (data || []) as PayoutRow[];
+    payoutRows.push(...batch);
+    if (batch.length < 1000) break;
   }
 
-  const entries = ledger || [];
-  const pendingPayouts = (payouts || []).filter((row) => ["requested", "approved", "processing"].includes(row.status));
+  const pendingPayouts = payoutRows.filter((row) => ["requested", "approved", "processing"].includes(row.status));
   const credits = entries
     .filter((row) => row.entry_type === "credit" || row.entry_type === "adjustment")
     .reduce((sum, row) => sum + Number(row.amount || 0), 0);
@@ -98,7 +137,7 @@ export async function GET() {
 
   return NextResponse.json({
     summary: { credits, fees, reversals, paid_out: paidOut, requested, available },
-    payouts: (payouts || []).map((row) => ({ ...row, status_label: STATUS_LABELS[row.status] || row.status })),
+    payouts: payoutRows.slice(0, 50).map((row) => ({ ...row, status_label: STATUS_LABELS[row.status] || row.status })),
     movements,
   });
 }
