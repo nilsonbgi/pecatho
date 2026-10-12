@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 
-type Summary = { credits: number; fees: number; reversals: number; paid_out: number; requested: number; available: number };
+type Summary = { credits: number; fees: number; reversals: number; paid_out: number; other_debits: number; requested: number; available: number };
 
 type Movement = { id: string; type: string; amount: number; currency: string; description: string | null; created_at: string; sale: { id: string; product_id: string; order_id: string; amount: number; owner_amount: number; status: string; paid_at: string | null } | null; product: { id: string; title: string } | null };
 type Payout = {
@@ -22,7 +22,7 @@ type Payout = {
 const money = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function FinanceiroPage() {
-  const [summary, setSummary] = useState<Summary>({ credits: 0, fees: 0, reversals: 0, paid_out: 0, requested: 0, available: 0 });
+  const [summary, setSummary] = useState<Summary>({ credits: 0, fees: 0, reversals: 0, paid_out: 0, other_debits: 0, requested: 0, available: 0 });
   const [movements, setMovements] = useState<Movement[]>([]);
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [amount, setAmount] = useState("");
@@ -93,6 +93,7 @@ export default function FinanceiroPage() {
           <article className="card"><div className="cardIcon">+</div><h2>Créditos</h2><p className="financeBig">{loading ? "..." : money(summary.credits)}</p><p>Vendas e demais créditos contabilizados.</p></article>
           <article className="card"><div className="cardIcon">−</div><h2>Reservado</h2><p className="financeBig">{loading ? "..." : money(summary.requested)}</p><p>Solicitações aguardando conclusão.</p></article>
           <article className="card"><div className="cardIcon">↩</div><h2>Reversões</h2><p className="financeBig">{loading ? "..." : money(summary.reversals)}</p><p>Estornos e chargebacks contabilizados.</p></article>
+          <article className="card"><div className="cardIcon">−</div><h2>Outras saídas</h2><p className="financeBig">{loading ? "..." : money(summary.other_debits)}</p><p>Débitos do livro financeiro que não são taxas, reversões ou recebimentos liquidados.</p></article>
           <article className="card"><div className="cardIcon">✓</div><h2>Já recebido</h2><p className="financeBig">{loading ? "..." : money(summary.paid_out)}</p><p>Valores já liquidados pela Pecatho.</p></article>
         </section>
 

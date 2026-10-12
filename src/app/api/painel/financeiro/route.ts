@@ -79,14 +79,45 @@ export async function GET() {
     if (batch.length < 1000) break;
   }
 
+  const { data: creatorData, error: creatorError } = await supabase
+    .from("fans_creators")
+    .select("id")
+    .eq("user_id", user.id);
+  if (creatorError) {
+    return NextResponse.json({ error: "Não foi possível identificar as contas de conteúdo vinculadas ao perfil." }, { status: 500 });
+  }
+  const creatorRows = (creatorData || []) as CreatorRow[];
+  const creatorIds = creatorRows.map((creator) => creator.id);
+
+  const fansEntries: FansLedgerRow[] = [];
+  if (creatorIds.length) {
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error } = await supabase.from("fans_financial_ledger")
+        .select("id,creator_id,entry_type,direction,amount,currency,status,metadata,occurred_at,created_at")
+        .in("creator_id", creatorIds)
+        .eq("status", "posted")
+        .order("occurred_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(offset, offset + 999);
+      if (error) {
+        return NextResponse.json({ error: "Não foi possível carregar o livro financeiro de conteúdo." }, { status: 500 });
+      }
+      const batch = (data || []) as FansLedgerRow[];
+      fansEntries.push(...batch);
+      if (batch.length < 1000) break;
+    }
+  }
+
   const payoutRows: PayoutRow[] = [];
   for (let offset = 0; ; offset += 1000) {
-    const { data, error } = await supabase.from("fans_payout_requests")
+    let payoutQuery = supabase.from("fans_payout_requests")
       .select("id,amount,currency,status,requested_at,processed_at,rejection_reason,provider,provider_reference,idempotency_key")
-      .eq("seller_user_id", user.id)
       .order("requested_at", { ascending: false })
-      .order("id", { ascending: false })
-      .range(offset, offset + 999);
+      .order("id", { ascending: false });
+    payoutQuery = creatorIds.length
+      ? payoutQuery.or(`seller_user_id.eq.${user.id},creator_id.in.(${creatorIds.join(",")})`)
+      : payoutQuery.eq("seller_user_id", user.id);
+    const { data, error } = await payoutQuery.range(offset, offset + 999);
     if (error) {
       return NextResponse.json({ error: "Não foi possível carregar as solicitações de recebimento." }, { status: 500 });
     }
@@ -96,20 +127,49 @@ export async function GET() {
   }
 
   const pendingPayouts = payoutRows.filter((row) => ["requested", "approved", "processing"].includes(row.status));
-  const credits = entries
-    .filter((row) => row.entry_type === "credit" || row.entry_type === "adjustment")
-    .reduce((sum, row) => sum + Number(row.amount || 0), 0);
-  const fees = entries
-    .filter((row) => row.entry_type === "fee")
-    .reduce((sum, row) => sum + Number(row.amount || 0), 0);
-  const reversals = entries
-    .filter((row) => row.entry_type === "refund" || row.entry_type === "chargeback")
-    .reduce((sum, row) => sum + Number(row.amount || 0), 0);
-  const paidOut = entries
-    .filter((row) => row.entry_type === "payout")
-    .reduce((sum, row) => sum + Number(row.amount || 0), 0);
+  const sumAmount = <T,>(rows: T[], amountOf: (row: T) => number) =>
+    rows.reduce((sum, row) => sum + amountOf(row), 0);
+  const credits = sumAmount(
+    entries.filter((row) => row.entry_type === "credit" || row.entry_type === "adjustment"),
+    (row) => Number(row.amount || 0),
+  ) + sumAmount(
+    fansEntries.filter((row) => row.direction === "credit"),
+    (row) => Number(row.amount || 0),
+  );
+  const fees = sumAmount(
+    entries.filter((row) => row.entry_type === "fee"),
+    (row) => Number(row.amount || 0),
+  ) + sumAmount(
+    fansEntries.filter((row) => row.direction === "debit" && /fee|commission|taxa/i.test(row.entry_type)),
+    (row) => Number(row.amount || 0),
+  );
+  const reversals = sumAmount(
+    entries.filter((row) => row.entry_type === "refund" || row.entry_type === "chargeback"),
+    (row) => Number(row.amount || 0),
+  ) + sumAmount(
+    fansEntries.filter((row) => row.direction === "debit" && /refund|chargeback|reversal|estorno/i.test(row.entry_type)),
+    (row) => Number(row.amount || 0),
+  );
+  const paidOut = sumAmount(
+    entries.filter((row) => row.entry_type === "payout"),
+    (row) => Number(row.amount || 0),
+  );
+  const otherDebits = sumAmount(
+    entries.filter((row) => !["credit", "adjustment", "fee", "refund", "chargeback", "payout"].includes(row.entry_type)),
+    (row) => Number(row.amount || 0),
+  ) + sumAmount(
+    fansEntries.filter((row) => row.direction === "debit" && !/fee|commission|taxa|refund|chargeback|reversal|estorno/i.test(row.entry_type)),
+    (row) => Number(row.amount || 0),
+  );
   const requested = pendingPayouts.reduce((sum, row) => sum + Number(row.amount || 0), 0);
-  const available = Math.max(credits - fees - reversals - paidOut - requested, 0);
+  // Reproduz a mesma regra das funções privadas usadas pelo banco ao autorizar saques.
+  const ledgerBalance = sumAmount(entries, (row) =>
+    (row.entry_type === "credit" || row.entry_type === "adjustment" ? 1 : -1) * Number(row.amount || 0),
+  );
+  const fansBalance = sumAmount(fansEntries, (row) =>
+    (row.direction === "credit" ? 1 : -1) * Number(row.amount || 0),
+  );
+  const available = Math.max(ledgerBalance + fansBalance - requested, 0);
 
   const saleIds = entries.map((row) => row.metadata && typeof row.metadata === "object" && "sale_id" in row.metadata ? String(row.metadata.sale_id) : null).filter((id): id is string => Boolean(id));
   const productIds = entries.map((row) => row.metadata && typeof row.metadata === "object" && "product_id" in row.metadata ? String(row.metadata.product_id) : null).filter((id): id is string => Boolean(id));
@@ -123,20 +183,33 @@ export async function GET() {
   const saleMap = new Map(saleRows.map((sale) => [sale.id, sale]));
   const productMap = new Map(productRows.map((product) => [product.id, product]));
 
-  const movements = entries.map((row) => ({
-    id: row.id,
-    type: row.entry_type,
-    amount: Number(row.amount || 0),
-    currency: row.currency,
-    description: row.description,
-    created_at: row.created_at,
-    metadata: row.metadata,
-    sale: row.metadata && typeof row.metadata === "object" && "sale_id" in row.metadata ? saleMap.get(String(row.metadata.sale_id)) || null : null,
-    product: row.metadata && typeof row.metadata === "object" && "product_id" in row.metadata ? productMap.get(String(row.metadata.product_id)) || null : null,
-  }));
+  const movements = [
+    ...entries.map((row) => ({
+      id: row.id,
+      type: row.entry_type,
+      amount: Number(row.amount || 0),
+      currency: row.currency,
+      description: row.description,
+      created_at: row.created_at,
+      metadata: row.metadata,
+      sale: row.metadata && typeof row.metadata === "object" && "sale_id" in row.metadata ? saleMap.get(String(row.metadata.sale_id)) || null : null,
+      product: row.metadata && typeof row.metadata === "object" && "product_id" in row.metadata ? productMap.get(String(row.metadata.product_id)) || null : null,
+    })),
+    ...fansEntries.map((row) => ({
+      id: `fans-${row.id}`,
+      type: `fans_${row.entry_type}`,
+      amount: (row.direction === "credit" ? 1 : -1) * Number(row.amount || 0),
+      currency: row.currency,
+      description: typeof row.metadata?.description === "string" ? row.metadata.description : row.entry_type.replace(/_/g, " "),
+      created_at: row.occurred_at || row.created_at,
+      metadata: row.metadata,
+      sale: null,
+      product: null,
+    })),
+  ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   return NextResponse.json({
-    summary: { credits, fees, reversals, paid_out: paidOut, requested, available },
+    summary: { credits, fees, reversals, paid_out: paidOut, other_debits: otherDebits, requested, available },
     payouts: payoutRows.slice(0, 50).map((row) => ({ ...row, status_label: STATUS_LABELS[row.status] || row.status })),
     movements,
   });
