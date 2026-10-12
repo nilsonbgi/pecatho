@@ -11,6 +11,30 @@ type Sale = { id:string; product_id:string; order_id:string; buyer_user_id:strin
 
 function brl(value:number){return new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(value);}
 function fileSize(value:number){if(value<1024*1024)return Math.max(1,Math.round(value/1024))+" KB";return (value/1024/1024).toFixed(1).replace(".",",")+" MB";}
+function parsePrice(value:string):number{
+ const raw=value.trim().replace(/\s/g,"");
+ if(!raw)return Number.NaN;
+ let normalized="";
+ if(raw.includes(",")&&raw.includes(".")){
+  const decimalSeparator=raw.lastIndexOf(",")>raw.lastIndexOf(".")?",":".";
+  const thousandsSeparator=decimalSeparator===","?".":",";
+  const parts=raw.split(decimalSeparator);
+  if(parts.length!==2||!/^\d{1,3}(?:[.,]\d{3})*$/.test(parts[0])||!/^\d{1,2}$/.test(parts[1]))return Number.NaN;
+  normalized=parts[0].split(thousandsSeparator).join("").replace(decimalSeparator,".")+"."+parts[1];
+ }else if(raw.includes(",")){
+  if(!/^\d+(,\d{1,2})?$/.test(raw))return Number.NaN;
+  normalized=raw.replace(",",".");
+ }else if(raw.includes(".")){
+  if(/^\d{1,3}(\.\d{3})+$/.test(raw))normalized=raw.replace(/\./g,"");
+  else if(/^\d+(\.\d{1,2})?$/.test(raw))normalized=raw;
+  else return Number.NaN;
+ }else{
+  if(!/^\d+$/.test(raw))return Number.NaN;
+  normalized=raw;
+ }
+ const result=Number(normalized);
+ return Number.isFinite(result)&&result>0?Math.round(result*100)/100:Number.NaN;
+}
 
 export default function DigitalContentManager({ownerType}:{ownerType:OwnerType}){
  const supabase=useMemo(()=>createClient(),[]);
@@ -36,8 +60,9 @@ export default function DigitalContentManager({ownerType}:{ownerType:OwnerType})
   setBusy(true);setError("");setMessage("");
   try{
    if(!ownerId)throw new Error("Proprietário não identificado.");
-   const normalized=Number(price.replace(/\./g,"").replace(",","."));
-   if(!title.trim()||!Number.isFinite(normalized)||normalized<=0)throw new Error("Informe título e valor válido.");
+   const normalized=parsePrice(price);
+   if(!title.trim())throw new Error("Informe o título do conteúdo.");
+   if(!Number.isFinite(normalized))throw new Error("Informe um preço válido, por exemplo 49,90 ou 1.234,56.");
    if(!files.length)throw new Error("Adicione pelo menos um arquivo.");
    if(productType==="single_image"&&(files.length!==1||!files[0].type.startsWith("image/")))throw new Error("Uma venda de imagem deve conter exatamente uma imagem.");
    if(productType==="single_video"&&(files.length!==1||!files[0].type.startsWith("video/")))throw new Error("Uma venda de vídeo deve conter exatamente um vídeo.");
@@ -79,12 +104,13 @@ export default function DigitalContentManager({ownerType}:{ownerType:OwnerType})
       <label>Título<input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Ex.: Ensaio exclusivo — coleção de setembro"/></label>
       <label>Descrição<textarea value={description} onChange={e=>setDescription(e.target.value)} rows={4} placeholder="Explique ao comprador o que ele receberá."/></label>
       <div className="digitalFormGrid">
-       <label>Preço<input value={price} onChange={e=>setPrice(e.target.value)} inputMode="decimal" placeholder="49,90"/></label>
+       <label>Preço (R$)<input value={price} onChange={e=>setPrice(e.target.value)} inputMode="decimal" maxLength={18} placeholder="49,90" aria-describedby="digital-price-help"/><small id="digital-price-help">Use vírgula para centavos. Também aceitamos valores como 1.234,56.</small></label>
        <label>Tipo<select value={productType} onChange={e=>setProductType(e.target.value as typeof productType)}><option value="package">Pacote</option><option value="single_image">Imagem única</option><option value="single_video">Vídeo único</option></select></label>
       </div>
-      <label className="digitalFileDrop"><span>02 · ARQUIVOS</span><strong>Selecione fotos ou vídeos</strong><small>Os originais permanecem privados. Até 250 MB por arquivo.</small><input type="file" multiple accept="image/*,video/*,audio/*,.pdf" onChange={e=>setFiles(Array.from(e.target.files??[]))}/></label>
-      {files.length>0&&<div className="digitalFileList">{files.map((file,index)=><div key={file.name+"-"+index}><span>{file.type.startsWith("video/")?"▶":"✦"}</span><div><strong>{file.name}</strong><small>{file.type||"arquivo"} · {fileSize(file.size)}</small></div></div>)}</div>}
-      {files.length>0&&<div className="digitalUploadSummary"><span>{files.length} arquivo(s)</span><strong>{fileSize(totalSize)}</strong></div>}
+      <label className="digitalFileDrop"><span>02 · ARQUIVOS</span><strong>Selecione fotos ou vídeos</strong><small>Os originais permanecem privados. Até 250 MB por arquivo. Você pode remover arquivos antes de publicar.</small><input key={files.length} type="file" multiple accept="image/*,video/*,audio/*,.pdf" onChange={e=>setFiles(Array.from(e.target.files??[]))}/></label>
+      {files.length>0&&<div className="digitalFileList">{files.map((file,index)=><div key={file.name+"-"+index}><span aria-hidden="true">{file.type.startsWith("video/")?"▶":file.type.startsWith("image/")?"▧":"✦"}</span><div className="digitalFileDetails"><strong>{file.name}</strong><small>{file.type||"arquivo"} · {fileSize(file.size)}</small></div><button type="button" className="digitalRemoveFile" onClick={()=>setFiles(current=>current.filter((_,fileIndex)=>fileIndex!==index))} disabled={busy} aria-label={"Remover arquivo "+file.name}>Remover</button></div>)}</div>}
+      {files.length>0&&<div className="digitalUploadSummary"><span>{files.length} arquivo(s) selecionado(s)</span><strong>{fileSize(totalSize)}</strong></div>}
+      <aside className="digitalOfferPreview" aria-live="polite"><div className="digitalOfferPreviewTop"><span>PRÉVIA DA OFERTA</span><span>{productType==="package"?"PACOTE":productType==="single_video"?"VÍDEO":"IMAGEM"}</span></div><h3>{title.trim()||"Nome do seu conteúdo"}</h3><p>{description.trim()||"A descrição que você escrever aparecerá aqui para contextualizar a oferta."}</p><div className="digitalOfferPreviewBottom"><strong>{Number.isFinite(parsePrice(price))?brl(parsePrice(price)):"R$ 0,00"}</strong><span>{files.length} arquivo(s) · {fileSize(totalSize)}</span></div></aside>
       <button type="button" className="digitalPublishButton" onClick={()=>void createProduct()} disabled={busy}>{busy?"Preparando conteúdo...":"Publicar para venda"}</button>
       {message&&<p className="digitalSuccess">{message}</p>}{error&&<p className="digitalError">{error}</p>}
      </div>
@@ -99,5 +125,21 @@ export default function DigitalContentManager({ownerType}:{ownerType:OwnerType})
    <section className="digitalSalesPanel"><div className="digitalSectionHead"><div><span>04</span><div><b>COMERCIAL</b><h2>Vendas realizadas.</h2></div></div><strong>{sales.length} registro{sales.length === 1 ? "" : "s"}</strong></div>{sales.length===0?<div className="digitalEmpty"><div>R$</div><h3>Ainda não há vendas.</h3><p>Quando um cliente confirmar uma compra, a transação aparecerá aqui.</p></div>:<div className="digitalSalesTable">{sales.map((sale)=><article key={sale.id} className="digitalSaleRow"><div><strong>{sale.product?.title || "Conteúdo"}</strong><span>{sale.buyer?.display_name ? "Cliente: "+sale.buyer.display_name : "Cliente Pecatho"}</span><small>{new Date(sale.paid_at || sale.created_at).toLocaleString("pt-BR")} · Venda {sale.id.slice(0,8)}</small></div><div><strong>{brl(sale.amount)}</strong><span>Você recebe {brl(sale.owner_amount)}</span><small className={"digitalSaleStatus digitalSaleStatus-"+sale.status}>{sale.status}</small><CustomerReview sourceType="digital_content" sourceId={sale.id} customerName={sale.buyer?.display_name} /></div></article>)}</div>}</section>
    <div className="digitalTrust"><span>🔒</span><div><strong>Venda protegida</strong><p>O conteúdo comercial permanece em armazenamento privado. O cliente não recebe o arquivo antes da confirmação do pagamento.</p></div><div><strong>Preço sob seu controle</strong><p>Você define e altera a oferta comercial de cada produto.</p></div></div>
   </div>
+  <style>{`
+   .digitalFileDetails{min-width:0;flex:1;overflow-wrap:anywhere}
+   .digitalRemoveFile{flex-shrink:0;border:1px solid #e2e8f0;background:#fff;color:#64748b;border-radius:8px;padding:7px 9px;font-size:10px;font-weight:800;cursor:pointer}
+   .digitalRemoveFile:hover{border-color:#fda4af;color:#be123c}
+   .digitalRemoveFile:disabled{opacity:.5;cursor:wait}
+   .digitalOfferPreview{border:1px solid #e9d5ff;border-radius:15px;padding:15px;background:linear-gradient(145deg,#faf5ff,#fff 72%)}
+   .digitalOfferPreviewTop,.digitalOfferPreviewBottom{display:flex;justify-content:space-between;align-items:center;gap:10px}
+   .digitalOfferPreviewTop{font-size:9px;letter-spacing:.12em;font-weight:900;color:#7c3aed}
+   .digitalOfferPreviewTop span:last-child{background:#ede9fe;border-radius:999px;padding:5px 8px}
+   .digitalOfferPreview h3{font-size:16px;line-height:1.35;margin:12px 0 5px;color:#111827;overflow-wrap:anywhere}
+   .digitalOfferPreview p{font-size:11px;line-height:1.6;color:#64748b;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+   .digitalOfferPreviewBottom{margin-top:14px;padding-top:12px;border-top:1px solid #ede9fe}
+   .digitalOfferPreviewBottom strong{font-size:20px;letter-spacing:-.04em;color:#111827}
+   .digitalOfferPreviewBottom span{font-size:10px;color:#64748b;text-align:right}
+   #digital-price-help{display:block;font-size:10px;color:#94a3b8;line-height:1.5;margin-top:5px}
+  `}</style>
  </main>;
 }
