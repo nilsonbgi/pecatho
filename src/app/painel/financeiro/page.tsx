@@ -91,6 +91,7 @@ export default function FinanceiroPage() {
         <section className="pillars">
           <article className="card"><div className="cardIcon">R$</div><h2>Disponível</h2><p className="financeBig">{loading ? "..." : money(summary.available)}</p><p>Valor atualmente disponível para solicitar.</p></article>
           <article className="card"><div className="cardIcon">+</div><h2>Créditos</h2><p className="financeBig">{loading ? "..." : money(summary.credits)}</p><p>Vendas e demais créditos contabilizados.</p></article>
+          <article className="card"><div className="cardIcon">%</div><h2>Taxas e comissões</h2><p className="financeBig">{loading ? "..." : money(summary.fees)}</p><p>Taxas e comissões registradas no livro financeiro.</p></article>
           <article className="card"><div className="cardIcon">−</div><h2>Reservado</h2><p className="financeBig">{loading ? "..." : money(summary.requested)}</p><p>Solicitações aguardando conclusão.</p></article>
           <article className="card"><div className="cardIcon">↩</div><h2>Reversões</h2><p className="financeBig">{loading ? "..." : money(summary.reversals)}</p><p>Estornos e chargebacks contabilizados.</p></article>
           <article className="card"><div className="cardIcon">−</div><h2>Outras saídas</h2><p className="financeBig">{loading ? "..." : money(summary.other_debits)}</p><p>Débitos do livro financeiro que não são taxas, reversões ou recebimentos liquidados.</p></article>
