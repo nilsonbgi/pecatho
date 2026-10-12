@@ -42,7 +42,8 @@ export default function DigitalContentManager({ownerType}:{ownerType:OwnerType})
  const [title,setTitle]=useState("");const [description,setDescription]=useState("");const [price,setPrice]=useState("");
  const [productType,setProductType]=useState<"single_image"|"single_video"|"package">("package");const [files,setFiles]=useState<File[]>([]);
  const [busy,setBusy]=useState(false);const [message,setMessage]=useState("");const [error,setError]=useState("");
- const [metrics,setMetrics]=useState({sales:0,gross:0,ownerAmount:0,last30Sales:0,last30Gross:0});const [sales,setSales]=useState<Sale[]>([]);\n const [catalogSearch,setCatalogSearch]=useState("");const [catalogStatus,setCatalogStatus]=useState<"all"|"published"|"archived">("all");const [editingProduct,setEditingProduct]=useState<string|null>(null);const [editTitle,setEditTitle]=useState("");const [editDescription,setEditDescription]=useState("");const [editPrice,setEditPrice]=useState("");
+ const [metrics,setMetrics]=useState({sales:0,gross:0,ownerAmount:0,last30Sales:0,last30Gross:0});const [sales,setSales]=useState<Sale[]>([]);
+ const [catalogSearch,setCatalogSearch]=useState("");const [catalogStatus,setCatalogStatus]=useState<"all"|"published"|"archived">("all");const [editingProduct,setEditingProduct]=useState<string|null>(null);const [editTitle,setEditTitle]=useState("");const [editDescription,setEditDescription]=useState("");const [editPrice,setEditPrice]=useState("");
 
  async function load(){
   setError("");const {data:{user}}=await supabase.auth.getUser();if(!user){setError("Sessão expirada.");return;}setOwnerUserId(user.id);
@@ -82,7 +83,8 @@ export default function DigitalContentManager({ownerType}:{ownerType:OwnerType})
  async function changeStatus(id:string,nextStatus:"archived"|"published"){if(!ownerUserId)return;setBusy(true);setError("");setMessage("");try{const {data:{user}}=await supabase.auth.getUser();if(!user||user.id!==ownerUserId)throw new Error("Sua sessão mudou. Atualize a página e tente novamente.");const {data:updated,error:e}=await supabase.from("digital_content_products").update({status:nextStatus,updated_at:new Date().toISOString()}).eq("id",id).eq("owner_user_id",user.id).eq("owner_type",ownerType).select("id").maybeSingle();if(e)throw new Error(e.message);if(!updated)throw new Error("Não foi possível alterar o status deste conteúdo.");setMessage(nextStatus==="archived"?"Conteúdo arquivado. Você pode reativá-lo a qualquer momento.":"Conteúdo reativado e disponível para venda.");await load();}catch(e){setError(e instanceof Error?e.message:"Não foi possível alterar o status.");}finally{setBusy(false);}}
 
  const totalSize=files.reduce((sum,file)=>sum+file.size,0);
- const activeProducts=products.filter(p=>p.status==="published").length;\n const visibleProducts=products.filter(p=>(catalogStatus==="all"||p.status===catalogStatus)&&(`${p.title} ${p.description??""}`).toLocaleLowerCase("pt-BR").includes(catalogSearch.trim().toLocaleLowerCase("pt-BR")));
+ const activeProducts=products.filter(p=>p.status==="published").length;
+ const visibleProducts=products.filter(p=>(catalogStatus==="all"||p.status===catalogStatus)&&(`${p.title} ${p.description??""}`).toLocaleLowerCase("pt-BR").includes(catalogSearch.trim().toLocaleLowerCase("pt-BR")));
  const label=ownerType==="creator"?"FANS":"ACOMPANHANTE";
 
  return <main className="digitalManager">
