@@ -28,6 +28,29 @@ type ProductRow = {
   title: string;
 };
 
+type CreatorRow = { id: string };
+
+type FansLedgerRow = {
+  id: string;
+  entry_type: string;
+  direction: string;
+  amount: number | string;
+  currency: string;
+  description: string | null;
+  occurred_at: string;
+  created_at: string;
+};
+
+type FinancialSummaryRow = {
+  credits: number | string;
+  fees: number | string;
+  reversals: number | string;
+  paid_out: number | string;
+  other_debits: number | string;
+  requested: number | string;
+  available: number | string;
+};
+
 function idempotencyKey(value: unknown) {
   if (typeof value === "string" && value.trim()) return value.trim().slice(0, 120);
   return crypto.randomUUID();
@@ -120,7 +143,6 @@ export async function GET() {
     if (batch.length < 1000) break;
   }
 
-  const pendingPayouts = payoutRows.filter((row) => ["requested", "approved", "processing"].includes(row.status));
   const credits = Number(summaryRow.credits || 0);
   const fees = Number(summaryRow.fees || 0);
   const reversals = Number(summaryRow.reversals || 0);
