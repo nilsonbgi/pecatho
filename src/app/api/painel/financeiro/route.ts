@@ -89,23 +89,17 @@ export async function GET() {
   const creatorRows = (creatorData || []) as CreatorRow[];
   const creatorIds = creatorRows.map((creator) => creator.id);
 
-  const fansEntries: FansLedgerRow[] = [];
-  if (creatorIds.length) {
-    for (let offset = 0; ; offset += 1000) {
-      const { data, error } = await supabase.from("fans_financial_ledger")
-        .select("id,creator_id,entry_type,direction,amount,currency,status,metadata,occurred_at,created_at")
-        .in("creator_id", creatorIds)
-        .eq("status", "posted")
-        .order("occurred_at", { ascending: false })
-        .order("id", { ascending: false })
-        .range(offset, offset + 999);
-      if (error) {
-        return NextResponse.json({ error: "Não foi possível carregar o livro financeiro de conteúdo." }, { status: 500 });
-      }
-      const batch = (data || []) as FansLedgerRow[];
-      fansEntries.push(...batch);
-      if (batch.length < 1000) break;
-    }
+  const [{ data: fansLedgerData, error: fansLedgerError }, { data: summaryData, error: summaryError }] = await Promise.all([
+    supabase.rpc("seller_fans_financial_movements"),
+    supabase.rpc("seller_payout_financial_summary"),
+  ]);
+  if (fansLedgerError || summaryError) {
+    return NextResponse.json({ error: "Não foi possível carregar o saldo financeiro unificado da conta." }, { status: 500 });
+  }
+  const fansEntries = (fansLedgerData || []) as FansLedgerRow[];
+  const summaryRow = (Array.isArray(summaryData) ? summaryData[0] : summaryData) as FinancialSummaryRow | null;
+  if (!summaryRow) {
+    return NextResponse.json({ error: "O resumo financeiro não foi retornado pelo banco de dados." }, { status: 500 });
   }
 
   const payoutRows: PayoutRow[] = [];
@@ -127,49 +121,14 @@ export async function GET() {
   }
 
   const pendingPayouts = payoutRows.filter((row) => ["requested", "approved", "processing"].includes(row.status));
-  const sumAmount = <T,>(rows: T[], amountOf: (row: T) => number) =>
-    rows.reduce((sum, row) => sum + amountOf(row), 0);
-  const credits = sumAmount(
-    entries.filter((row) => row.entry_type === "credit" || row.entry_type === "adjustment"),
-    (row) => Number(row.amount || 0),
-  ) + sumAmount(
-    fansEntries.filter((row) => row.direction === "credit"),
-    (row) => Number(row.amount || 0),
-  );
-  const fees = sumAmount(
-    entries.filter((row) => row.entry_type === "fee"),
-    (row) => Number(row.amount || 0),
-  ) + sumAmount(
-    fansEntries.filter((row) => row.direction === "debit" && /fee|commission|taxa/i.test(row.entry_type)),
-    (row) => Number(row.amount || 0),
-  );
-  const reversals = sumAmount(
-    entries.filter((row) => row.entry_type === "refund" || row.entry_type === "chargeback"),
-    (row) => Number(row.amount || 0),
-  ) + sumAmount(
-    fansEntries.filter((row) => row.direction === "debit" && /refund|chargeback|reversal|estorno/i.test(row.entry_type)),
-    (row) => Number(row.amount || 0),
-  );
-  const paidOut = sumAmount(
-    entries.filter((row) => row.entry_type === "payout"),
-    (row) => Number(row.amount || 0),
-  );
-  const otherDebits = sumAmount(
-    entries.filter((row) => !["credit", "adjustment", "fee", "refund", "chargeback", "payout"].includes(row.entry_type)),
-    (row) => Number(row.amount || 0),
-  ) + sumAmount(
-    fansEntries.filter((row) => row.direction === "debit" && !/fee|commission|taxa|refund|chargeback|reversal|estorno/i.test(row.entry_type)),
-    (row) => Number(row.amount || 0),
-  );
-  const requested = pendingPayouts.reduce((sum, row) => sum + Number(row.amount || 0), 0);
-  // Reproduz a mesma regra das funções privadas usadas pelo banco ao autorizar saques.
-  const ledgerBalance = sumAmount(entries, (row) =>
-    (row.entry_type === "credit" || row.entry_type === "adjustment" ? 1 : -1) * Number(row.amount || 0),
-  );
-  const fansBalance = sumAmount(fansEntries, (row) =>
-    (row.direction === "credit" ? 1 : -1) * Number(row.amount || 0),
-  );
-  const available = Math.max(ledgerBalance + fansBalance - requested, 0);
+  const credits = Number(summaryRow.credits || 0);
+  const fees = Number(summaryRow.fees || 0);
+  const reversals = Number(summaryRow.reversals || 0);
+  const paidOut = Number(summaryRow.paid_out || 0);
+  const otherDebits = Number(summaryRow.other_debits || 0);
+  const requested = Number(summaryRow.requested || 0);
+  // Saldo vem da mesma função autoritativa que valida a solicitação de recebimento no banco.
+  const available = Number(summaryRow.available || 0);
 
   const saleIds = entries.map((row) => row.metadata && typeof row.metadata === "object" && "sale_id" in row.metadata ? String(row.metadata.sale_id) : null).filter((id): id is string => Boolean(id));
   const productIds = entries.map((row) => row.metadata && typeof row.metadata === "object" && "product_id" in row.metadata ? String(row.metadata.product_id) : null).filter((id): id is string => Boolean(id));
@@ -200,9 +159,9 @@ export async function GET() {
       type: `fans_${row.entry_type}`,
       amount: (row.direction === "credit" ? 1 : -1) * Number(row.amount || 0),
       currency: row.currency,
-      description: typeof row.metadata?.description === "string" ? row.metadata.description : row.entry_type.replace(/_/g, " "),
+      description: row.description || row.entry_type.replace(/_/g, " "),
       created_at: row.occurred_at || row.created_at,
-      metadata: row.metadata,
+      metadata: null,
       sale: null,
       product: null,
     })),
