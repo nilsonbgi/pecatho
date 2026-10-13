@@ -10,6 +10,14 @@ export default async function Painel() {
   if (!user) redirect("/login");
   const { data: profile } = await supabase.from("profiles").select("display_name,username,status,account_type").eq("id", user.id).single();
   if (profile?.account_type === "customer") redirect("/painel/cliente");
+  const { data: staffRole } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", user.id)
+    .in("role", ["super_admin", "admin", "moderator", "support", "finance"])
+    .limit(1)
+    .maybeSingle();
+  const canAccessAdministration = Boolean(staffRole?.role);
   const { data: advertiser } = await supabase.from("advertiser_profiles").select("id,slug,title,status,verification_status,city_id,state_id").eq("user_id", user.id).maybeSingle();
   const { data: creator } = await supabase.from("fans_creators").select("id,slug,display_name,status,bio").eq("user_id", user.id).maybeSingle();
   const { count: followingCount } = await supabase.from("user_follows").select("profile_id", { count: "exact", head: true }).eq("follower_id", user.id);
@@ -22,7 +30,7 @@ export default async function Painel() {
   const paidReceivedGifts = (receivedGifts ?? []).filter((gift) => gift.status === "paid");
   const receivedGiftTotal = paidReceivedGifts.reduce((sum, gift) => sum + Number(gift.amount || 0), 0);
   return (
-    <main className="shell advertiserDashboard"><nav className="topbar"><div className="brand"><span className="brandMark">P</span><span>Pecatho</span></div><div className="navLinks"><Link href="/">Página inicial</Link><Link href="/anunciantes">Acompanhantes</Link><Link href="/admin" className="navCta">Administração</Link></div></nav>
+    <main className="shell advertiserDashboard"><nav className="topbar"><div className="brand"><span className="brandMark">P</span><span>Pecatho</span></div><div className="navLinks"><Link href="/">Página inicial</Link><Link href="/anunciantes">Acompanhantes</Link>{canAccessAdministration && <Link href="/admin" className="navCta">Administração</Link>}</div></nav>
       <section className="hero"><nav className="dashboardSectionNav" aria-label="Navegação rápida do painel"><Link href="#operacao">Operação</Link><Link href="#relacionamento">Relacionamento</Link><Link href="#financeiro">Financeiro</Link><Link href="#conta">Conta</Link></nav><div className="eyebrow">PECATHO · ÁREA DA ACOMPANHANTE</div><h1>Olá, <em>{profile?.display_name || user.email}</em></h1><p className="heroCopy">Sua central de operação reúne anúncio, mídia, disponibilidade, relacionamento e Pecatho Fans em uma única experiência.</p><div className="dashboardQuickLinks"><Link href="/anunciantes">Explorar acompanhantes</Link><Link href="/painel/financeiro">Financeiro</Link>{advertiser&&<Link href="/anunciantes">Ver meu posicionamento</Link>}<Link href="/fans">Pecatho Fans</Link><Link href="/parceiros">Parceiros</Link><Link href="/painel/mensagens">Mensagens</Link></div>
         <section id="operacao" className="pillars">
           <article className="card"><div className="cardIcon">A</div><h2>Meu anúncio Pecatho</h2><p>{advertiser ? advertiser.title : "Você ainda não criou um anúncio de serviços."}</p><p>Status: {advertiser ? publicationStatus[advertiser.status] || advertiser.status : "Não iniciado"}</p><div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:12}}><Link className="secondaryButton" href="/painel/anuncio">{advertiser ? "Editar anúncio" : "Criar anúncio"}</Link>{advertiser&&<Link className="secondaryButton" href="/painel/anuncio/operacional">Disponibilidade, preços e pagamentos</Link>}{advertiser&&<Link className="secondaryButton" href="/painel/anuncio/revisao">Revisar antes de enviar</Link>}</div></article>
