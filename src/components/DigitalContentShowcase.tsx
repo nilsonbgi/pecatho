@@ -49,10 +49,15 @@ export default function DigitalContentShowcase({
   const [products, setProducts] = useState<Product[]>([]);
   const [reputation, setReputation] = useState<SellerReputation | null>(null);
   const [loading, setLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState(false);
+  const [reloadCatalog, setReloadCatalog] = useState(0);
   const [reputationLoading, setReputationLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
+    setLoading(true);
+    setCatalogError(false);
+    setReputationLoading(true);
 
     fetch(
       `/api/conteudos/public?owner_type=${encodeURIComponent(ownerType)}&owner_id=${encodeURIComponent(ownerId)}`,
@@ -63,10 +68,16 @@ export default function DigitalContentShowcase({
         return response.json() as Promise<{ products?: Product[] }>;
       })
       .then((data) => {
-        if (active) setProducts(Array.isArray(data.products) ? data.products : []);
+        if (active) {
+          setProducts(Array.isArray(data.products) ? data.products : []);
+          setCatalogError(false);
+        }
       })
       .catch(() => {
-        if (active) setProducts([]);
+        if (active) {
+          setProducts([]);
+          setCatalogError(true);
+        }
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -93,7 +104,21 @@ export default function DigitalContentShowcase({
     return () => {
       active = false;
     };
-  }, [ownerId, ownerType]);
+  }, [ownerId, ownerType, reloadCatalog]);
+
+  if (!loading && catalogError) {
+    return (
+      <section className="relative overflow-hidden rounded-[32px] border border-amber-200/20 bg-gradient-to-br from-[#08080d] via-[#151022] to-[#211a13] p-6 text-white shadow-[0_28px_90px_rgba(76,29,149,.16)] sm:p-10" aria-live="polite">
+        <div className="mx-auto max-w-3xl text-center">
+          <span className="inline-flex rounded-full border border-amber-300/25 bg-amber-400/10 px-3 py-1.5 text-[9px] font-black tracking-[.18em] text-amber-200">LOJA PRIVADA · PECATHO</span>
+          <div className="mx-auto mt-5 grid h-16 w-16 place-items-center rounded-2xl border border-white/10 bg-white/[.05] text-3xl" aria-hidden="true">↻</div>
+          <h2 className="mt-5 text-3xl font-black tracking-[-.06em] sm:text-4xl">Não foi possível carregar a loja agora</h2>
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-300">Não conseguimos consultar os conteúdos deste perfil neste momento. Isso não significa que o criador esteja sem publicações. Tente novamente em instantes.</p>
+          <button type="button" onClick={() => { setLoading(true); setReloadCatalog((current) => current + 1); }} className="mt-6 inline-flex items-center justify-center rounded-xl border border-violet-300/30 bg-violet-400/10 px-5 py-3 text-xs font-black text-white transition hover:bg-violet-400/20">Tentar novamente</button>
+        </div>
+      </section>
+    );
+  }
 
   if (!loading && products.length === 0) {
     return (
