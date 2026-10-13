@@ -11,6 +11,7 @@ type Conversation = {
   title: string;
   display_name: string;
   slug: string | null;
+  profileHref: string | null;
   lastMessage: string;
   lastMessageAt: string | null;
   unread: boolean;
@@ -18,6 +19,8 @@ type Conversation = {
 
 type ConversationRow = { id: string; profile_id: string | null; updated_at: string };
 type MemberRow = { conversation_id: string; last_read_at: string | null };
+type FansConversationRow = { conversation_id: string; creator_id: string };
+type CreatorRow = { id: string; display_name: string; slug: string | null };
 type MessageRow = { conversation_id: string; body: string; created_at: string; sender_id: string };
 
 export default function MessagesPage() {
@@ -48,7 +51,7 @@ export default function MessagesPage() {
         const conversationIds = rows.map((row) => row.id);
         const profileIds = rows.map((row) => row.profile_id).filter((value): value is string => Boolean(value));
 
-        const [profileResult, memberResult, messageResult] = await Promise.all([
+        const [profileResult, memberResult, messageResult, fansConversationResult] = await Promise.all([
           profileIds.length
             ? supabase.from("advertiser_profiles").select("id,title,display_name,slug").in("id", profileIds)
             : Promise.resolve({ data: [], error: null }),
@@ -58,13 +61,26 @@ export default function MessagesPage() {
           conversationIds.length
             ? supabase.from("messages").select("conversation_id,body,created_at,sender_id").in("conversation_id", conversationIds).order("created_at", { ascending: false })
             : Promise.resolve({ data: [], error: null }),
+          conversationIds.length
+            ? supabase.from("fans_conversations").select("conversation_id,creator_id").in("conversation_id", conversationIds)
+            : Promise.resolve({ data: [], error: null }),
         ]);
 
         if (profileResult.error) throw profileResult.error;
         if (memberResult.error) throw memberResult.error;
         if (messageResult.error) throw messageResult.error;
+        if (fansConversationResult.error) throw fansConversationResult.error;
+
+        const fansConversationRows = (fansConversationResult.data ?? []) as FansConversationRow[];
+        const creatorIds = [...new Set(fansConversationRows.map((row) => row.creator_id))];
+        const creatorResult = creatorIds.length
+          ? await supabase.from("fans_creators").select("id,display_name,slug").in("id", creatorIds)
+          : { data: [], error: null };
+        if (creatorResult.error) throw creatorResult.error;
 
         const profileMap = new Map((profileResult.data ?? []).map((profile) => [profile.id, profile]));
+        const fansConversationMap = new Map(fansConversationRows.map((row) => [row.conversation_id, row]));
+        const creatorMap = new Map(((creatorResult.data ?? []) as CreatorRow[]).map((creator) => [creator.id, creator]));
         const memberMap = new Map((memberResult.data ?? []).map((member) => [member.conversation_id, member as MemberRow]));
         const latest = new Map<string, MessageRow>();
 
@@ -74,6 +90,8 @@ export default function MessagesPage() {
 
         const mapped = rows.map((row) => {
           const profile = row.profile_id ? profileMap.get(row.profile_id) : null;
+          const fansConversation = fansConversationMap.get(row.id);
+          const creator = fansConversation ? creatorMap.get(fansConversation.creator_id) : null;
           const member = memberMap.get(row.id);
           const lastMessage = latest.get(row.id);
           const unread = Boolean(
@@ -87,9 +105,10 @@ export default function MessagesPage() {
             id: row.id,
             profile_id: row.profile_id,
             updated_at: row.updated_at,
-            title: profile?.title || "Conversa Pecatho",
-            display_name: profile?.display_name || "Anunciante",
-            slug: profile?.slug || null,
+            title: profile?.title || (creator ? "Conversa com " + creator.display_name : "Conversa Pecatho"),
+            display_name: profile?.display_name || creator?.display_name || "Conversa privada",
+            slug: profile?.slug || creator?.slug || null,
+            profileHref: profile?.slug ? "/anunciantes/" + profile.slug : creator?.slug ? "/fans/" + creator.slug : null,
             lastMessage: lastMessage?.body || "Nenhuma mensagem enviada ainda.",
             lastMessageAt: lastMessage?.created_at || null,
             unread,
@@ -227,7 +246,7 @@ export default function MessagesPage() {
           Minhas <em>conversas.</em>
         </h1>
         <p className="heroCopy">
-          Converse diretamente com anunciantes publicados no Pecatho, mantendo a interação dentro da plataforma.
+          Converse diretamente com anunciantes e criadores do Pecatho, mantendo a interação dentro da plataforma.
         </p>
 
         {loading && (
@@ -245,9 +264,12 @@ export default function MessagesPage() {
         {!loading && !error && items.length === 0 && (
           <div className="card">
             <h2>Nenhuma conversa ainda.</h2>
-            <p>Abra um perfil publicado em Anunciantes e use o botão para iniciar uma conversa.</p>
+            <p>Abra um perfil de anunciante ou criador e use o botão para iniciar uma conversa.</p>
             <Link href="/anunciantes" className="primaryButton">
-              Encontrar anunciantes
+              Encontrar perfis
+            </Link>
+            <Link href="/fans" className="secondaryButton">
+              Descobrir criadores Fans
             </Link>
           </div>
         )}
@@ -268,7 +290,7 @@ export default function MessagesPage() {
                     gap: 12,
                   }}
                 >
-                  <div className="eyebrow">CONVERSA</div>
+                  <div className="eyebrow">{item.profileHref?.startsWith("/fans/") ? "CONVERSA FANS" : "CONVERSA"}</div>
                   {item.unread && (
                     <strong style={{ fontSize: 12, letterSpacing: ".08em" }}>
                       NOVA MENSAGEM
@@ -282,8 +304,8 @@ export default function MessagesPage() {
                   <Link href={`/painel/mensagens/${item.id}`} className="primaryButton">
                     Abrir conversa
                   </Link>
-                  {item.slug && (
-                    <Link href={`/anunciantes/${item.slug}`} className="secondaryButton">
+                  {item.profileHref && (
+                    <Link href={item.profileHref} className="secondaryButton">
                       Ver perfil
                     </Link>
                   )}
