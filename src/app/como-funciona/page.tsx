@@ -61,7 +61,7 @@ export default function ComoFuncionaPage() {
       </section>
 
       <nav className="howContents" aria-label="Navegação deste guia">
-        <a href="#jornada">Como começar</a><a href="#funcionalidades">Funcionalidades</a><a href="#convivencia">Regras e Blacklist</a><a href="#duvidas">Perguntas frequentes</a>
+        <a href="#jornada">Como começar</a><a href="#funcionalidades">Funcionalidades</a><a href="#convivencia">Regras e Blacklist</a><a href="#duvidas">Perguntas frequentes</a><Link href="/painel/seguranca">Central de segurança</Link>
       </nav>
 
       <section id="jornada" className="howSection">
@@ -78,7 +78,7 @@ export default function ComoFuncionaPage() {
         <div className="eyebrow">SEGURANÇA E GOVERNANÇA</div><h2>Condutas que podem levar a restrições ou à Blacklist.</h2>
         <p className="howLead">A segurança da comunidade depende de limites claros. As situações abaixo podem motivar análise de moderação e medidas proporcionais, conforme a gravidade, o contexto e as evidências disponíveis.</p>
         <div className="howRulesGrid">{rules.map(([title, text], index) => <article className="howRule" key={title}><span>{String(index + 1).padStart(2, "0")}</span><div><h3>{title}</h3><p>{text}</p></div></article>)}</div>
-        <div className="howNotice"><strong>Sobre a Blacklist e as denúncias</strong><p>Uma lista de restrição deve servir à proteção da comunidade, não à vingança. Relatos precisam ser específicos e verdadeiros; evidências devem ser preservadas sem adulteração e tratadas com confidencialidade. Uma denúncia não equivale, por si só, a uma decisão final de suspensão. A aplicação de uma restrição geral da plataforma deve passar por análise de governança, com registro do motivo e possibilidade de contestação quando cabível.</p><p>Se você sofreu uma situação grave, preserve as mensagens e os arquivos originais e procure os canais de suporte disponíveis. Não publique provas com dados pessoais de terceiros nem tente resolver o conflito por ameaças.</p></div>
+        <div className="howNotice"><strong>Sobre a Blacklist e as denúncias</strong><p>Uma lista de restrição deve servir à proteção da comunidade, não à vingança. Relatos precisam ser específicos e verdadeiros; evidências devem ser preservadas sem adulteração e tratadas com confidencialidade. Uma denúncia não equivale, por si só, a uma decisão final de suspensão. A aplicação de uma restrição geral da plataforma deve passar por análise de governança, com registro do motivo e possibilidade de contestação quando cabível.</p><p>Se você sofreu uma situação grave, preserve as mensagens e os arquivos originais e procure os canais de suporte disponíveis. Não publique provas com dados pessoais de terceiros nem tente resolver o conflito por ameaças.</p><p>Para registrar um bloqueio pessoal ou encaminhar uma denúncia confidencial com evidências privadas, acesse a <Link href="/painel/seguranca">Central de segurança do Pecatho</Link>. É necessário entrar na sua conta.</p></div>
       </section>
 
       <section id="duvidas" className="howSection">
