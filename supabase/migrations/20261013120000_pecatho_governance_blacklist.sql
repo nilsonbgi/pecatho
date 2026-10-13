@@ -96,6 +96,7 @@ begin
   return new;
 end;
 $$;
+revoke all on function private.governance_audit_report_change() from public, anon, authenticated;
 drop trigger if exists governance_report_audit_trigger on public.governance_reports;
 create trigger governance_report_audit_trigger before insert or update on public.governance_reports
 for each row execute function private.governance_audit_report_change();
