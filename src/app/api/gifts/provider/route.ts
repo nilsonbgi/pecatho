@@ -31,7 +31,7 @@ export async function POST(request: Request) {
 
   const { data: payment } = await admin
     .from("payments")
-    .select("id,status,provider_payment_id,raw_reference")
+    .select("id,status,provider,provider_payment_id,raw_reference")
     .eq("order_id", order.id)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -40,6 +40,26 @@ export async function POST(request: Request) {
   if (!payment) return NextResponse.json({ error: "Pagamento não encontrado." }, { status: 409 });
   if (payment.status === "paid") return NextResponse.json({ error: "Este pedido já foi pago." }, { status: 409 });
   if (payment.provider_payment_id) return NextResponse.json({ error: "Este pedido já possui transação no provedor." }, { status: 409 });
+
+  const rawReference =
+    payment.raw_reference && typeof payment.raw_reference === "object" && !Array.isArray(payment.raw_reference)
+      ? payment.raw_reference as Record<string, unknown>
+      : {};
+
+  if (
+    payment.provider === "mercadopago" &&
+    typeof rawReference.preference_id === "string" &&
+    typeof rawReference.checkout_url === "string" &&
+    rawReference.checkout_url.length > 0
+  ) {
+    return NextResponse.json({
+      provider: "mercadopago",
+      preference_id: rawReference.preference_id,
+      checkout_url: rawReference.checkout_url,
+      sandbox: rawReference.sandbox === true,
+      reused: true,
+    });
+  }
 
   const title = typeof order.metadata?.recipient_name === "string"
     ? "Presente para " + order.metadata.recipient_name
@@ -58,10 +78,12 @@ export async function POST(request: Request) {
     await admin.from("payments").update({
       provider: "mercadopago",
       raw_reference: {
-        ...(payment.raw_reference && typeof payment.raw_reference === "object" ? payment.raw_reference : {}),
+        ...rawReference,
         channel: "pecatho_gift",
         provider: "mercadopago",
         preference_id: preference.id,
+        checkout_url: preference.init_point ?? preference.sandbox_init_point ?? null,
+        sandbox: !preference.init_point && Boolean(preference.sandbox_init_point),
         order_id: order.id,
       },
       updated_at: new Date().toISOString(),
