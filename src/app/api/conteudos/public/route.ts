@@ -19,23 +19,39 @@ export async function GET(request: Request) {
   let ownerSlug = "";
 
   if (ownerType === "advertiser") {
-    const { data: owner } = await admin
+    const { data: owner, error: ownerError } = await admin
       .from("advertiser_profiles")
       .select("id,status,display_name,title,slug")
       .eq("id", ownerId)
       .eq("status", "published")
       .maybeSingle();
 
+    if (ownerError) {
+      console.error("Erro ao validar o anunciante do catálogo:", ownerError);
+      return NextResponse.json(
+        { error: "Não foi possível validar o perfil do vendedor." },
+        { status: 500 },
+      );
+    }
+
     if (!owner) return NextResponse.json({ products: [] });
     ownerName = owner.display_name || owner.title || "Anunciante";
     ownerSlug = owner.slug || "";
   } else {
-    const { data: owner } = await admin
+    const { data: owner, error: ownerError } = await admin
       .from("fans_creators")
       .select("id,status,display_name,slug")
       .eq("id", ownerId)
       .eq("status", "active")
       .maybeSingle();
+
+    if (ownerError) {
+      console.error("Erro ao validar o criador do catálogo:", ownerError);
+      return NextResponse.json(
+        { error: "Não foi possível validar o perfil do vendedor." },
+        { status: 500 },
+      );
+    }
 
     if (!owner) return NextResponse.json({ products: [] });
     ownerName = owner.display_name || "Criador";
