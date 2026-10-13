@@ -95,7 +95,21 @@ export default function DigitalContentShowcase({
     };
   }, [ownerId, ownerType]);
 
-  if (!loading && products.length === 0) return null;
+  if (!loading && products.length === 0) {
+    return (
+      <section id="conteudo-exclusivo" className="relative overflow-hidden rounded-[32px] border border-violet-200/20 bg-gradient-to-br from-[#08080d] via-[#151022] to-[#2a1240] p-6 text-white shadow-[0_28px_90px_rgba(76,29,149,.2)] sm:p-10">
+        <div className="mx-auto max-w-3xl text-center">
+          <span className="inline-flex rounded-full border border-violet-300/25 bg-violet-400/10 px-3 py-1.5 text-[9px] font-black tracking-[.18em] text-violet-200">LOJA PRIVADA · PECATHO</span>
+          <div className="mx-auto mt-5 grid h-16 w-16 place-items-center rounded-2xl border border-white/10 bg-white/[.05] text-3xl" aria-hidden="true">✦</div>
+          <h2 className="mt-5 text-3xl font-black tracking-[-.06em] sm:text-4xl">O próximo conteúdo exclusivo começa aqui</h2>
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-300">Este criador ainda não disponibilizou itens para compra direta. Quando houver fotos, vídeos ou pacotes publicados, eles aparecerão nesta área com preço e acesso definidos.</p>
+          <Link href={ownerType === "creator" ? "/fans" : "/conteudos"} className="mt-6 inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/[.07] px-5 py-3 text-xs font-black text-white no-underline transition hover:bg-white/[.12]">
+            {ownerType === "creator" ? "Explorar outros criadores" : "Explorar conteúdo disponível"} →
+          </Link>
+        </div>
+      </section>
+    );
+  }
 
   const visible = compact ? products.slice(0, 3) : products;
   const sellerLabel = ownerType === "creator" ? "criador" : "acompanhante";

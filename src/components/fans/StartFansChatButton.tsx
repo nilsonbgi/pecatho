@@ -7,14 +7,24 @@ import { createClient } from "@/lib/supabase/browser";
 type Props = {
   creatorId: string;
   className?: string;
+  whatsappNumber?: string | null;
+  creatorName?: string;
 };
 
-export default function StartFansChatButton({ creatorId, className = "" }: Props) {
+export default function StartFansChatButton({ creatorId, className = "", whatsappNumber, creatorName = "criador" }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   async function start() {
+    if (whatsappNumber) {
+      const digits = whatsappNumber.replace(/\D/g, "");
+      if (digits.length >= 10 && digits.length <= 15) {
+        const text = "Olá, " + creatorName + "! Encontrei seu perfil no Pecatho Fans e gostaria de conversar.";
+        window.open("https://wa.me/" + digits + "?text=" + encodeURIComponent(text), "_blank", "noopener,noreferrer");
+        return;
+      }
+    }
     if (loading) return;
     setLoading(true);
     setError("");
@@ -46,6 +56,10 @@ export default function StartFansChatButton({ creatorId, className = "" }: Props
     }
   }
 
+  if (!whatsappNumber) {
+    return <div className={className}><button type="button" disabled className="rounded-xl border border-slate-300 bg-white/70 px-5 py-3 text-sm font-semibold text-slate-500 cursor-not-allowed" title="O criador ainda não cadastrou o WhatsApp.">WhatsApp não cadastrado</button></div>;
+  }
+
   return (
     <div className={className}>
       <button
@@ -54,7 +68,7 @@ export default function StartFansChatButton({ creatorId, className = "" }: Props
         disabled={loading}
         className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {loading ? "Abrindo chat..." : "Conversar com o criador"}
+        {loading ? "Abrindo WhatsApp..." : "Conversar via WhatsApp"}
       </button>
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
     </div>
