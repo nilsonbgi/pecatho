@@ -27,6 +27,8 @@ export default function MessagesPage() {
   const [items, setItems] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<"all" | "unread">("all");
 
   useEffect(() => {
     let active = true;
@@ -227,6 +229,13 @@ export default function MessagesPage() {
     };
   }, []);
 
+  const visibleItems = items.filter((item) => {
+    const term = query.trim().toLocaleLowerCase("pt-BR");
+    const matchesQuery = !term || [item.title, item.display_name, item.lastMessage].some((value) => value.toLocaleLowerCase("pt-BR").includes(term));
+    return matchesQuery && (filter === "all" || item.unread);
+  });
+  const unreadCount = items.filter((item) => item.unread).length;
+
   return (
     <main className="shell">
       <nav className="topbar">
@@ -235,8 +244,9 @@ export default function MessagesPage() {
           <span>Pecatho</span>
         </Link>
         <div className="navLinks">
-          <Link href="/anunciantes">Anunciantes</Link>
-          <Link href="/painel">Painel</Link>
+          <Link href="/anunciantes">Acompanhantes</Link>
+          <Link href="/painel/notificacoes">Notificações</Link>
+          <Link href="/painel">Meu painel</Link>
         </div>
       </nav>
 
@@ -248,6 +258,20 @@ export default function MessagesPage() {
         <p className="heroCopy">
           Converse diretamente com anunciantes e criadores do Pecatho, mantendo a interação dentro da plataforma.
         </p>
+
+        {!loading && !error && items.length > 0 && (
+          <section aria-label="Filtros de conversas" className="card" style={{ display: "grid", gap: 14, marginTop: 20, padding: 18 }}>
+            <label style={{ display: "grid", gap: 7, color: "var(--text, #F4F6FB)", fontSize: 13, fontWeight: 750 }}>
+              Buscar nas conversas
+              <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Nome, perfil ou trecho da última mensagem..." aria-label="Buscar conversas" style={{ width: "100%", minHeight: 46, padding: "12px 14px", borderRadius: 12, border: "1px solid rgba(255,255,255,.18)", background: "#11131B", color: "#F4F6FB", outlineOffset: 3 }} />
+            </label>
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 9 }}>
+              <button type="button" className={filter === "all" ? "primaryButton" : "secondaryButton"} aria-pressed={filter === "all"} onClick={() => setFilter("all")}>Todas ({items.length})</button>
+              <button type="button" className={filter === "unread" ? "primaryButton" : "secondaryButton"} aria-pressed={filter === "unread"} onClick={() => setFilter("unread")}>Não lidas ({unreadCount})</button>
+              <span className="fieldNote" aria-live="polite">{visibleItems.length} {visibleItems.length === 1 ? "conversa encontrada" : "conversas encontradas"}</span>
+            </div>
+          </section>
+        )}
 
         {loading && (
           <div className="card">
@@ -274,9 +298,13 @@ export default function MessagesPage() {
           </div>
         )}
 
-        {!loading && !error && items.length > 0 && (
+        {!loading && !error && items.length > 0 && visibleItems.length === 0 && (
+          <div className="card" style={{ marginTop: 18 }}><h2>Nenhuma conversa corresponde ao filtro.</h2><p>Altere a busca ou mostre todas as conversas para continuar.</p><button type="button" className="secondaryButton" onClick={() => { setQuery(""); setFilter("all"); }}>Limpar filtros</button></div>
+        )}
+
+        {!loading && !error && visibleItems.length > 0 && (
           <section className="pillars">
-            {items.map((item) => (
+            {visibleItems.map((item) => (
               <article
                 className="card"
                 key={item.id}
@@ -299,7 +327,8 @@ export default function MessagesPage() {
                 </div>
                 <h2>{item.title}</h2>
                 <p>{item.display_name}</p>
-                <p className="fieldNote">{item.lastMessage}</p>
+                <p className="fieldNote" style={{ overflowWrap: "anywhere" }}>{item.lastMessage}</p>
+                {item.lastMessageAt && <p className="fieldNote" style={{ fontSize: 11, marginTop: 8 }}>Última atividade: {new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(item.lastMessageAt))}</p>}
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 16 }}>
                   <Link href={`/painel/mensagens/${item.id}`} className="primaryButton">
                     Abrir conversa
