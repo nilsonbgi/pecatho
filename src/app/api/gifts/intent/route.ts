@@ -32,12 +32,19 @@ export async function POST(request: Request) {
   });
 
   if (error) {
+    const code = error.message || "";
     const status =
-      error.message.includes("CUSTOMER_ACCOUNT_REQUIRED") ? 403 :
-      error.message.includes("SELF_GIFT_NOT_ALLOWED") ? 409 :
-      error.message.includes("RECIPIENT_NOT_FOUND") ? 404 :
-      error.message.includes("INVALID_GIFT_AMOUNT") ? 400 : 400;
-    return NextResponse.json({ error: error.message }, { status });
+      code.includes("CUSTOMER_ACCOUNT_REQUIRED") ? 403 :
+      code.includes("SELF_GIFT_NOT_ALLOWED") ? 409 :
+      code.includes("RECIPIENT_NOT_FOUND") ? 404 :
+      code.includes("INVALID_GIFT_AMOUNT") ? 400 : 400;
+    const message =
+      code.includes("CUSTOMER_ACCOUNT_REQUIRED") ? "Para enviar um presente, entre com uma conta de cliente ou habilite o perfil de cliente na sua conta." :
+      code.includes("SELF_GIFT_NOT_ALLOWED") ? "Você não pode enviar um presente para o seu próprio perfil." :
+      code.includes("RECIPIENT_NOT_FOUND") ? "Este perfil não está disponível para receber presentes no momento." :
+      code.includes("INVALID_GIFT_AMOUNT") ? "Informe um presente entre R$ 10,00 e R$ 10.000,00." :
+      "Não foi possível preparar o presente agora. Confira sua conta e tente novamente.";
+    return NextResponse.json({ error: message, code: status === 400 ? "GIFT_REQUEST_INVALID" : "GIFT_REQUEST_REJECTED" }, { status });
   }
 
   return NextResponse.json(data);
