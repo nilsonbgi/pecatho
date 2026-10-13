@@ -3,6 +3,11 @@
 -- 14-argument signature and needs location, pricing and total-count fields.
 drop function if exists public.search_public_advertisers(
   bigint, bigint, bigint, text, jsonb, text[],
+  integer, integer, numeric, numeric, integer, integer
+);
+
+drop function if exists public.search_public_advertisers(
+  bigint, bigint, bigint, text, jsonb, text[],
   integer, integer, numeric, numeric, integer, text, integer, integer
 );
 
