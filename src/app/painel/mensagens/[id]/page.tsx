@@ -42,7 +42,7 @@ function MessageBody({ body, ownMessage }: { body: string; ownMessage: boolean }
     );
   }
 
-  const parts = body.split(/(\\*\\*[^*]+\\*\\*|~~[^~]+~~|_[^_]+_|\\x60[^\\x60]+\\x60)/g);
+  const parts = body.split(/(\*\*[^*]+\*\*|~~[^~]+~~|_[^_]+_|\x60[^\x60]+\x60)/g);
   return (
     <p style={{ margin: 0, whiteSpace: "pre-wrap", lineHeight: 1.6, fontSize: 14, overflowWrap: "anywhere" }}>
       {parts.map((part, index) => {
