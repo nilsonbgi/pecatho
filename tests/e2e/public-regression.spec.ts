@@ -4,7 +4,7 @@ const publicRoutes = [
   { path: '/', heading: /Pecatho/i },
   { path: '/login', heading: /entrar|acesso/i },
   { path: '/cadastro', heading: /crie seu espaço/i },
-  { path: '/anunciantes', heading: /anunciantes/i },
+  { path: '/anunciantes', heading: /descubra perfis|pecatho\s*·\s*acompanhantes/i },
   { path: '/fans', heading: /conexões reais|criadores/i },
 ];
 
@@ -25,7 +25,7 @@ test('cadastro preserves the complete five-step onboarding flow', async ({ page 
   await page.goto('/cadastro', { waitUntil: 'domcontentloaded' });
 
   await expect(page.getByText('Etapa 1 de 5')).toBeVisible();
-  await expect(page.getByRole('button', { name: /Quero anunciar/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Quero ser acompanhante/i })).toBeVisible();
   await expect(page.getByRole('button', { name: /Quero criar no Fans/i })).toBeVisible();
   await expect(page.getByRole('button', { name: /Quero os dois/i })).toBeVisible();
 
