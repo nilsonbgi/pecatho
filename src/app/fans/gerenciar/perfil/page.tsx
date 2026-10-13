@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import FansProfileForm from "@/components/fans/FansProfileForm";
+import FansFormattedBio from "@/components/fans/FansFormattedBio";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +16,7 @@ async function saveProfile(formData: FormData) {
   const displayName = String(formData.get("display_name") || "").trim();
   const bio = String(formData.get("bio") || "").trim();
   const avatarUrl = String(formData.get("avatar_url") || "").trim();
+  const whatsappNumber = String(formData.get("whatsapp_number") || "").replace(/\D/g, "");
 
   if (!displayName) {
     redirect("/fans/gerenciar/perfil?error=Informe+o+nome+publico");
@@ -31,6 +34,10 @@ async function saveProfile(formData: FormData) {
     redirect("/fans/gerenciar/perfil?error=A+URL+da+imagem+e+muito+longa");
   }
 
+  if (whatsappNumber && !/^\d{10,15}$/.test(whatsappNumber)) {
+    redirect("/fans/gerenciar/perfil?error=Informe+um+WhatsApp+com+DDD+e+código+do+país+quando+necessário");
+  }
+
   const { data: creator } = await supabase
     .from("fans_creators")
     .select("id,slug")
@@ -45,6 +52,7 @@ async function saveProfile(formData: FormData) {
       display_name: displayName,
       bio: bio || null,
       avatar_url: avatarUrl || null,
+      whatsapp_number: whatsappNumber || null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", creator.id)
@@ -72,7 +80,7 @@ export default async function FansProfileManagePage({
 
   const { data: creator } = await supabase
     .from("fans_creators")
-    .select("id,slug,display_name,bio,status,avatar_url,advertiser_profile_id,created_at,updated_at")
+    .select("id,slug,display_name,bio,status,avatar_url,whatsapp_number,advertiser_profile_id,created_at,updated_at")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -115,48 +123,7 @@ export default async function FansProfileManagePage({
               Use uma apresentação clara e uma imagem que representem sua identidade. O espaço pode ser usado para conteúdo, assinaturas, publicações e experiências privadas.
             </p>
 
-            <form action={saveProfile} className="profileForm">
-              <label>
-                <span>Nome público</span>
-                <input
-                  name="display_name"
-                  defaultValue={creator.display_name || ""}
-                  maxLength={80}
-                  required
-                  placeholder="Como você quer ser conhecido no Fans"
-                />
-                <small>Este é o nome principal exibido no seu perfil público.</small>
-              </label>
-
-              <label>
-                <span>Apresentação</span>
-                <textarea
-                  name="bio"
-                  defaultValue={creator.bio || ""}
-                  maxLength={2000}
-                  rows={8}
-                  placeholder="Conte aos seus fãs quem você é, o que publica e que tipo de experiência oferece."
-                />
-                <small>Até 2.000 caracteres. Evite inserir telefone, documentos ou dados sensíveis.</small>
-              </label>
-
-              <label>
-                <span>URL da imagem de perfil</span>
-                <input
-                  name="avatar_url"
-                  type="url"
-                  defaultValue={creator.avatar_url || ""}
-                  maxLength={1000}
-                  placeholder="https://..."
-                />
-                <small>Informe uma imagem pública já hospedada. O campo pode ficar vazio.</small>
-              </label>
-
-              <div className="formActions">
-                <Link className="secondaryButton" href="/fans/gerenciar">Cancelar</Link>
-                <button className="primaryButton" type="submit">Salvar perfil</button>
-              </div>
-            </form>
+            <FansProfileForm action={saveProfile} displayName={creator.display_name || ""} bio={creator.bio || ""} avatarUrl={creator.avatar_url || ""} whatsappNumber={creator.whatsapp_number || ""} />     </form>
           </section>
 
           <aside className="profileAside">
@@ -171,7 +138,7 @@ export default async function FansProfileManagePage({
                 )}
               </div>
               <h2>{creator.display_name}</h2>
-              <p>{creator.bio || "Sua apresentação aparecerá aqui quando você preencher o perfil."}</p>
+              <p className="profileBioPreview"><FansFormattedBio text={creator.bio || "Sua apresentação aparecerá aqui quando você preencher o perfil."} /></p>
               <span className="statusPill">{creator.status === "active" ? "● PERFIL ATIVO" : creator.status}</span>
               <Link className="primaryButton fullButton" href={`/fans/${creator.slug}`}>Abrir perfil público →</Link>
             </section>
@@ -215,7 +182,7 @@ export default async function FansProfileManagePage({
         .avatarPreview{width:108px;height:108px;border-radius:28px;background:#111827;overflow:hidden;display:grid;place-items:center;color:#fff;font-size:42px;font-weight:950;margin:16px 0}
         .avatarPreview img{width:100%;height:100%;object-fit:cover}
         .previewCard h2{font-size:21px}
-        .previewCard p,.identityCard p{font-size:11px;line-height:1.65;color:#6b7280}
+        .previewCard p,.identityCard p{font-size:11px;line-height:1.65;color:#6b7280}.profileBioPreview{white-space:pre-wrap;overflow-wrap:anywhere}.profileRichEditor{display:grid;gap:9px}.profileFormatToolbar{display:flex;flex-wrap:wrap;gap:7px}.profileFormatToolbar button{border:1px solid #dfe3e8;border-radius:10px;background:#fff;padding:8px 11px;font-size:11px;font-weight:800;color:#303746;cursor:pointer}.profileFormatToolbar button:hover{border-color:#7c3aed;background:#faf5ff}.profileBioLivePreview{border:1px solid #e8e5ef;border-radius:13px;padding:12px 14px;background:#faf9fc}.profilePreviewLabel{font-size:8px;letter-spacing:.14em;font-weight:900;color:#8b5cf6}.profileBioLivePreview p{margin:7px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;line-height:1.7;color:#303746}.profileUploadRow{display:flex;align-items:center;gap:15px;border:1px solid #e5e7eb;border-radius:15px;padding:13px}.profileUploadPreview{width:96px;aspect-ratio:1;border-radius:18px;overflow:hidden;display:grid;place-items:center;flex-shrink:0;background:#111827;color:#fff;font-size:32px;font-weight:900}.profileUploadPreview img{width:100%;height:100%;object-fit:cover}.profileUploadControls{display:grid;gap:8px;min-width:0}.profileUploadControls input[type=file]{font-size:11px;max-width:100%}.profileUploadStatus{font-size:10px;line-height:1.5;color:#6d28d9}.profileRemoveImage{justify-self:start;background:transparent;border:0;padding:0;color:#b91c1c;font-size:10px;font-weight:800;cursor:pointer}@media(max-width:560px){.profileUploadRow{align-items:flex-start;flex-direction:column}.profileUploadPreview{width:88px}}
         .statusPill{display:inline-flex;margin-top:10px;border-radius:999px;background:#ecfdf5;border:1px solid #bbf7d0;color:#047857;padding:7px 9px;font-size:9px;font-weight:900}
         .fullButton{display:flex!important;justify-content:center;margin-top:16px}
         .identityCard strong{display:block;margin-top:10px;font-size:12px;word-break:break-all}
