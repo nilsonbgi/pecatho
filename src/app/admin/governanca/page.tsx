@@ -18,7 +18,8 @@ export default function GovernanceAdminPage(){
  const [authorized,setAuthorized]=useState<boolean|null>(null);
  const [reports,setReports]=useState<Report[]>([]);
  const [selected,setSelected]=useState<Report|null>(null);
- const [evidence,setEvidence]=useState<Array<Evidence&{url?:string}>>([]);\n const [history,setHistory]=useState<DecisionRecord[]>([]);
+ const [evidence,setEvidence]=useState<Array<Evidence&{url?:string}>>([]);
+ const [history,setHistory]=useState<DecisionRecord[]>([]);
  const [decision,setDecision]=useState<Decision>({outcome:"warning",rationale:""});
  const [status,setStatus]=useState("under_review");
  const [busy,setBusy]=useState(false);
