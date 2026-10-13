@@ -123,7 +123,7 @@ export default async function FansProfileManagePage({
               Use uma apresentação clara e uma imagem que representem sua identidade. O espaço pode ser usado para conteúdo, assinaturas, publicações e experiências privadas.
             </p>
 
-            <FansProfileForm action={saveProfile} displayName={creator.display_name || ""} bio={creator.bio || ""} avatarUrl={creator.avatar_url || ""} whatsappNumber={creator.whatsapp_number || ""} />     </form>
+            <FansProfileForm action={saveProfile} displayName={creator.display_name || ""} bio={creator.bio || ""} avatarUrl={creator.avatar_url || ""} whatsappNumber={creator.whatsapp_number || ""} />
           </section>
 
           <aside className="profileAside">
