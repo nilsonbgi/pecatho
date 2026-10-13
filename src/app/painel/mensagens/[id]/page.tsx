@@ -9,6 +9,7 @@ import MessageReactions from "@/components/MessageReactions";
 
 type Message = { id: string; sender_id: string; body: string; status: string; created_at: string };
 type Profile = { id: string; title: string | null; display_name: string | null; slug: string | null };
+type FansCreatorProfile = { id: string; display_name: string; slug: string | null };
 type FansConversation = { id: string; creator_id: string; buyer_user_id: string; source: string; source_id: string | null; status: string };
 type LiveOffer = { id: string; creator_id: string; title: string; description: string | null; duration_minutes: number; price: number; currency: string; status: string };
 type LiveSession = { id: string; offer_id: string; creator_id: string; buyer_user_id: string; conversation_id: string | null; order_id: string | null; title: string; duration_minutes: number; amount: number; currency: string; status: string; paid_at: string | null; scheduled_for: string | null; confirmed_at: string | null; rejection_reason: string | null; created_at: string };
@@ -20,6 +21,7 @@ export default function ConversationPage() {
   const searchParams = useSearchParams();
   const [messages, setMessages] = useState<Message[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [fansCreator, setFansCreator] = useState<FansCreatorProfile | null>(null);
   const [fansConversation, setFansConversation] = useState<FansConversation | null>(null);
   const [offers, setOffers] = useState<LiveOffer[]>([]);
   const [sessions, setSessions] = useState<LiveSession[]>([]);
@@ -122,15 +124,24 @@ export default function ConversationPage() {
     const { data: conversation, error: conversationError } = await supabase.from("conversations").select("id,profile_id").eq("id", params.id).maybeSingle();
     if (conversationError || !conversation) throw conversationError || new Error("Conversa não encontrada.");
 
-    const [profileResult, messageResult] = await Promise.all([
+    const [profileResult, messageResult, fansConversationResult] = await Promise.all([
       conversation.profile_id
         ? supabase.from("advertiser_profiles").select("id,title,display_name,slug").eq("id", conversation.profile_id).maybeSingle()
         : Promise.resolve({ data: null, error: null }),
       supabase.from("messages").select("id,sender_id,body,status,created_at").eq("conversation_id", params.id).order("created_at", { ascending: true }),
+      supabase.from("fans_conversations").select("id,creator_id,buyer_user_id,source,source_id,status").eq("conversation_id", params.id).maybeSingle(),
     ]);
     if (profileResult.error) throw profileResult.error;
     if (messageResult.error) throw messageResult.error;
+    if (fansConversationResult.error) throw fansConversationResult.error;
+    const fansRow = (fansConversationResult.data as FansConversation | null) || null;
+    const creatorResult = fansRow
+      ? await supabase.from("fans_creators").select("id,display_name,slug").eq("id", fansRow.creator_id).maybeSingle()
+      : { data: null, error: null };
+    if (creatorResult.error) throw creatorResult.error;
     setProfile((profileResult.data as Profile | null) || null);
+    setFansConversation(fansRow);
+    setFansCreator((creatorResult.data as FansCreatorProfile | null) || null);
     setMessages((messageResult.data ?? []) as Message[]);
     const reputationResponse = await fetch("/api/clientes/reputacao/context?conversation_id=" + encodeURIComponent(params.id), { cache: "no-store" });
     if (reputationResponse.ok) {
@@ -362,10 +373,10 @@ export default function ConversationPage() {
         {loading && <div className="card"><p>Carregando conversa...</p></div>}
         {!loading && error && <div className="card"><h2>Conversa indisponível</h2><p>{error}</p><Link href="/painel/mensagens" className="primaryButton">Voltar às conversas</Link></div>}
         {!loading && !error && <>
-          <div className="eyebrow">CONVERSA PECATHO</div>
-          <h1>{profile?.title || profile?.display_name || "Conversa"}</h1>
-          <p className="heroCopy">{profile?.display_name || "Anunciante"} {otherOnline ? "· online agora" : "· offline"}</p>
-          {profile?.slug && <Link href={`/anunciantes/${profile.slug}`} className="secondaryButton">Voltar ao perfil</Link>}
+          <div className="eyebrow">{fansCreator ? "CONVERSA PECATHO FANS" : "CONVERSA PECATHO"}</div>
+          <h1>{fansCreator?.display_name || profile?.title || profile?.display_name || "Conversa"}</h1>
+          <p className="heroCopy">{fansCreator ? "Criador Fans" : profile?.display_name || "Conversa privada"} <span aria-label={otherOnline ? "online agora" : "offline"}>{otherOnline ? "· online agora" : "· offline"}</span></p>
+          {(fansCreator?.slug || profile?.slug) && <Link href={fansCreator?.slug ? `/fans/${fansCreator.slug}` : `/anunciantes/${profile?.slug}`} className="secondaryButton">Voltar ao perfil</Link>}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
             {profile && <GiftButton recipientType="advertiser" recipientId={profile.id} recipientName={profile.display_name || profile.title || "este anunciante"} compact />}
             {fansConversation && <GiftButton recipientType="creator" recipientId={fansConversation.creator_id} recipientName={profile?.display_name || "este vendedor de conteúdo"} compact />}
@@ -492,10 +503,10 @@ export default function ConversationPage() {
           <section className="card" style={{ marginTop: 24 }}>
             <div style={{ display: "grid", gap: 12, maxHeight: 520, overflowY: "auto", paddingBottom: 16 }}>
               {messages.length === 0 && <p className="fieldNote">Esta conversa ainda não tem mensagens. Envie a primeira mensagem.</p>}
-              {messages.map((message) => <div key={message.id} style={{ display: "flex", justifyContent: message.sender_id === userId ? "flex-end" : "flex-start" }}><div style={{ maxWidth: "78%", padding: "12px 14px", borderRadius: 14, background: message.sender_id === userId ? "var(--accent, #E7C33F)" : "rgba(255,255,255,.08)", color: message.sender_id === userId ? "#000" : "inherit" }}><p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{message.body}</p><small style={{ opacity: .7 }}>{new Date(message.created_at).toLocaleString("pt-BR")}</small>{userId && <MessageReactions messageId={message.id} userId={userId} />}</div></div>)}
+              {messages.map((message) => { const ownMessage = message.sender_id === userId; return <div key={message.id} style={{ display: "flex", justifyContent: ownMessage ? "flex-end" : "flex-start", minWidth: 0 }}><div style={{ width: "fit-content", maxWidth: "min(86%, 620px)", minWidth: 0, overflowWrap: "anywhere", padding: "12px 14px", borderRadius: ownMessage ? "16px 16px 4px 16px" : "16px 16px 16px 4px", border: ownMessage ? "1px solid rgba(231,195,63,.75)" : "1px solid rgba(255,255,255,.13)", background: ownMessage ? "#E7C33F" : "#20232D", color: ownMessage ? "#17130A" : "#F4F6FB", boxShadow: "0 5px 18px rgba(0,0,0,.12)" }}><p style={{ margin: 0, whiteSpace: "pre-wrap", lineHeight: 1.55, fontSize: 14 }}>{message.body}</p><small style={{ display: "block", marginTop: 7, color: ownMessage ? "#49401F" : "#B9C0CF", fontSize: 11 }}>{new Date(message.created_at).toLocaleString("pt-BR")}</small>{userId && <MessageReactions messageId={message.id} userId={userId} />}</div></div>; })}
             </div>
-            <form onSubmit={sendMessage} style={{ display: "grid", gap: 10, marginTop: 16 }}>
-              <label>Mensagem<textarea value={body} onChange={(event) => handleTyping(event.target.value)} rows={4} maxLength={4000} placeholder="Escreva sua mensagem..." />{otherTyping && <small style={{ display: "block", marginTop: 6, opacity: .72 }}>A outra pessoa está digitando...</small>}</label>
+            <form onSubmit={sendMessage} style={{ display: "grid", gap: 12, marginTop: 16, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,.09)" }}>
+              <label style={{ display: "grid", gap: 8, color: "#E5E7EF", fontSize: 13, fontWeight: 650 }}>Sua mensagem<textarea value={body} onChange={(event) => handleTyping(event.target.value)} rows={3} maxLength={4000} placeholder="Escreva sua mensagem..." style={{ width: "100%", minWidth: 0, resize: "vertical", border: "1px solid rgba(255,255,255,.16)", borderRadius: 12, background: "#11131A", color: "#F4F6FB", padding: "13px 14px", lineHeight: 1.55, font: "inherit", outlineOffset: 2 }} />{otherTyping && <small style={{ display: "block", marginTop: 2, color: "#B9C0CF", fontWeight: 400 }}>A outra pessoa está digitando...</small>}</label>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {["❤️","😍","🔥","😘","😉","😂","🥰","👍","🙏","✨","💋","🎁",":)", ";)", ":D", "<3"].map((emoji) => <button key={emoji} type="button" onClick={() => handleTyping(body + emoji)} style={{ border: "1px solid rgba(255,255,255,.12)", borderRadius: 10, background: "rgba(255,255,255,.04)", padding: "7px 9px", cursor: "pointer", fontSize: 17 }} aria-label={"Inserir " + emoji}>{emoji}</button>)}
               </div>
