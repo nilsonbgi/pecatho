@@ -16,6 +16,46 @@ type LiveSession = { id: string; offer_id: string; creator_id: string; buyer_use
 type LiveTip = { id: string; session_id: string | null; amount: number; creator_amount: number; currency: string; message: string | null; status: string; paid_at: string | null; created_at: string };
 type CustomerReputation = { average_rating: number | null; review_count: number; trust_badge: boolean };
 
+const MESSAGE_STICKERS = [
+  { label: "Carinho", value: "🥰💛", description: "Um carinho para você" },
+  { label: "Beijinhos", value: "😘💋", description: "Beijos" },
+  { label: "Coração", value: "❤️💖💕", description: "Muito amor" },
+  { label: "Fogo", value: "🔥😍🔥", description: "Você arrasa" },
+  { label: "Gratidão", value: "🙏✨💛", description: "Muito obrigado(a)" },
+  { label: "Abraço", value: "🫂🤗", description: "Um abraço apertado" },
+  { label: "Risadas", value: "😂🤣😆", description: "Rindo muito" },
+  { label: "Festa", value: "🥳🎉✨", description: "Vamos comemorar" },
+  { label: "Surpresa", value: "😮✨🎁", description: "Uma surpresa" },
+  { label: "Saudades", value: "🥹💌❤️", description: "Estou com saudades" },
+  { label: "Aplausos", value: "👏👏✨", description: "Parabéns!" },
+  { label: "Boa noite", value: "🌙✨😴", description: "Uma ótima noite" },
+];
+
+function MessageBody({ body, ownMessage }: { body: string; ownMessage: boolean }) {
+  const sticker = MESSAGE_STICKERS.find((item) => item.value === body);
+  if (sticker) {
+    return (
+      <div role="img" aria-label={"Figurinha: " + sticker.description} title={sticker.description} style={{ display: "grid", justifyItems: "center", gap: 6, minWidth: 112, padding: "8px 4px" }}>
+        <span style={{ fontSize: 38, lineHeight: 1.3 }}>{sticker.value}</span>
+        <span style={{ fontSize: 11, fontWeight: 750, opacity: 0.8 }}>{sticker.label}</span>
+      </div>
+    );
+  }
+
+  const parts = body.split(/(\\*\\*[^*]+\\*\\*|~~[^~]+~~|_[^_]+_|\\x60[^\\x60]+\\x60)/g);
+  return (
+    <p style={{ margin: 0, whiteSpace: "pre-wrap", lineHeight: 1.6, fontSize: 14, overflowWrap: "anywhere" }}>
+      {parts.map((part, index) => {
+        if (part.startsWith("**") && part.endsWith("**") && part.length > 4) return <strong key={index}>{part.slice(2, -2)}</strong>;
+        if (part.startsWith("~~") && part.endsWith("~~") && part.length > 4) return <s key={index}>{part.slice(2, -2)}</s>;
+        if (part.startsWith("_") && part.endsWith("_") && part.length > 2) return <em key={index}>{part.slice(1, -1)}</em>;
+        if (part.startsWith("`") && part.endsWith("`") && part.length > 2) return <code key={index} style={{ padding: "2px 5px", borderRadius: 5, background: ownMessage ? "rgba(0,0,0,.09)" : "rgba(255,255,255,.1)", fontSize: "0.92em" }}>{part.slice(1, -1)}</code>;
+        return <span key={index}>{part}</span>;
+      })}
+    </p>
+  );
+}
+
 export default function ConversationPage() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
@@ -30,6 +70,8 @@ export default function ConversationPage() {
   const sessionIdsRef = useRef<Set<string>>(new Set());
   const [userId, setUserId] = useState<string | null>(null);
   const [body, setBody] = useState("");
+  const [stickersOpen, setStickersOpen] = useState(false);
+  const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [commercialLoading, setCommercialLoading] = useState(false);
@@ -216,6 +258,41 @@ export default function ConversationPage() {
       if (channel) void supabase.removeChannel(channel);
     };
   }, [params.id]);
+
+  function applyFormatting(marker: "**" | "_" | "~~" | "`") {
+    const input = messageInputRef.current;
+    if (!input) return;
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const selected = body.slice(start, end);
+    const replacement = selected ? marker + selected + marker : marker + marker;
+    const nextBody = body.slice(0, start) + replacement + body.slice(end);
+    setBody(nextBody);
+    handleTyping(nextBody);
+    requestAnimationFrame(() => {
+      input.focus();
+      const cursorStart = selected ? start : start + marker.length;
+      const cursorEnd = selected ? start + replacement.length : cursorStart;
+      input.setSelectionRange(cursorStart, cursorEnd);
+    });
+  }
+
+  function insertSticker(value: string) {
+    const input = messageInputRef.current;
+    const start = input?.selectionStart ?? body.length;
+    const end = input?.selectionEnd ?? body.length;
+    const separatorBefore = start > 0 && !/\\s$/.test(body.slice(0, start)) ? " " : "";
+    const separatorAfter = end < body.length && !/^\\s/.test(body.slice(end)) ? " " : "";
+    const insertion = separatorBefore + value + separatorAfter;
+    const nextBody = body.slice(0, start) + insertion + body.slice(end);
+    handleTyping(nextBody);
+    setStickersOpen(false);
+    requestAnimationFrame(() => {
+      input?.focus();
+      const cursor = start + insertion.length;
+      input?.setSelectionRange(cursor, cursor);
+    });
+  }
 
   function handleTyping(value: string) {
     setBody(value);
@@ -503,13 +580,24 @@ export default function ConversationPage() {
           <section className="card" style={{ marginTop: 24 }}>
             <div style={{ display: "grid", gap: 12, maxHeight: 520, overflowY: "auto", paddingBottom: 16 }}>
               {messages.length === 0 && <p className="fieldNote">Esta conversa ainda não tem mensagens. Envie a primeira mensagem.</p>}
-              {messages.map((message) => { const ownMessage = message.sender_id === userId; return <div key={message.id} style={{ display: "flex", justifyContent: ownMessage ? "flex-end" : "flex-start", minWidth: 0 }}><div style={{ width: "fit-content", maxWidth: "min(86%, 620px)", minWidth: 0, overflowWrap: "anywhere", padding: "12px 14px", borderRadius: ownMessage ? "16px 16px 4px 16px" : "16px 16px 16px 4px", border: ownMessage ? "1px solid rgba(231,195,63,.75)" : "1px solid rgba(255,255,255,.13)", background: ownMessage ? "#E7C33F" : "#20232D", color: ownMessage ? "#17130A" : "#F4F6FB", boxShadow: "0 5px 18px rgba(0,0,0,.12)" }}><p style={{ margin: 0, whiteSpace: "pre-wrap", lineHeight: 1.55, fontSize: 14 }}>{message.body}</p><small style={{ display: "block", marginTop: 7, color: ownMessage ? "#49401F" : "#B9C0CF", fontSize: 11 }}>{new Date(message.created_at).toLocaleString("pt-BR")}</small>{userId && <MessageReactions messageId={message.id} userId={userId} />}</div></div>; })}
+              {messages.map((message) => { const ownMessage = message.sender_id === userId; return <div key={message.id} style={{ display: "flex", justifyContent: ownMessage ? "flex-end" : "flex-start", minWidth: 0 }}><div style={{ width: "fit-content", maxWidth: "min(86%, 620px)", minWidth: 0, overflowWrap: "anywhere", padding: "12px 14px", borderRadius: ownMessage ? "16px 16px 4px 16px" : "16px 16px 16px 4px", border: ownMessage ? "1px solid rgba(231,195,63,.75)" : "1px solid rgba(255,255,255,.13)", background: ownMessage ? "#E7C33F" : "#20232D", color: ownMessage ? "#17130A" : "#F4F6FB", boxShadow: "0 5px 18px rgba(0,0,0,.12)" }}><MessageBody body={message.body} ownMessage={ownMessage} /><small style={{ display: "block", marginTop: 7, color: ownMessage ? "#49401F" : "#B9C0CF", fontSize: 11 }}>{new Date(message.created_at).toLocaleString("pt-BR")}</small>{userId && <MessageReactions messageId={message.id} userId={userId} />}</div></div>; })}
             </div>
             <form onSubmit={sendMessage} style={{ display: "grid", gap: 12, marginTop: 16, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,.09)" }}>
-              <label style={{ display: "grid", gap: 8, color: "#E5E7EF", fontSize: 13, fontWeight: 650 }}>Sua mensagem<textarea value={body} onChange={(event) => handleTyping(event.target.value)} rows={3} maxLength={4000} placeholder="Escreva sua mensagem..." style={{ width: "100%", minWidth: 0, resize: "vertical", border: "1px solid rgba(255,255,255,.16)", borderRadius: 12, background: "#11131A", color: "#F4F6FB", padding: "13px 14px", lineHeight: 1.55, font: "inherit", outlineOffset: 2 }} />{otherTyping && <small style={{ display: "block", marginTop: 2, color: "#B9C0CF", fontWeight: 400 }}>A outra pessoa está digitando...</small>}</label>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {["❤️","😍","🔥","😘","😉","😂","🥰","👍","🙏","✨","💋","🎁",":)", ";)", ":D", "<3"].map((emoji) => <button key={emoji} type="button" onClick={() => handleTyping(body + emoji)} style={{ border: "1px solid rgba(255,255,255,.12)", borderRadius: 10, background: "rgba(255,255,255,.04)", padding: "7px 9px", cursor: "pointer", fontSize: 17 }} aria-label={"Inserir " + emoji}>{emoji}</button>)}
+              <label style={{ display: "grid", gap: 8, color: "#E5E7EF", fontSize: 13, fontWeight: 650 }}>Sua mensagem<textarea ref={messageInputRef} value={body} onChange={(event) => handleTyping(event.target.value)} rows={4} maxLength={4000} placeholder="Escreva sua mensagem... Use os botões para formatar o texto." aria-label="Texto da mensagem" style={{ width: "100%", minWidth: 0, resize: "vertical", border: "1px solid rgba(255,255,255,.16)", borderRadius: 12, background: "#11131A", color: "#F4F6FB", padding: "13px 14px", lineHeight: 1.6, font: "inherit", outlineOffset: 2 }} />{otherTyping && <small style={{ display: "block", marginTop: 2, color: "#B9C0CF", fontWeight: 400 }}>A outra pessoa está digitando...</small>}<small style={{ color: "#B9C0CF", fontWeight: 400 }}>{body.length}/4000 caracteres · A formatação é aplicada ao enviar.</small></label>
+              <div aria-label="Formatação de texto" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 7 }}>
+                <span style={{ color: "#B9C0CF", fontSize: 12, marginRight: 4 }}>Formatar:</span>
+                <button type="button" onClick={() => applyFormatting("**")} aria-label="Aplicar negrito" title="Negrito" style={{ minWidth: 40, minHeight: 38, border: "1px solid rgba(255,255,255,.16)", borderRadius: 9, background: "#20232D", color: "#F4F6FB", cursor: "pointer", fontWeight: 900 }}>B</button>
+                <button type="button" onClick={() => applyFormatting("_")} aria-label="Aplicar itálico" title="Itálico" style={{ minWidth: 40, minHeight: 38, border: "1px solid rgba(255,255,255,.16)", borderRadius: 9, background: "#20232D", color: "#F4F6FB", cursor: "pointer", fontStyle: "italic" }}>I</button>
+                <button type="button" onClick={() => applyFormatting("~~")} aria-label="Aplicar tachado" title="Tachado" style={{ minWidth: 40, minHeight: 38, border: "1px solid rgba(255,255,255,.16)", borderRadius: 9, background: "#20232D", color: "#F4F6FB", cursor: "pointer", textDecoration: "line-through" }}>S</button>
+                <button type="button" onClick={() => applyFormatting("`")} aria-label="Aplicar código" title="Texto monoespaçado" style={{ minWidth: 40, minHeight: 38, border: "1px solid rgba(255,255,255,.16)", borderRadius: 9, background: "#20232D", color: "#F4F6FB", cursor: "pointer", fontFamily: "monospace" }}>{"<>"}</button>
+                <button type="button" onClick={() => setStickersOpen((current) => !current)} aria-expanded={stickersOpen} aria-controls="pecatho-sticker-picker" style={{ minHeight: 38, border: "1px solid rgba(231,195,63,.42)", borderRadius: 9, background: stickersOpen ? "rgba(231,195,63,.16)" : "#20232D", color: "#F4F6FB", cursor: "pointer", padding: "7px 11px", fontWeight: 750 }}>🎨 Figurinhas</button>
               </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }} aria-label="Emojis rápidos">
+                {["❤️","😍","🔥","😘","😉","😂","🥰","👍","🙏","✨","💋","🎁","🥹","🫶","💯","🤗"].map((emoji) => <button key={emoji} type="button" onClick={() => insertSticker(emoji)} style={{ minWidth: 38, minHeight: 38, border: "1px solid rgba(255,255,255,.12)", borderRadius: 10, background: "rgba(255,255,255,.04)", padding: "6px 8px", cursor: "pointer", fontSize: 18 }} aria-label={"Inserir emoji " + emoji} title={"Inserir " + emoji}>{emoji}</button>)}
+              </div>
+              {stickersOpen && <section id="pecatho-sticker-picker" aria-label="Galeria de figurinhas" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(118px, 1fr))", gap: 8, padding: 12, border: "1px solid rgba(231,195,63,.25)", borderRadius: 14, background: "rgba(255,255,255,.025)" }}>
+                {MESSAGE_STICKERS.map((sticker) => <button key={sticker.label} type="button" onClick={() => insertSticker(sticker.value)} title={sticker.description} style={{ display: "grid", justifyItems: "center", gap: 6, minHeight: 94, padding: 10, border: "1px solid rgba(255,255,255,.12)", borderRadius: 12, background: "#171923", color: "#F4F6FB", cursor: "pointer" }}><span aria-hidden="true" style={{ fontSize: 26 }}>{sticker.value}</span><span style={{ fontSize: 12, fontWeight: 750 }}>{sticker.label}</span><span style={{ color: "#B9C0CF", fontSize: 10 }}>{sticker.description}</span></button>)}
+              </section>}
               {error && <p className="fieldNote">{error}</p>}
               <button type="submit" className="primaryButton" disabled={sending || !body.trim()}>{sending ? "Enviando..." : "Enviar mensagem"}</button>
             </form>
