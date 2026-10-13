@@ -5,7 +5,7 @@ const checks = [
     file: "src/app/cadastro/page.tsx",
     name: "Cadastro — onboarding estruturado",
     required: [
-      'type EntryMode = "advertiser" | "fans" | "both"',
+      'type EntryMode = "customer" | "advertiser" | "fans" | "both"',
       "const [step, setStep] = useState(1)",
       "const [entryMode, setEntryMode]",
       "function lookupCep",
