@@ -7,7 +7,7 @@ on:
 
 jobs:
   critical-contract:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -19,7 +19,7 @@ jobs:
         run: node scripts/verify-regression-contract.mjs
 
   browser-regression:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: critical-contract
     steps:
       - name: Checkout
