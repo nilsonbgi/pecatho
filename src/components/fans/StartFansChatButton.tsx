@@ -56,19 +56,15 @@ export default function StartFansChatButton({ creatorId, className = "", whatsap
     }
   }
 
-  if (!whatsappNumber) {
-    return <div className={className}><button type="button" disabled className="rounded-xl border border-slate-300 bg-white/70 px-5 py-3 text-sm font-semibold text-slate-500 cursor-not-allowed" title="O criador ainda não cadastrou o WhatsApp.">WhatsApp não cadastrado</button></div>;
-  }
-
   return (
     <div className={className}>
       <button
         type="button"
         onClick={start}
         disabled={loading}
-        className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60"
+        className="primaryButton"
       >
-        {loading ? "Abrindo WhatsApp..." : "Conversar via WhatsApp"}
+        {loading ? "Abrindo conversa..." : "Conversar com o criador"}
       </button>
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
     </div>

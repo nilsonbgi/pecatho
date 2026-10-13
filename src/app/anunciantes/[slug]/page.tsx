@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
 import ApproximateLocationMap from "@/components/ApproximateLocationMap";
 import DigitalContentShowcase from "@/components/DigitalContentShowcase";
+import FansFormattedBio from "@/components/fans/FansFormattedBio";
 import ProfileCommerceHub from "@/components/ProfileCommerceHub";
 import GiftButton from "@/components/GiftButton";
 
@@ -451,7 +452,7 @@ export default function PublicAdvertiserPage() {
       </section>
 
       <section className="profileContentGrid">
-        <article className="card profileAbout"><div className="eyebrow">SOBRE</div><h2>{profile.display_name || "Acompanhante"}</h2><p>{profile.description || "A acompanhante ainda não adicionou uma apresentação detalhada."}</p>{socialLinks.length > 0 && <div className="profileLinks"><strong>Redes e presença digital</strong>{socialLinks.map(([label, url]) => <a href={url} target="_blank" rel="noopener noreferrer" key={label}>{label}</a>)}</div>}{fans && <div className="fansCta"><div><span>PECATHO FANS</span><strong>{fans.display_name}</strong><p>{fans.bio || "Conteúdo exclusivo diretamente no ecossistema Pecatho."}</p></div><Link href={`/fans/${fans.slug}`} className="primaryButton">Ver conteúdo exclusivo</Link></div>}</article>
+        <article className="card profileAbout"><div className="eyebrow">SOBRE</div><h2>{profile.display_name || "Acompanhante"}</h2><p><FansFormattedBio text={profile.description || "A acompanhante ainda não adicionou uma apresentação detalhada."} /></p>{socialLinks.length > 0 && <div className="profileLinks"><strong>Redes e presença digital</strong>{socialLinks.map(([label, url]) => <a href={url} target="_blank" rel="noopener noreferrer" key={label}>{label}</a>)}</div>}{fans && <div className="fansCta"><div><span>PECATHO FANS</span><strong>{fans.display_name}</strong><p>{fans.bio || "Conteúdo exclusivo diretamente no ecossistema Pecatho."}</p></div><Link href={`/fans/${fans.slug}`} className="primaryButton">Ver conteúdo exclusivo</Link></div>}</article>
         <ApproximateLocationMap latitude={address?.public_latitude ?? null} longitude={address?.public_longitude ?? null} label="Localização aproximada do anúncio" />
       </section>
 
