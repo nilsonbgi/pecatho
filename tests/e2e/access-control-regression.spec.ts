@@ -38,5 +38,5 @@ test('public catalogue remains usable on mobile without horizontal overflow', as
     viewport: window.innerWidth,
   }));
   expect(metrics.width).toBeLessThanOrEqual(metrics.viewport + 1);
-  await expect(page.locator('body')).toContainText(/Anunciantes/i);
+  await expect(page.locator('body')).toContainText(/PECATHO\s*·\s*ACOMPANHANTES|Descubra perfis/i);
 });
