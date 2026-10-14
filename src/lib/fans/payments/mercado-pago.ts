@@ -5,7 +5,7 @@ type MercadoPagoPreferenceInput = {
   amount: number;
   buyerEmail: string;
   creatorId?: string;
-  productType?: "digital_content" | "profile_media" | "gift";
+  productType?: "digital_content" | "profile_media" | "gift" | "premium_subscription";
 };
 
 type MercadoPagoPreference = {
@@ -23,7 +23,17 @@ export async function createMercadoPagoPreference(input: MercadoPagoPreferenceIn
 
   const notificationUrl = new URL("/api/fans/payments/mercadopago/webhook", baseUrl).toString();
   const productType = input.productType ?? "digital_content";
-  const channel = productType === "profile_media" ? "pecatho_profile_media" : productType === "gift" ? "pecatho_gift" : input.creatorId ? "pecatho_fans" : "pecatho_digital_content";
+  const channel = productType === "profile_media"
+    ? "pecatho_profile_media"
+    : productType === "gift"
+      ? "pecatho_gift"
+      : productType === "premium_subscription"
+        ? "pecatho_customer_premium"
+        : input.creatorId ? "pecatho_fans" : "pecatho_digital_content";
+
+  const successUrl = productType === "premium_subscription"
+    ? `${baseUrl}/painel/cliente?premium=aguardando&order=${encodeURIComponent(input.orderId)}`
+    : `${baseUrl}/fans/checkout/sucesso?order=${encodeURIComponent(input.orderId)}`;
 
   const response = await fetch("https://api.mercadopago.com/checkout/preferences", {
     method: "POST",
@@ -44,7 +54,7 @@ export async function createMercadoPagoPreference(input: MercadoPagoPreferenceIn
       payer: { email: input.buyerEmail },
       notification_url: notificationUrl,
       back_urls: {
-        success: `${baseUrl}/fans/checkout/sucesso?order=${encodeURIComponent(input.orderId)}`,
+        success: successUrl,
         pending: `${baseUrl}/fans/checkout/pendente?order=${encodeURIComponent(input.orderId)}&product_type=${encodeURIComponent(productType)}`,
         failure: `${baseUrl}/fans/checkout/falha?order=${encodeURIComponent(input.orderId)}&product_type=${encodeURIComponent(productType)}`,
       },
