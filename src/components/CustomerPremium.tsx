@@ -41,15 +41,7 @@ export default function CustomerPremium() {
   const [data, setData] = useState<PremiumResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState<string | null>(null);
-  const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
-
-  async function load() {
-    const response = await fetch("/api/cliente/premium", { cache: "no-store" });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.error || "Não foi possível carregar o Premium.");
-    setData(payload as PremiumResponse);
-  }
 
   useEffect(() => {
     let mounted = true;
@@ -69,7 +61,6 @@ export default function CustomerPremium() {
   async function subscribe(plan: PremiumPlan) {
     setBuying(plan.id);
     setError("");
-    setNotice("");
     try {
       const response = await fetch("/api/cliente/premium", {
         method: "POST",
@@ -92,7 +83,6 @@ export default function CustomerPremium() {
       <h2 id="customer-premium-title">Mais vantagens na sua experiência</h2>
       <p>Consulte os planos disponíveis e os benefícios incluídos antes de pagar. A contratação é processada pelo Mercado Pago; o Premium só é ativado depois que o Pecatho confirma o pagamento pelo webhook.</p>
 
-      {notice && <p role="status" className="fieldNote">{notice}</p>}
       {error && <p role="alert" className="fieldNote" style={{ border: "1px solid rgba(239,68,68,.35)", borderRadius: 12, padding: 12 }}>{error}</p>}
 
       {loading ? <p className="fieldNote">Consultando planos e situação da assinatura...</p> : data?.current ? (
