@@ -82,11 +82,16 @@ export async function POST(request: Request) {
     : 0;
   const paymentMethod = typeof payment?.payment_method_id === "string" ? payment.payment_method_id : null;
 
-  const settlementFunction = order.metadata?.product_type === "digital_content"
-    ? "settle_digital_content_checkout"
-    : order.metadata?.product_type === "profile_media"
-      ? "settle_profile_media_checkout"
-      : "settle_fans_checkout";
+  const productType = order.metadata?.product_type;
+  const settlementFunction = productType === "premium_subscription"
+    ? "settle_pecatho_customer_premium_checkout"
+    : productType === "digital_content"
+      ? "settle_digital_content_checkout"
+      : productType === "profile_media"
+        ? "settle_profile_media_checkout"
+        : productType === "gift"
+          ? "settle_pecatho_gift_checkout"
+          : "settle_fans_checkout";
 
   const { data, error } = await admin.rpc(settlementFunction, {
     p_order_id: orderId,
