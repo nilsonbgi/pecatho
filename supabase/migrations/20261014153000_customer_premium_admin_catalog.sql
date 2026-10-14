@@ -32,7 +32,7 @@ begin
   if p_price is null or p_price <= 0 or p_price > 10000 then raise exception 'INVALID_PLAN_PRICE'; end if;
   if p_duration_days is null or p_duration_days < 1 or p_duration_days > 365 then raise exception 'INVALID_PLAN_DURATION'; end if;
   if jsonb_typeof(v_benefits) <> 'array' or jsonb_array_length(v_benefits) > 20 then raise exception 'INVALID_PLAN_BENEFITS'; end if;
-  if exists(select 1 from jsonb_array_elements(v_benefits) b where jsonb_typeof(b) <> 'string' or char_length(trim(b #>> '{}')) not between 1 and 240) then
+  if exists(select 1 from jsonb_array_elements(v_benefits) as item(value) where jsonb_typeof(item.value) <> 'string' or char_length(trim(item.value #>> '{}')) not between 1 and 240) then
     raise exception 'INVALID_PLAN_BENEFIT_ITEM';
   end if;
 
