@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import CustomerProfessionalReviews from "@/components/CustomerProfessionalReviews";
 import PecathoBenefits from "@/components/PecathoBenefits";
+import CustomerPremium from "@/components/CustomerPremium";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,7 @@ export default async function ClientePainel() {
   return (
     <main className="shell advertiserDashboard">
       <nav className="topbar"><div className="brand"><span className="brandMark">P</span><span>Pecatho</span></div><div className="navLinks"><Link href="/">Página inicial</Link><Link href="/anunciantes">Acompanhantes</Link><Link href="/conteudos">Conteúdos</Link><Link href="/painel/mensagens">Mensagens</Link><Link href="/painel/perfil">Meu cadastro</Link></div></nav>
-      <section className="hero"><nav className="dashboardSectionNav" aria-label="Navegação rápida do painel"><Link href="#resumo">Resumo</Link><Link href="#reputacao">Reputação</Link><Link href="#avaliacoes">Avaliações</Link><Link href="#protecao">Proteção</Link></nav>
+      <section className="hero"><nav className="dashboardSectionNav" aria-label="Navegação rápida do painel"><Link href="#resumo">Resumo</Link><Link href="#reputacao">Reputação</Link><Link href="#avaliacoes">Avaliações</Link><Link href="#protecao">Proteção</Link><Link href="#premium">Premium</Link></nav>
         <div className="eyebrow">PECATHO · ÁREA DO CLIENTE</div>
         <h1>Olá, <em>{profile?.display_name || user.email}</em></h1>
         <p className="heroCopy">Seu espaço é separado das áreas profissionais. Aqui você contrata serviços, conversa com acompanhantes, acompanha seus conteúdos e constrói sua reputação como cliente.</p>
@@ -58,6 +59,7 @@ export default async function ClientePainel() {
         </section>
         <section id="pontuacao" className="card"><div className="eyebrow">PONTUAÇÃO PECATHO</div><h2>Seu saldo de confiança</h2><p>Os pontos são registrados automaticamente quando uma avaliação sua é aprovada e vinculada a uma interação verificada. A pontuação é igual para a participação válida, independentemente de você dar uma nota alta ou baixa.</p>{pointHistory?.length ? <div className="financeHistory">{pointHistory.map((entry) => <article key={entry.id}><div><strong>{entry.points > 0 ? "+" : ""}{entry.points} pontos</strong><small>{new Date(entry.created_at).toLocaleString("pt-BR")}</small></div><span className="financeStatus">{entry.description}</span></article>)}</div> : <p className="fieldNote">Você ainda não possui lançamentos de pontos. Quando participar de uma avaliação verificada, o lançamento aparecerá aqui.</p>}</section>
         <PecathoBenefits initialPoints={Number(pointAccount?.balance ?? 0)} />
+        <CustomerPremium />
         <section id="reputacao" className="card"><div className="eyebrow">REPUTAÇÃO DO CLIENTE</div><h2>Seu histórico de confiança</h2>{reviews?.length ? <div className="financeHistory">{reviews.map((review) => <article key={review.id}><div><strong className="text-amber-300">{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</strong><small>{review.source_type === "digital_content" ? "Compra de conteúdo" : review.source_type === "profile_media" ? "Compra de mídia exclusiva" : "Experiência de serviço"} · {new Date(review.created_at).toLocaleString("pt-BR")}</small></div>{review.comment ? <p>{review.comment}</p> : <span className="financeStatus">Interação verificada</span>}</article>)}</div> : <p className="fieldNote">Ainda não há avaliações verificadas. Elas aparecerão conforme vendedores e acompanhantes registrarem experiências reais com você.</p>}</section>
         <section id="avaliacoes"><CustomerProfessionalReviews /></section>
 
