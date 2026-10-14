@@ -28,6 +28,34 @@ const checks = [
     ],
   },
   {
+    file: "src/app/api/cliente/premium/route.ts",
+    name: "Premium do cliente — checkout autenticado",
+    required: [
+      "create_pecatho_customer_premium_checkout",
+      'productType: "premium_subscription"',
+      "createMercadoPagoPreference",
+      'order.status !== "awaiting_payment"',
+    ],
+  },
+  {
+    file: "src/app/api/fans/payments/mercadopago/webhook/route.ts",
+    name: "Premium do cliente — conciliação por webhook",
+    required: [
+      "settle_pecatho_customer_premium_checkout",
+      'productType === "premium_subscription"',
+      "Assinatura inválida.",
+    ],
+  },
+  {
+    file: "src/components/CustomerPremium.tsx",
+    name: "Premium do cliente — ativação condicionada à confirmação",
+    required: [
+      "o Premium só é ativado depois que o Pecatho confirma o pagamento",
+      "Seu Premium está ativo",
+      "Não há renovação automática habilitada.",
+    ],
+  },
+  {
     file: "src/app/anunciantes/page.tsx",
     name: "Catálogo público — filtros estruturados",
     required: [
