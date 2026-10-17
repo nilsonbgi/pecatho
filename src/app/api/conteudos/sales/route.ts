@@ -70,6 +70,7 @@ export async function GET() {
       status: sale.status,
       paid_at: sale.paid_at,
       created_at: sale.created_at,
+      buyer: buyerMap.get(sale.buyer_user_id) ?? null,
       product: productMap.get(sale.product_id) ?? null,
     })),
   }, { headers: { "Cache-Control": "no-store" } });
