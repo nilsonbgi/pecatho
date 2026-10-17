@@ -56,6 +56,8 @@ function mediaLabel(type: string) {
 export default function DigitalContentProductPage() {
   const params = useParams<{ id: string }>();
   const [product, setProduct] = useState<Product | null>(null);
+  const [productLoading, setProductLoading] = useState(true);
+  const [reloadProduct, setReloadProduct] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [reputation, setReputation] = useState<SellerReputation | null>(null);
@@ -66,6 +68,11 @@ export default function DigitalContentProductPage() {
 
   useEffect(() => {
     let active = true;
+    setProduct(null);
+    setError("");
+    setProductLoading(true);
+    setReputation(null);
+    setRelatedProducts([]);
 
     async function load() {
       try {
@@ -88,6 +95,8 @@ export default function DigitalContentProductPage() {
               : "Não foi possível carregar o conteúdo.",
           );
         }
+      } finally {
+        if (active) setProductLoading(false);
       }
     }
 
@@ -96,7 +105,7 @@ export default function DigitalContentProductPage() {
     return () => {
       active = false;
     };
-  }, [params.id]);
+  }, [params.id, reloadProduct]);
 
   useEffect(() => {
     if (!product) return;
@@ -196,11 +205,38 @@ export default function DigitalContentProductPage() {
     }
   }
 
+  if (productLoading && !product) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-[#07070b] p-6 text-white" aria-live="polite">
+        <div className="w-full max-w-md rounded-[28px] border border-white/10 bg-white/[.04] p-8 text-center shadow-2xl">
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-white/15 border-t-violet-300" aria-hidden="true" />
+          <p className="mt-5 text-sm font-bold text-slate-200">Carregando conteúdo exclusivo…</p>
+          <p className="mt-2 text-xs leading-5 text-slate-500">Estamos validando a publicação e os dados da loja.</p>
+        </div>
+      </main>
+    );
+  }
+
   if (error && !product) {
     return (
-      <main className="min-h-screen bg-[#07070b] px-4 py-12 text-white">
-        <div className="mx-auto max-w-xl rounded-[30px] border border-white/10 bg-white/[.04] p-8 text-center shadow-2xl">
-          <p className="text-sm font-semibold text-red-300">{error}</p>
+      <main className="grid min-h-screen place-items-center bg-[#07070b] px-4 py-12 text-white">
+        <div className="mx-auto w-full max-w-xl rounded-[30px] border border-red-300/15 bg-white/[.04] p-8 text-center shadow-2xl sm:p-10" role="alert">
+          <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-red-300/20 bg-red-400/[.08] text-2xl text-red-200" aria-hidden="true">!</div>
+          <h1 className="mt-5 text-2xl font-black tracking-tight">Não foi possível abrir este conteúdo</h1>
+          <p className="mt-3 text-sm leading-6 text-red-200">{error}</p>
+          <p className="mt-2 text-xs leading-5 text-slate-400">A publicação pode ter sido retirada ou a consulta pode estar temporariamente indisponível.</p>
+          <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => { setError(""); setProductLoading(true); setReloadProduct((current) => current + 1); }}
+              className="rounded-xl bg-white px-5 py-3 text-xs font-black text-slate-950 transition hover:bg-violet-100"
+            >
+              Tentar novamente
+            </button>
+            <Link href="/conteudos" className="rounded-xl border border-white/15 bg-white/[.05] px-5 py-3 text-xs font-black text-white no-underline transition hover:bg-white/10">
+              Explorar conteúdos
+            </Link>
+          </div>
         </div>
       </main>
     );
@@ -209,7 +245,8 @@ export default function DigitalContentProductPage() {
   if (!product) {
     return (
       <main className="grid min-h-screen place-items-center bg-[#07070b] p-6 text-white">
-        <p className="text-sm text-slate-400">Carregando conteúdo…</p>
+        <p className="text-sm text-slate-400">Conteúdo indisponível.</p>
+        <Link href="/conteudos" className="mt-3 text-sm font-bold text-violet-200">Voltar à loja</Link>
       </main>
     );
   }
