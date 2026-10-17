@@ -29,7 +29,7 @@ export default async function FansCreatorPublicPage({params}:Props){
   creator=data;
  }else{
   const {data}=await supabase.rpc("get_public_fans_creator_by_slug",{p_slug:slug}).maybeSingle();
-  creator=data?{...data,whatsapp_number:null,user_id:null}:null;
+  creator=data?({...data,whatsapp_number:null,user_id:null} as {id:string;slug:string;display_name:string;bio:string|null;avatar_url:string|null;whatsapp_number:string|null;status:string;user_id:string|null}):null;
  }
  if(!creator||creator.status!=="active") notFound();
  const isOwner=!!user&&!!creator.user_id&&creator.user_id===user.id;
