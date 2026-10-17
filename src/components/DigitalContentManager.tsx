@@ -61,6 +61,9 @@ export default function DigitalContentManager({ownerType}:{ownerType:OwnerType})
 
  async function createProduct(){
   setBusy(true);setError("");setMessage("");
+  let createdProductId:string|null=null;
+  let uploadedPaths:string[]=[];
+  let ownerUserIdForCleanup:string|null=null;
   try{
    if(!ownerId)throw new Error("Proprietário não identificado.");
    const normalized=parsePrice(price);
@@ -71,14 +74,29 @@ export default function DigitalContentManager({ownerType}:{ownerType:OwnerType})
    if(productType==="single_video"&&(files.length!==1||!files[0].type.startsWith("video/")))throw new Error("Uma venda de vídeo deve conter exatamente um vídeo.");
    for(const file of files)if(file.size>250*1024*1024)throw new Error("Cada arquivo pode ter no máximo 250 MB.");
    const {data:{user}}=await supabase.auth.getUser();if(!user)throw new Error("Sessão expirada.");
+   ownerUserIdForCleanup=user.id;
    const {data:product,error:productError}=await supabase.from("digital_content_products").insert({owner_type:ownerType,owner_id:ownerId,owner_user_id:user.id,title:title.trim(),description:description.trim()||null,product_type:productType,price:normalized,currency:"BRL",status:"draft"}).select("id").single();
    if(productError||!product)throw new Error(productError?.message||"Não foi possível criar o produto.");
+   createdProductId=product.id;
    const rows=[];
-   for(let i=0;i<files.length;i++){const original=files[i];const file=original.type.startsWith("image/")?(await optimizeImage(original,2560,0.9)).file:original;const safe=original.name.normalize("NFKD").replace(/[^a-zA-Z0-9._-]+/g,"-").replace(/-+/g,"-").replace(/^-|-$/g,"").slice(0,120)||"arquivo";const path=user.id+"/digital-products/"+product.id+"/"+crypto.randomUUID()+"-"+(file.type==="image/webp"?"imagem.webp":safe);const {error:uploadError}=await supabase.storage.from("pecatho-private").upload(path,file,{upsert:false,contentType:file.type||"application/octet-stream"});if(uploadError)throw new Error("Falha no upload de "+original.name+": "+uploadError.message);const mediaType=file.type.startsWith("image/")?"image":file.type.startsWith("video/")?"video":file.type.startsWith("audio/")?"audio":"document";rows.push({product_id:product.id,owner_user_id:user.id,storage_bucket:"pecatho-private",storage_path:path,original_filename:original.name,mime_type:file.type||null,size_bytes:file.size,media_type:mediaType,sort_order:i});}
+   for(let i=0;i<files.length;i++){const original=files[i];const file=original.type.startsWith("image/")?(await optimizeImage(original,2560,0.9)).file:original;const safe=original.name.normalize("NFKD").replace(/[^a-zA-Z0-9._-]+/g,"-").replace(/-+/g,"-").replace(/^-|-$/g,"").slice(0,120)||"arquivo";const path=user.id+"/digital-products/"+product.id+"/"+crypto.randomUUID()+"-"+(file.type==="image/webp"?"imagem.webp":safe);const {error:uploadError}=await supabase.storage.from("pecatho-private").upload(path,file,{upsert:false,contentType:file.type||"application/octet-stream"});if(uploadError)throw new Error("Falha no upload de "+original.name+": "+uploadError.message);uploadedPaths.push(path);const mediaType=file.type.startsWith("image/")?"image":file.type.startsWith("video/")?"video":file.type.startsWith("audio/")?"audio":"document";rows.push({product_id:product.id,owner_user_id:user.id,storage_bucket:"pecatho-private",storage_path:path,original_filename:original.name,mime_type:file.type||null,size_bytes:file.size,media_type:mediaType,sort_order:i});}
    const {error:itemError}=await supabase.from("digital_content_product_items").insert(rows);if(itemError)throw new Error(itemError.message);
-   const {error:publishError}=await supabase.from("digital_content_products").update({status:"published",updated_at:new Date().toISOString()}).eq("id",product.id);if(publishError)throw new Error(publishError.message);
+   const {error:publishError}=await supabase.from("digital_content_products").update({status:"published",updated_at:new Date().toISOString()}).eq("id",product.id).eq("owner_user_id",user.id).eq("owner_type",ownerType).eq("status","draft");if(publishError)throw new Error(publishError.message);
+   createdProductId=null;
    setTitle("");setDescription("");setPrice("");setFiles([]);setMessage("Conteúdo publicado e disponível para venda.");await load();await loadMetrics();
-  }catch(e){setError(e instanceof Error?e.message:"Não foi possível criar o conteúdo.");}finally{setBusy(false);}
+  }catch(e){
+   if(createdProductId&&ownerUserIdForCleanup){
+    try{
+     await supabase.from("digital_content_product_items").delete().eq("product_id",createdProductId).eq("owner_user_id",ownerUserIdForCleanup);
+     const {data:deletedProduct}=await supabase.from("digital_content_products").delete().eq("id",createdProductId).eq("owner_user_id",ownerUserIdForCleanup).eq("owner_type",ownerType).eq("status","draft").select("id").maybeSingle();
+     if(deletedProduct&&uploadedPaths.length){
+      const {error:cleanupError}=await supabase.storage.from("pecatho-private").remove(uploadedPaths);
+      if(cleanupError)console.error("Falha ao remover arquivos de um rascunho de conteúdo incompleto:",cleanupError);
+     }
+    }catch(cleanupError){console.error("Falha ao limpar um rascunho de conteúdo incompleto:",cleanupError);}
+   }
+   setError(e instanceof Error?e.message:"Não foi possível criar o conteúdo.");
+  }finally{setBusy(false);}
  }
  function beginEdit(product:Product){setEditingProduct(product.id);setEditTitle(product.title);setEditDescription(product.description??"");setEditPrice(String(product.price).replace(".",","));setError("");setMessage("");}
  async function saveProduct(){if(!editingProduct||!ownerUserId)return;setBusy(true);setError("");setMessage("");try{const normalized=parsePrice(editPrice);if(!editTitle.trim())throw new Error("Informe o título do conteúdo.");if(!Number.isFinite(normalized))throw new Error("Informe um preço válido, por exemplo 49,90.");const {data:{user}}=await supabase.auth.getUser();if(!user||user.id!==ownerUserId)throw new Error("Sua sessão mudou. Atualize a página e tente novamente.");const {data:updated,error:updateError}=await supabase.from("digital_content_products").update({title:editTitle.trim(),description:editDescription.trim()||null,price:normalized,updated_at:new Date().toISOString()}).eq("id",editingProduct).eq("owner_user_id",user.id).eq("owner_type",ownerType).select("id").maybeSingle();if(updateError)throw new Error(updateError.message);if(!updated)throw new Error("O conteúdo não foi alterado. Confirme sua sessão e tente novamente.");setEditingProduct(null);setMessage("Oferta atualizada com sucesso.");await load();}catch(e){setError(e instanceof Error?e.message:"Não foi possível atualizar a oferta.");}finally{setBusy(false);}}
