@@ -1176,3 +1176,81 @@
 @media(max-width:680px){.discoveryShell .discoveryHero{border-radius:0 0 22px 22px}.discoveryShell .advertiserGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.discoveryShell .commercialAdvertiserCard{border-radius:16px}.discoveryShell .commercialAdvertiserVisual{aspect-ratio:3/4;min-height:0}.discoveryShell .commercialVisualTop{left:8px;right:8px;top:8px;gap:5px;align-items:flex-start}.discoveryShell .commercialCategory{font-size:8px;letter-spacing:.06em;padding:6px 7px}.discoveryShell .commercialVisualTop .verifiedMark{font-size:7px;padding:6px 7px;letter-spacing:.02em}.discoveryShell .commercialVisualBottom{left:8px;right:8px;bottom:8px;gap:5px}.discoveryShell .commercialVisualBottom span{font-size:8px;padding:5px 6px}.discoveryShell .commercialAdvertiserBody{padding:12px}.discoveryShell .commercialTitleRow{display:block}.discoveryShell .commercialTitleRow h3{font-size:14px;line-height:1.25}.discoveryShell .advertiserName{font-size:10px;margin-top:4px}.discoveryShell .commercialTrust{display:inline-flex;margin-top:7px}.discoveryShell .advertiserLocation{font-size:10px;margin:8px 0}.discoveryShell .advertiserSummary{font-size:11px;line-height:1.6;-webkit-line-clamp:3}.discoveryShell .commercialSignalRow{font-size:9px;gap:5px}.discoveryShell .commercialSignalRow span{padding:5px 6px}.discoveryShell .commercialPrice{gap:4px;padding-top:10px;align-items:flex-start}.discoveryShell .commercialPrice>div span{font-size:10px}.discoveryShell .commercialPrice>div small{font-size:9px}.discoveryShell .commercialPrice strong{font-size:16px}.discoveryShell .commercialActions{display:grid;grid-template-columns:minmax(0,1fr);gap:7px;margin-top:12px}.discoveryShell .commercialActions a{width:100%;min-height:41px;padding:8px;font-size:10px}.partnerDirectory .partnerDirectoryCover{min-height:0}.partnerDirectory .partnerDirectoryCardBody{padding:15px}.partnerDirectory .partnerDirectoryCardBody>a.primaryButton{width:100%}}
 @media(max-width:390px){.discoveryShell .advertiserGrid{grid-template-columns:minmax(0,1fr)}.discoveryShell .commercialAdvertiserVisual{aspect-ratio:4/3.9}.discoveryShell .commercialAdvertiserBody{padding:16px}.discoveryShell .commercialTitleRow{display:flex}.discoveryShell .commercialTitleRow h3{font-size:17px}.discoveryShell .commercialActions{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(prefers-reduced-motion:reduce){.discoveryShell *, .partnerDirectory *, .partnerDetail *{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+
+
+/* Pecatho public companion profile polish — additive, scoped overrides. */
+.publicProfile{--pp-gold:#e7c33f;--pp-ink:#090a0f;--pp-panel:#11131b;--pp-muted:#aeb4c2;max-width:1280px;padding-bottom:110px;overflow-x:clip}
+.publicProfile .topbar{position:relative;z-index:4;min-height:72px;gap:14px;flex-wrap:wrap}
+.publicProfile .brand{gap:10px}
+.publicProfile .brandMark{box-shadow:0 0 0 1px rgba(231,195,63,.34),0 8px 24px rgba(231,195,63,.08)}
+.publicProfile .profileSectionNav{position:sticky;top:8px;z-index:35;display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;padding:9px;margin:0 0 16px;border:1px solid rgba(255,255,255,.1)!important;border-radius:16px!important;background:rgba(12,13,18,.91)!important;box-shadow:0 14px 36px rgba(0,0,0,.22)!important;backdrop-filter:blur(18px)}
+.publicProfile .profileSectionNav a{flex:0 0 auto;min-height:40px;display:inline-flex;align-items:center;justify-content:center;padding:9px 13px;border-radius:11px;font-size:11px;font-weight:850;white-space:nowrap;color:#e8e9ed!important;border-color:rgba(255,255,255,.12)!important;background:rgba(255,255,255,.045)!important;text-decoration:none}
+.publicProfile .profileSectionNav a:hover,.publicProfile .profileSectionNav a:focus-visible{border-color:rgba(231,195,63,.55)!important;color:var(--pp-gold)!important;outline:none}
+.publicProfile .publicProfileHero{padding-top:clamp(34px,5vw,70px);padding-bottom:30px}
+.publicProfile .publicProfileHero:after{width:min(52%,620px);height:clamp(250px,32vw,390px);opacity:.8;border-color:rgba(231,195,63,.18);box-shadow:0 24px 80px rgba(0,0,0,.18)}
+.publicProfile .advertiserHeroGrid{gap:clamp(22px,4vw,54px);align-items:center}
+.publicProfile .profileHeroMedia{border:1px solid rgba(231,195,63,.22);border-radius:26px;overflow:hidden;background:radial-gradient(ellipse at 75% 15%,rgba(124,58,237,.25),transparent 40%),linear-gradient(145deg,#20212b,#0b0c11);box-shadow:0 24px 65px rgba(0,0,0,.28)}
+.publicProfile .profileHeroMedia img,.publicProfile .profileHeroMedia video{display:block;width:100%;max-width:100%;object-fit:cover}
+.publicProfile .profileHeroCopy{min-width:0}
+.publicProfile .profileHeroCopy h1,.publicProfile .profileTitleRow h1{overflow-wrap:anywhere;text-wrap:balance}
+.publicProfile .profileHeroCopy .heroCopy{max-width:720px;line-height:1.8;color:#b9bfcc}
+.publicProfile .profileTrustRail{gap:12px;margin:22px 0 28px;padding:18px;border:1px solid rgba(231,195,63,.17);border-radius:22px;background:radial-gradient(ellipse at 0 0,rgba(231,195,63,.07),transparent 48%),linear-gradient(145deg,#14151d,#0e0f14);box-shadow:0 16px 44px rgba(0,0,0,.16)}
+.publicProfile .profileTrustIntro p{color:#aeb4c2;line-height:1.7}
+.publicProfile .profileTrustItem{min-width:0;border-color:rgba(255,255,255,.08);border-radius:15px;background:rgba(255,255,255,.035);padding:13px}
+.publicProfile .profileTrustItem strong{color:#f5f4ef}
+.publicProfile .profileTrustItem small{color:#a5aab7;line-height:1.55}
+.publicProfile .profileTrustIcon{flex:0 0 36px;width:36px;height:36px;display:grid;place-items:center;border-radius:12px;background:rgba(231,195,63,.1);color:var(--pp-gold)}
+.publicProfile .profileTrustAccent{border-color:rgba(231,195,63,.24);background:rgba(231,195,63,.045)}
+.publicProfile .card.profileDetails,.publicProfile .profileServices.card,.publicProfile .profilePricing.card,.publicProfile .profilePayment.card,.publicProfile .profileContact.card,.publicProfile .profileAvailability.card,.publicProfile .card.profileAbout{padding:clamp(18px,3vw,30px);border:1px solid rgba(255,255,255,.09);border-radius:22px;background:linear-gradient(150deg,#171820,#101116 76%);color:#f3f4f6;box-shadow:0 16px 44px rgba(0,0,0,.14)}
+.publicProfile .sectionHeading{gap:18px;align-items:flex-end}
+.publicProfile .sectionHeading h2,.publicProfile .profileContentGrid h2,.publicProfile .profileMediaSection h2,.publicProfile .profileReviews h2{color:#f7f5ef;letter-spacing:-.045em;text-wrap:balance}
+.publicProfile .sectionHeading p,.publicProfile .profilePayment p,.publicProfile .profileAvailability p{color:#aeb4c2;line-height:1.75}
+.publicProfile .detailGrid>div{min-width:0;padding:15px;border:1px solid rgba(255,255,255,.08);border-radius:15px;background:rgba(255,255,255,.035)}
+.publicProfile .detailGrid>div span{color:#a5aab7}
+.publicProfile .detailGrid>div strong{color:#f6f4ee;overflow-wrap:anywhere}
+.publicProfile .serviceChips>div,.publicProfile .priceGrid>div{min-width:0;border-color:rgba(255,255,255,.1)!important;background:rgba(255,255,255,.035)!important;color:#f4f4f5}
+.publicProfile .serviceChips small{color:#b5bac6!important}
+.publicProfile .serviceChips small[style*="color: rgb(124, 58, 237)"]{color:#e7c33f!important}
+.publicProfile .priceGrid strong{color:var(--pp-gold)}
+.publicProfile .paymentChips span{border:1px solid rgba(231,195,63,.2);background:rgba(231,195,63,.07);color:#f2e6b2}
+.publicProfile .profileMediaSection{margin-top:clamp(32px,5vw,58px)}
+.publicProfile .profileMediaSection .sectionHeading{margin-bottom:18px}
+.publicProfile .mediaTabs{display:flex;gap:5px;flex-wrap:wrap;padding:4px;border:1px solid rgba(255,255,255,.1);border-radius:13px;background:#11131b}
+.publicProfile .mediaTabs button{min-height:36px;padding:8px 12px;border:1px solid transparent;border-radius:9px;background:transparent;color:#b8bdc9;font-size:11px;font-weight:800}
+.publicProfile .mediaTabs button.active{border-color:rgba(231,195,63,.25);background:rgba(231,195,63,.11);color:var(--pp-gold)}
+.publicProfile .profileGallery{grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
+.publicProfile .profileMediaCard{min-width:0;overflow:hidden;border:1px solid rgba(255,255,255,.1);border-radius:19px;background:#11131b;box-shadow:0 14px 36px rgba(0,0,0,.18);transition:transform .2s,border-color .2s,box-shadow .2s}
+.publicProfile .profileMediaCard:hover{transform:translateY(-3px);border-color:rgba(231,195,63,.35);box-shadow:0 20px 44px rgba(0,0,0,.28)}
+.publicProfile .profileMediaVisual{background:radial-gradient(ellipse at 50% 0,rgba(124,58,237,.16),transparent 60%),#090a0f}
+.publicProfile .profileMediaVisual img,.publicProfile .profileMediaVisual video{display:block;width:100%;height:100%;object-fit:cover}
+.publicProfile .mediaBadge{border:1px solid rgba(255,255,255,.15);backdrop-filter:blur(12px)}
+.publicProfile .paidOverlay{background:linear-gradient(180deg,rgba(5,6,10,.18),rgba(5,6,10,.88));}
+.publicProfile .paidOverlay button{min-height:42px;border:1px solid rgba(255,255,255,.12);background:var(--pp-gold);color:#121212;font-weight:900;box-shadow:0 8px 24px rgba(231,195,63,.13)}
+.publicProfile .profileContentGrid{gap:18px;margin-top:28px}
+.publicProfile .card.profileAbout>p{color:#c1c5cf;line-height:1.8}
+.publicProfile .profileLinks a{border-color:rgba(231,195,63,.2);background:rgba(231,195,63,.07);color:#f2e6b2}
+.publicProfile .fansCta{gap:16px;border:1px solid rgba(231,195,63,.23);border-radius:17px;background:linear-gradient(130deg,rgba(231,195,63,.09),rgba(124,58,237,.07))}
+.publicProfile .fansCta p{color:#b8bdc9;line-height:1.65}
+.publicProfile .profileReviews{margin-top:clamp(32px,5vw,58px)}
+.publicProfile .ratingBig{border:1px solid rgba(231,195,63,.22);border-radius:17px;background:rgba(231,195,63,.07);padding:14px 18px}
+.publicProfile .ratingBig strong{color:var(--pp-gold)}
+.publicProfile .ratingBig span{color:#b8bdc9}
+.publicProfile .reviewCard{border:1px solid rgba(255,255,255,.1);border-radius:17px;background:linear-gradient(145deg,#171820,#101116);color:#f3f4f6}
+.publicProfile .reviewCard p{color:#c1c5cf;line-height:1.75}
+.publicProfile .reviewCard small,.publicProfile .reviewStars span{color:#a5aab7}
+.publicProfile .emptyDiscovery{border:1px dashed rgba(231,195,63,.2);border-radius:20px;background:linear-gradient(145deg,#15161e,#0e0f14);color:#b8bdc9}
+.publicProfile .emptyDiscovery h2{color:#f6f4ef}
+.publicProfile .profileSectionNav~.publicProfileHero,.publicProfile .publicProfileHero [id],.publicProfile [id]{scroll-margin-top:94px}
+.publicProfile .advertiserMobileActions{left:10px;right:10px;bottom:max(10px,env(safe-area-inset-bottom));z-index:65;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;padding:8px;border:1px solid rgba(255,255,255,.13);border-radius:18px;background:rgba(12,13,18,.94);box-shadow:0 16px 44px rgba(0,0,0,.38);backdrop-filter:blur(18px)}
+.publicProfile .advertiserMobileActions a,.publicProfile .advertiserMobileActions button{min-width:0;min-height:43px;display:flex;align-items:center;justify-content:center;padding:8px 6px;border-radius:12px;font-size:11px;font-weight:850;text-align:center;white-space:normal}
+.publicProfile .advertiserMobileActions .primaryButton{background:var(--pp-gold);border-color:var(--pp-gold);color:#111}
+.publicProfile .advertiserMobileActions .secondaryButton{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);color:#f2f2f4}
+.publicProfile .pAgeGate{z-index:100;background:rgba(4,5,9,.94);backdrop-filter:blur(16px)}
+.publicProfile .pAgeCard{border:1px solid rgba(231,195,63,.24);border-radius:24px;background:linear-gradient(145deg,#191a22,#0c0d12);box-shadow:0 28px 90px rgba(0,0,0,.5);color:#f5f5f6}
+.publicProfile .pAgeCard h2{color:#fff}
+.publicProfile .pAgeWarning,.publicProfile .pAgeLegal{color:#b8bdc9}
+.publicProfile :is(a,button):focus-visible{outline:2px solid var(--pp-gold);outline-offset:3px}
+@media(max-width:1000px){.publicProfile .profileGallery{grid-template-columns:repeat(2,minmax(0,1fr))}.publicProfile .advertiserHeroGrid{gap:24px}.publicProfile .profileTrustRail{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:680px){.publicProfile{width:calc(100% - 24px);padding-bottom:112px}.publicProfile .topbar{min-height:64px}.publicProfile .profileSectionNav{top:4px;gap:6px;padding:7px;margin-bottom:12px}.publicProfile .profileSectionNav a{min-height:38px;padding:8px 10px;font-size:10px}.publicProfile .publicProfileHero{padding-top:30px}.publicProfile .publicProfileHero:after{top:0;right:0;width:100%;height:250px;opacity:.32;mask-image:linear-gradient(180deg,#000,transparent)}.publicProfile .advertiserHeroGrid{grid-template-columns:minmax(0,1fr);gap:18px}.publicProfile .profileHeroMedia{max-width:100%;border-radius:20px}.publicProfile .profileHeroCopy h1,.publicProfile .profileTitleRow h1{font-size:clamp(34px,10vw,48px);line-height:1.02}.publicProfile .profileTrustRail{grid-template-columns:minmax(0,1fr);padding:12px;border-radius:18px}.publicProfile .sectionHeading{align-items:flex-start;flex-direction:column}.publicProfile .sectionHeading>.primaryButton,.publicProfile .sectionHeading>a,.publicProfile .sectionHeading>button{width:100%}.publicProfile .profileGallery{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.publicProfile .profileMediaCard{border-radius:14px}.publicProfile .paidOverlay{padding:10px!important;gap:8px!important}.publicProfile .paidOverlay strong{font-size:clamp(15px,4vw,21px)}.publicProfile .paidOverlay button{width:100%;padding:9px 7px;font-size:10px;line-height:1.35}.publicProfile .profileContentGrid{grid-template-columns:minmax(0,1fr);gap:12px}.publicProfile .fansCta{align-items:flex-start;flex-direction:column}.publicProfile .fansCta .primaryButton{width:100%;text-align:center}.publicProfile .profileReviews .sectionHeading{gap:12px}.publicProfile .advertiserMobileActions{display:grid}.publicProfile>a[aria-label="Conversar com a acompanhante pelo WhatsApp"]{display:none!important}.publicProfile footer{padding-bottom:12px}}
+@media(max-width:380px){.publicProfile .profileGallery{grid-template-columns:minmax(0,1fr)}.publicProfile .profileMediaVisual{max-height:70vh}.publicProfile .advertiserMobileActions{left:6px;right:6px;gap:4px;padding:6px}.publicProfile .advertiserMobileActions a,.publicProfile .advertiserMobileActions button{font-size:10px;padding:7px 4px}.publicProfile .profileSectionNav a{font-size:9px;padding:7px 8px}}
+@media(prefers-reduced-motion:reduce){.publicProfile *{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
