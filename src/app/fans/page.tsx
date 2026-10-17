@@ -147,18 +147,18 @@ export default async function FansPage() {
         .fansFeaturedCardFallback{width:100%;height:100%;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,#55441f,#18150e 45%,#0c0c0c 75%);color:#e7c33f;font-size:48px;font-weight:950}
         .fansFeaturedCard:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 35%,rgba(0,0,0,.9) 100%)}
         .fansFeaturedInfo{position:absolute;z-index:2;left:14px;right:14px;bottom:14px}
-        .fansFeaturedInfo strong{font-size:13px;display:block;color:#fff}
-        .fansFeaturedInfo span{display:block;color:#9c988e;font-size:10px;margin-top:5px}
+        .fansFeaturedInfo strong{font-size:14px;line-height:1.35;display:block;color:#fff;overflow-wrap:anywhere}
+        .fansFeaturedInfo span{display:block;color:#c4bfb2;font-size:10px;margin-top:6px;line-height:1.5}
         .fansOnline{display:inline-block;width:7px;height:7px;border-radius:50%;background:#39d56f;margin-right:5px}
         .fansCreatorGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:20px}
-        .fansCreatorCard{display:flex;gap:14px;padding:18px;border:1px solid rgba(255,255,255,.08);border-radius:17px;background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.018));text-decoration:none;color:#fff;transition:.2s}
-        .fansCreatorCard:hover{border-color:rgba(231,195,63,.28);transform:translateY(-2px)}
-        .fansCreatorAvatar{width:58px;height:58px;border-radius:15px;overflow:hidden;background:#1b1914;display:grid;place-items:center;color:#e7c33f;font-size:21px;font-weight:950;flex:none}
+        .fansCreatorCard{position:relative;isolation:isolate;display:flex;align-items:flex-start;gap:15px;padding:19px;border:1px solid rgba(255,255,255,.085);border-radius:19px;background:radial-gradient(ellipse at 0 0,rgba(231,195,63,.075),transparent 58%),linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.018));text-decoration:none;color:#fff;transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease;min-width:0;overflow:hidden}
+        .fansCreatorCard:before{content:"";position:absolute;z-index:-1;left:0;top:18px;bottom:18px;width:2px;border-radius:2px;background:linear-gradient(180deg,#e7c33f,rgba(231,195,63,0));opacity:.55;transition:opacity .22s ease}.fansCreatorCard:hover{border-color:rgba(231,195,63,.38);transform:translateY(-3px);box-shadow:0 18px 42px rgba(0,0,0,.24),0 0 0 1px rgba(231,195,63,.035)}.fansCreatorCard:hover:before{opacity:1}.fansCreatorCard:focus-visible,.fansFeaturedCard:focus-visible,.fansPrimary:focus-visible,.fansSecondary:focus-visible,.fansViewAll:focus-visible{outline:2px solid #e7c33f;outline-offset:4px}
+        .fansCreatorAvatar{width:64px;height:64px;border-radius:17px;overflow:hidden;background:linear-gradient(145deg,#302714,#15130e);display:grid;place-items:center;color:#e7c33f;font-size:23px;font-weight:950;flex:none;border:1px solid rgba(231,195,63,.22);box-shadow:0 7px 18px rgba(0,0,0,.22)}
         .fansCreatorAvatar img{width:100%;height:100%;object-fit:cover}
-        .fansCreatorCard strong{font-size:13px}
-        .fansCreatorMeta{font-size:10px;color:#77736b;margin-top:6px}
-        .fansCreatorBio{font-size:11px;line-height:1.6;color:#a7a398;margin-top:9px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;max-width:100%}
-        .fansCreatorArrow{margin-left:auto;color:#e7c33f;font-size:16px;align-self:center}
+        .fansCreatorCard strong{font-size:14px;line-height:1.35;letter-spacing:-.015em;color:#f7f3e8;overflow-wrap:anywhere}
+        .fansCreatorMeta{font-size:10px;color:#a29d91;margin-top:7px;line-height:1.5;overflow-wrap:anywhere}.fansCreatorMeta .fansOnline{background:#e7c33f;width:5px;height:5px;vertical-align:middle;opacity:.85}
+        .fansCreatorBio{font-size:11px;line-height:1.65;color:#b2ada1;margin-top:10px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;max-width:100%}
+        .fansCreatorArrow{margin-left:auto;color:#e7c33f;font-size:22px;align-self:center;flex:none;width:27px;height:27px;display:grid;place-items:center;border:1px solid rgba(231,195,63,.18);border-radius:50%;background:rgba(231,195,63,.045);transition:transform .22s ease,background .22s ease}.fansCreatorCard:hover .fansCreatorArrow{transform:translateX(2px);background:rgba(231,195,63,.12)}
         .fansOwnerPanel{margin-top:68px;border:1px solid rgba(231,195,63,.18);border-radius:22px;background:linear-gradient(120deg,rgba(231,195,63,.08),rgba(255,255,255,.025));padding:30px;display:flex;align-items:center;justify-content:space-between;gap:25px}
         .fansOwnerPanel h2{font-size:27px;letter-spacing:-.05em;margin:5px 0 8px}
         .fansOwnerPanel p{font-size:12px;color:#97938a;line-height:1.7;margin:0;max-width:700px}
@@ -174,7 +174,7 @@ export default async function FansPage() {
         .fansEmpty{border:1px dashed rgba(231,195,63,.2);border-radius:18px;padding:35px;text-align:center;color:#7f7b73;background:rgba(255,255,255,.02)}
         @media(max-width:1100px){.fansPageWrap{padding:0 24px}.fansMainNav{gap:18px}.fansSearch{width:170px}.fansFeaturedGrid{grid-template-columns:repeat(3,1fr)}.fansFeaturedCard{height:300px}.fansHero{grid-template-columns:1fr .82fr}.fansHeroImage{width:360px;height:450px}.fansHeroCreatorTag{left:-10px}.fansHeroBadge{right:-2px}.fansCreatorGrid{grid-template-columns:repeat(2,1fr)}}
         @media(max-width:800px){.fansPageWrap{padding:0 16px}.fansTopbar{height:72px}.fansMainNav{display:none}.fansTopActions{gap:7px}.fansSearch{display:none}.fansIconBtn{display:none}.fansLogoText{font-size:19px}.fansLogoMark{width:37px;height:37px}.fansHero{grid-template-columns:1fr;padding:52px 0 44px;min-height:auto}.fansHeroCopy{padding:0}.fansHero h1{font-size:51px}.fansLead{font-size:15px}.fansBenefits{grid-template-columns:1fr;gap:12px;margin-top:34px}.fansHeroVisual{min-height:430px;margin-top:18px}.fansHeroImage{width:300px;height:385px}.fansHeroCreatorTag{left:0;bottom:18px}.fansHeroBadge{right:0;top:28px}.fansStatsBar{grid-template-columns:repeat(2,1fr);padding:13px}.fansStat{padding:12px 8px;border-right:0}.fansStat:nth-child(1),.fansStat:nth-child(2){border-bottom:1px solid rgba(255,255,255,.08)}.fansStat strong{font-size:18px}.fansStatIcon{width:36px;height:36px}.fansSection{padding-top:50px}.fansSectionHead{align-items:start;flex-direction:column}.fansFeaturedGrid{grid-template-columns:repeat(2,1fr);gap:10px}.fansFeaturedCard{height:270px}.fansCreatorGrid{grid-template-columns:1fr}.fansOwnerPanel{align-items:flex-start;flex-direction:column;margin-top:50px}.fansArchitecture{grid-template-columns:1fr;gap:30px;margin-top:55px}.fansArchitecture h2{font-size:34px}.fansFooter{flex-direction:column}}
-        @media(max-width:430px){.fansHero h1{font-size:44px}.fansFeaturedGrid{grid-template-columns:1fr 1fr}.fansFeaturedCard{height:235px}.fansHeroCreatorTag{min-width:205px}.fansHeroBadge{padding:11px 13px}.fansStat{gap:8px}.fansStat span{font-size:9px}}
+        @media(max-width:430px){.fansCreatorCard{gap:11px;padding:14px}.fansCreatorAvatar{width:54px;height:54px;border-radius:14px}.fansCreatorArrow{width:24px;height:24px;font-size:19px}.fansHero h1{font-size:44px}.fansFeaturedGrid{grid-template-columns:1fr 1fr}.fansFeaturedCard{height:235px}.fansHeroCreatorTag{min-width:205px}.fansHeroBadge{padding:11px 13px}.fansStat{gap:8px}.fansStat span{font-size:9px}}
       `}</style>
 
       <div className="fansPageWrap">
@@ -243,7 +243,7 @@ export default async function FansPage() {
           {featuredCreators.length === 0 ? <div className="fansEmpty">Ainda não há criadores ativos para destacar.</div> : <div className="fansFeaturedGrid">
             {featuredCreators.map((item) => <Link key={item.id} href={"/fans/" + item.slug} className="fansFeaturedCard">
               {item.avatar_url ? <img src={item.avatar_url} alt={item.display_name} /> : <div className="fansFeaturedCardFallback">{item.display_name.slice(0, 1).toUpperCase()}</div>}
-              <div className="fansFeaturedInfo"><strong>{item.display_name}</strong><span><i className="fansOnline" />Online · {planMap.get(item.id) || 0} plano(s)</span></div>
+              <div className="fansFeaturedInfo"><strong>{item.display_name}</strong><span><i className="fansOnline" />{planMap.get(item.id) || 0} plano(s) disponível(is)</span></div>
             </Link>)}
           </div>}
         </section>
@@ -256,7 +256,7 @@ export default async function FansPage() {
           {discoveryCreators.length === 0 ? <div className="fansEmpty">Ainda não há criadores ativos publicados no Fans.</div> : <div className="fansCreatorGrid">
             {discoveryCreators.map((item) => <Link key={item.id} href={"/fans/" + item.slug} className="fansCreatorCard">
               <div className="fansCreatorAvatar">{item.avatar_url ? <img src={item.avatar_url} alt={item.display_name} /> : item.display_name.slice(0, 1).toUpperCase()}</div>
-              <div style={{minWidth:0,flex:1}}><strong>{item.display_name}</strong><div className="fansCreatorMeta"><span className="fansOnline" />{planMap.get(item.id) || 0} plano(s) · {offerMap.get(item.id) || 0} experiência(s) privadas</div><div className="fansCreatorBio">{summarizeCreatorBio(item.bio)}</div></div>
+              <div style={{minWidth:0,flex:1}}><strong>{item.display_name}</strong><div className="fansCreatorMeta"><span className="fansOnline" />{planMap.get(item.id) || 0} plano(s) · {offerMap.get(item.id) || 0} experiência(s) privada(s)</div><div className="fansCreatorBio">{summarizeCreatorBio(item.bio)}</div></div>
               <span className="fansCreatorArrow">›</span>
             </Link>)}
           </div>}
