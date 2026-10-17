@@ -24,7 +24,7 @@ function summarizeCreatorBio(value: string | null, maxLength = 132): string {
     .trim();
 
   if (!plain) return "Conteúdos e experiências exclusivas no Pecatho Fans.";
-  return plain.length > maxLength ? \`\${plain.slice(0, maxLength).trimEnd()}…\` : plain;
+  return plain.length > maxLength ? plain.slice(0, maxLength).trimEnd() + "…" : plain;
 }
 
 export default async function FansPage() {
