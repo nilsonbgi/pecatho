@@ -17,23 +17,35 @@ const money=(value:number,currency="BRL")=>new Intl.NumberFormat("pt-BR",{style:
 const durationLabel=(days:number)=>days===30?"por mês":days===90?"por trimestre":days===365?"por ano":`por ${days} dias`;
 
 export default async function FansCreatorPublicPage({params}:Props){
- const {slug}=await params; const supabase=await createClient(); const {data:{user}}=await supabase.auth.getUser(); let admin; try { admin=createAdminClient(); } catch { admin=supabase; }
- const {data:creator}=await admin.from("fans_creators").select("id,slug,display_name,bio,avatar_url,whatsapp_number,status,user_id").eq("slug",slug).maybeSingle();
+ const {slug}=await params;
+ const supabase=await createClient();
+ const {data:{user}}=await supabase.auth.getUser();
+ let admin: ReturnType<typeof createAdminClient> | null = null;
+ try { admin=createAdminClient(); } catch { admin=null; }
+ const dataClient=admin??supabase;
+ let creator: {id:string;slug:string;display_name:string;bio:string|null;avatar_url:string|null;whatsapp_number:string|null;status:string;user_id:string|null}|null = null;
+ if(admin){
+  const {data}=await dataClient.from("fans_creators").select("id,slug,display_name,bio,avatar_url,whatsapp_number,status,user_id").eq("slug",slug).maybeSingle();
+  creator=data;
+ }else{
+  const {data}=await supabase.rpc("get_public_fans_creator_by_slug",{p_slug:slug}).maybeSingle();
+  creator=data?{...data,whatsapp_number:null,user_id:null}:null;
+ }
  if(!creator||creator.status!=="active") notFound();
- const isOwner=!!user&&creator.user_id===user.id;
+ const isOwner=!!user&&!!creator.user_id&&creator.user_id===user.id;
  const [{data:posts},{data:plans},{data:liveOffers}]=await Promise.all([
-  admin.from("fans_posts").select("id,title,body,price,currency,access_type,published_at,created_at").eq("creator_id",creator.id).eq("status","published").order("published_at",{ascending:false}).order("created_at",{ascending:false}),
-  admin.from("fans_plans").select("id,name,description,price,currency,duration_days,status").eq("creator_id",creator.id).eq("status","active").order("price",{ascending:true}),
-  admin.from("fans_live_offers").select("id,title,description,duration_minutes,price,currency,status").eq("creator_id",creator.id).eq("status","active").order("price",{ascending:true})
+  dataClient.from("fans_posts").select("id,title,body,price,currency,access_type,published_at,created_at").eq("creator_id",creator.id).eq("status","published").order("published_at",{ascending:false}).order("created_at",{ascending:false}),
+  dataClient.from("fans_plans").select("id,name,description,price,currency,duration_days,status").eq("creator_id",creator.id).eq("status","active").order("price",{ascending:true}),
+  dataClient.from("fans_live_offers").select("id,title,description,duration_minutes,price,currency,status").eq("creator_id",creator.id).eq("status","active").order("price",{ascending:true})
  ]);
  const cards:Card[]=await Promise.all((posts??[]).map(async post=>{
   const [{data:preview},{count:likesCount},{count:commentsCount}]=await Promise.all([
-   admin.from("fans_post_media").select("storage_bucket,storage_path,media_type,mime_type,width,height").eq("post_id",post.id).eq("is_preview",true).order("sort_order",{ascending:true}).limit(1).maybeSingle(),
-   admin.from("fans_likes").select("id",{count:"exact",head:true}).eq("post_id",post.id),
-   admin.from("fans_comments").select("id",{count:"exact",head:true}).eq("post_id",post.id).eq("status","visible")
+   dataClient.from("fans_post_media").select("storage_bucket,storage_path,media_type,mime_type,width,height").eq("post_id",post.id).eq("is_preview",true).order("sort_order",{ascending:true}).limit(1).maybeSingle(),
+   dataClient.from("fans_likes").select("id",{count:"exact",head:true}).eq("post_id",post.id),
+   dataClient.from("fans_comments").select("id",{count:"exact",head:true}).eq("post_id",post.id).eq("status","visible")
   ]);
   let previewUrl:string|null=null;
-  if(preview?.storage_path){const bucket=String(preview.storage_bucket||"fans-private").trim();if(bucket){const {data}=await admin.storage.from(bucket).createSignedUrl(preview.storage_path,180);previewUrl=data?.signedUrl??null;}}
+  if(preview?.storage_path){const bucket=String(preview.storage_bucket||"fans-private").trim();if(bucket){const {data}=await dataClient.storage.from(bucket).createSignedUrl(preview.storage_path,180);previewUrl=data?.signedUrl??null;}}
   return {...post,body:isOwner||post.access_type==="free"?post.body:null,previewUrl,previewType:preview?.media_type??null,likesCount:likesCount??0,commentsCount:commentsCount??0} as Card;
  }));
  const activePlans=(plans??[]) as Plan[]; const activeLiveOffers=(liveOffers??[]) as LiveOffer[];
