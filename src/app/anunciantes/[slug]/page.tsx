@@ -301,7 +301,7 @@ export default function PublicAdvertiserPage() {
       <nav className="topbar"><Link href="/" className="brand"><span className="brandMark">P</span><span>Pecatho</span></Link><Link href="/anunciantes" className="navCta">Ver acompanhantes</Link></nav>
 
       <nav className="profileSectionNav" aria-label="Navegação comercial do perfil">
-        <a href="#galeria" className="secondaryButton" style={{ textDecoration: "none" }}>Conteúdo exclusivo</a>
+        <a href="#conteudo-exclusivo" className="secondaryButton" style={{ textDecoration: "none" }}>Conteúdo exclusivo</a>
         {selectedServices.length > 0 && <a href="#servicos" className="secondaryButton" style={{ textDecoration: "none" }}>Serviços</a>}
         {validPrices.length > 0 && <a href="#valores" className="secondaryButton" style={{ textDecoration: "none" }}>Valores</a>}
         <a href="#galeria" className="secondaryButton" style={{ textDecoration: "none" }}>Galeria</a>
@@ -480,7 +480,7 @@ export default function PublicAdvertiserPage() {
             {conversationBusy ? "Abrindo..." : "Mensagem"}
           </button>
         )}
-        <a href="#galeria" className="secondaryButton">Conteúdo</a>
+        <a href="#conteudo-exclusivo" className="secondaryButton">Conteúdo</a>
         <GiftButton recipientType="advertiser" recipientId={profile.id} recipientName={profile.display_name || profile.title || "esta acompanhante"} compact />
       </div>
 
