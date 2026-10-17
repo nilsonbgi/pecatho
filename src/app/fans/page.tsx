@@ -14,17 +14,17 @@ type PublicFansCreator = {
 
 function summarizeCreatorBio(value: string | null, maxLength = 132): string {
   const plain = (value ?? "")
-    .replace(/\\r\\n?/g, "\\n")
-    .replace(/\\[(?:\\/?cor)(?:=[^\\]]*)?\\]/gi, "")
-    .replace(/!\\[[^\\]]*\\]\\([^)]*\\)/g, " ")
-    .replace(/\\[([^\\]]+)\\]\\([^)]*\\)/g, "$1")
-    .replace(/^\\s*[-•]\\s*/gm, "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/\[(?:\/?cor)(?:=[^\]]*)?\]/gi, "")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/^\s*[-•]\s*/gm, "")
     .replace(/[#*_\x60~>|]/g, " ")
-    .replace(/\\s+/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
 
   if (!plain) return "Conteúdos e experiências exclusivas no Pecatho Fans.";
-  return plain.length > maxLength ? `${plain.slice(0, maxLength).trimEnd()}…` : plain;
+  return plain.length > maxLength ? \`\${plain.slice(0, maxLength).trimEnd()}…\` : plain;
 }
 
 export default async function FansPage() {
