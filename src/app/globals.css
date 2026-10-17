@@ -1103,3 +1103,76 @@
   .contentMarketplaceSectionHead>a{align-self:flex-start}
   .contentMarketplaceResultsHead h2{font-size:18px}
 }
+
+
+/* Pecatho visual refinement — acompanhantes e parceiros (preserva layout e funcionalidades existentes) */
+.discoveryShell .discoveryHero{position:relative;isolation:isolate;background:radial-gradient(ellipse at 88% 8%,rgba(231,195,63,.12),transparent 34%),radial-gradient(ellipse at 8% 95%,rgba(124,58,237,.075),transparent 35%),linear-gradient(145deg,#101114 0%,#090a0c 58%,#080808 100%);border:1px solid rgba(231,195,63,.12);border-radius:0 0 28px 28px;box-shadow:0 24px 70px rgba(0,0,0,.16)}
+.discoveryShell .discoveryHero h1{max-width:920px;text-wrap:balance}
+.discoveryShell .discoveryHeroCopy{max-width:740px;color:#b7b3a9}
+.discoveryShell .advertiserHeroIntro{border:1px solid rgba(231,195,63,.16)!important;border-radius:20px!important;background:linear-gradient(120deg,rgba(231,195,63,.075),rgba(255,255,255,.025))!important;box-shadow:inset 0 1px rgba(255,255,255,.035),0 18px 45px rgba(0,0,0,.15)}
+.discoveryShell .advertiserHeroIntro strong{letter-spacing:-.035em}
+.discoveryShell .advertiserHeroStats span{border-left-color:rgba(231,195,63,.14)!important}
+.discoveryShell .discoverySearch{border:1px solid rgba(255,255,255,.09);border-radius:18px;background:rgba(18,18,18,.82);box-shadow:0 18px 45px rgba(0,0,0,.18);backdrop-filter:blur(12px)}
+.discoveryShell .discoverySearch input,.discoveryShell .discoverySearch select{min-height:48px;border-radius:12px;background:#101114;color:#f4f0e8;border-color:rgba(255,255,255,.12)}
+.discoveryShell .discoverySearch input:focus,.discoveryShell .discoverySearch select:focus{outline:2px solid rgba(231,195,63,.32);outline-offset:1px;border-color:#e7c33f}
+.discoveryShell .categoryChip{transition:transform .18s ease,border-color .18s ease,background .18s ease}
+.discoveryShell .categoryChip:hover{transform:translateY(-1px);border-color:rgba(231,195,63,.45)}
+.discoveryShell .discoveryResults{padding-top:clamp(28px,4vw,48px)}
+.discoveryShell .resultsHeader{align-items:flex-end}
+.discoveryShell .resultsHeader h2{letter-spacing:-.045em}
+.discoveryShell .advertiserGrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;align-items:stretch}
+.discoveryShell .commercialAdvertiserCard{border-radius:22px;border-color:rgba(255,255,255,.09);background:linear-gradient(160deg,#151619 0%,#0c0d10 80%);box-shadow:0 18px 48px rgba(0,0,0,.23)}
+.discoveryShell .commercialAdvertiserCard:focus-within{outline:2px solid rgba(231,195,63,.5);outline-offset:3px}
+.discoveryShell .commercialAdvertiserVisual{height:auto;min-height:0;aspect-ratio:4/4.15;border-bottom:1px solid rgba(231,195,63,.11)}
+.discoveryShell .commercialAdvertiserVisual>img{object-position:center 35%}
+.discoveryShell .commercialVisualTop{left:13px;right:13px;top:13px}
+.discoveryShell .commercialCategory,.discoveryShell .commercialVisualBottom span{backdrop-filter:blur(14px);box-shadow:0 5px 18px rgba(0,0,0,.16)}
+.discoveryShell .commercialAdvertiserBody{display:flex;flex:1;flex-direction:column;padding:20px}
+.discoveryShell .commercialTitleRow{gap:10px;align-items:flex-start}
+.discoveryShell .commercialTitleRow h3{font-size:clamp(17px,1.5vw,20px);line-height:1.2;letter-spacing:-.035em;text-wrap:balance}
+.discoveryShell .advertiserName{color:#b9b4a8}
+.discoveryShell .advertiserLocation{color:#d0c9b9;font-size:11px;line-height:1.5}
+.discoveryShell .advertiserSummary{color:#a8a59d;font-size:12px;line-height:1.75;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.discoveryShell .commercialSignalRow{gap:8px;flex-wrap:wrap;color:#c0bbaf}
+.discoveryShell .commercialSignalRow span{padding:6px 8px;border:1px solid rgba(255,255,255,.075);border-radius:8px;background:rgba(255,255,255,.025)}
+.discoveryShell .commercialSignalRow .signalAvailable{border-color:rgba(34,197,94,.22);background:rgba(34,197,94,.07);color:#9de7bb}
+.discoveryShell .commercialPrice{margin-top:auto;padding:14px 0 0;border-top:1px solid rgba(255,255,255,.075);background:transparent}
+.discoveryShell .commercialPrice strong{font-size:clamp(19px,2vw,24px);letter-spacing:-.045em;color:#f1d36d}
+.discoveryShell .commercialActions{margin-top:16px;gap:9px}
+.discoveryShell .commercialPrimary{min-height:46px;border-radius:12px;box-shadow:0 9px 24px rgba(231,195,63,.1)}
+.discoveryShell .commercialContentCta{min-height:46px;border-radius:12px}
+.discoveryShell .commercialAdvertiserCard:hover .commercialAdvertiserVisual>img{transform:scale(1.045)}
+.discoveryShell .discoveryLoadMore{padding:28px 0 12px}
+.discoveryShell .discoveryLoadMore button{min-height:46px;padding-inline:22px}
+.discoveryShell .discoveryMobileBar a,.discoveryShell .discoveryMobileBar button{min-height:44px;border-radius:12px}
+.discoveryShell :is(a,button,input,select):focus-visible{outline:2px solid #e7c33f;outline-offset:3px}
+.partnerDirectory .partnerDirectoryHero{border-color:rgba(231,195,63,.26);box-shadow:0 30px 90px rgba(0,0,0,.3),inset 0 1px rgba(255,255,255,.035)}
+.partnerDirectory .partnerDirectoryHero h1{max-width:800px;text-wrap:balance}
+.partnerDirectory .partnerDirectoryProof article{border-color:rgba(231,195,63,.13);background:linear-gradient(120deg,rgba(255,255,255,.055),rgba(255,255,255,.02));transition:transform .2s ease,border-color .2s ease}
+.partnerDirectory .partnerDirectoryProof article:hover{transform:translateX(3px);border-color:rgba(231,195,63,.3)}
+.partnerDirectory .partnerDirectoryFilters{box-shadow:0 20px 55px rgba(0,0,0,.2),inset 0 1px rgba(255,255,255,.025)}
+.partnerDirectory .partnerDirectoryGrid{align-items:stretch}
+.partnerDirectory .partnerCard{height:100%;outline-offset:4px}
+.partnerDirectory .partnerCard:focus-visible{outline:2px solid #e7c33f}
+.partnerDirectory .partnerDirectoryCover{min-height:205px}
+.partnerDirectory .partnerDirectoryCardBody{gap:2px}
+.partnerDirectory .partnerCard h2{letter-spacing:-.04em;text-wrap:balance}
+.partnerDirectory .partnerCard p{color:#b7bac5;line-height:1.75}
+.partnerDirectory .partnerDirectoryCardBody>a.primaryButton{min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:12px;margin-top:auto}
+.partnerDirectory .partnerDirectoryShowcase article{border-color:rgba(231,195,63,.12);background:linear-gradient(130deg,rgba(231,195,63,.04),rgba(255,255,255,.02))}
+.partnerDirectory :is(a,button,input,select):focus-visible{outline:2px solid #e7c33f;outline-offset:3px}
+.partnerDetail .hero{position:relative;border-color:rgba(231,195,63,.24);background:radial-gradient(ellipse at 88% 8%,rgba(231,195,63,.12),transparent 35%),radial-gradient(ellipse at 4% 100%,rgba(124,58,237,.11),transparent 34%),linear-gradient(135deg,#14151d,#111218 72%);box-shadow:0 28px 75px rgba(0,0,0,.3),inset 0 1px rgba(255,255,255,.035)}
+.partnerDetail .hero h1{letter-spacing:-.055em;text-wrap:balance}
+.partnerDetail .heroCopy{color:#c0c2cc}
+.partnerDetail .heroActions a{transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.partnerDetail .heroActions a:hover{transform:translateY(-2px)}
+.partnerDetail .authCard{border:1px solid rgba(255,255,255,.09);background:linear-gradient(145deg,rgba(23,24,32,.96),rgba(14,15,20,.96));box-shadow:0 18px 48px rgba(0,0,0,.18)}
+.partnerDetail .authCard h2{letter-spacing:-.04em}
+.partnerDetail .authCard article{transition:border-color .18s ease,transform .18s ease,background .18s ease}
+.partnerDetail .authCard article:hover{border-color:rgba(231,195,63,.24)!important}
+.partnerDetail .partnerFacts span{border-color:rgba(231,195,63,.16);background:rgba(231,195,63,.045)}
+.partnerDetail :is(a,button,input,select,summary):focus-visible{outline:2px solid #e7c33f;outline-offset:3px}
+@media(max-width:1000px){.discoveryShell .advertiserGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.discoveryShell .commercialAdvertiserVisual{aspect-ratio:4/4.4}}
+@media(max-width:680px){.discoveryShell .discoveryHero{border-radius:0 0 22px 22px}.discoveryShell .advertiserGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.discoveryShell .commercialAdvertiserCard{border-radius:16px}.discoveryShell .commercialAdvertiserVisual{aspect-ratio:3/4;min-height:0}.discoveryShell .commercialVisualTop{left:8px;right:8px;top:8px;gap:5px;align-items:flex-start}.discoveryShell .commercialCategory{font-size:8px;letter-spacing:.06em;padding:6px 7px}.discoveryShell .commercialVisualTop .verifiedMark{font-size:7px;padding:6px 7px;letter-spacing:.02em}.discoveryShell .commercialVisualBottom{left:8px;right:8px;bottom:8px;gap:5px}.discoveryShell .commercialVisualBottom span{font-size:8px;padding:5px 6px}.discoveryShell .commercialAdvertiserBody{padding:12px}.discoveryShell .commercialTitleRow{display:block}.discoveryShell .commercialTitleRow h3{font-size:14px;line-height:1.25}.discoveryShell .advertiserName{font-size:10px;margin-top:4px}.discoveryShell .commercialTrust{display:inline-flex;margin-top:7px}.discoveryShell .advertiserLocation{font-size:10px;margin:8px 0}.discoveryShell .advertiserSummary{font-size:11px;line-height:1.6;-webkit-line-clamp:3}.discoveryShell .commercialSignalRow{font-size:9px;gap:5px}.discoveryShell .commercialSignalRow span{padding:5px 6px}.discoveryShell .commercialPrice{gap:4px;padding-top:10px;align-items:flex-start}.discoveryShell .commercialPrice>div span{font-size:10px}.discoveryShell .commercialPrice>div small{font-size:9px}.discoveryShell .commercialPrice strong{font-size:16px}.discoveryShell .commercialActions{display:grid;grid-template-columns:minmax(0,1fr);gap:7px;margin-top:12px}.discoveryShell .commercialActions a{width:100%;min-height:41px;padding:8px;font-size:10px}.partnerDirectory .partnerDirectoryCover{min-height:0}.partnerDirectory .partnerDirectoryCardBody{padding:15px}.partnerDirectory .partnerDirectoryCardBody>a.primaryButton{width:100%}}
+@media(max-width:390px){.discoveryShell .advertiserGrid{grid-template-columns:minmax(0,1fr)}.discoveryShell .commercialAdvertiserVisual{aspect-ratio:4/3.9}.discoveryShell .commercialAdvertiserBody{padding:16px}.discoveryShell .commercialTitleRow{display:flex}.discoveryShell .commercialTitleRow h3{font-size:17px}.discoveryShell .commercialActions{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){.discoveryShell *, .partnerDirectory *, .partnerDetail *{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
