@@ -12,6 +12,21 @@ type PublicFansCreator = {
   avatar_url: string | null;
 };
 
+function summarizeCreatorBio(value: string | null, maxLength = 132): string {
+  const plain = (value ?? "")
+    .replace(/\\r\\n?/g, "\\n")
+    .replace(/\\[(?:\\/?cor)(?:=[^\\]]*)?\\]/gi, "")
+    .replace(/!\\[[^\\]]*\\]\\([^)]*\\)/g, " ")
+    .replace(/\\[([^\\]]+)\\]\\([^)]*\\)/g, "$1")
+    .replace(/^\\s*[-•]\\s*/gm, "")
+    .replace(/[#*_\x60~>|]/g, " ")
+    .replace(/\\s+/g, " ")
+    .trim();
+
+  if (!plain) return "Conteúdos e experiências exclusivas no Pecatho Fans.";
+  return plain.length > maxLength ? `${plain.slice(0, maxLength).trimEnd()}…` : plain;
+}
+
 export default async function FansPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -142,7 +157,7 @@ export default async function FansPage() {
         .fansCreatorAvatar img{width:100%;height:100%;object-fit:cover}
         .fansCreatorCard strong{font-size:13px}
         .fansCreatorMeta{font-size:10px;color:#77736b;margin-top:6px}
-        .fansCreatorBio{font-size:10px;line-height:1.55;color:#929087;margin-top:9px}
+        .fansCreatorBio{font-size:11px;line-height:1.6;color:#a7a398;margin-top:9px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;max-width:100%}
         .fansCreatorArrow{margin-left:auto;color:#e7c33f;font-size:16px;align-self:center}
         .fansOwnerPanel{margin-top:68px;border:1px solid rgba(231,195,63,.18);border-radius:22px;background:linear-gradient(120deg,rgba(231,195,63,.08),rgba(255,255,255,.025));padding:30px;display:flex;align-items:center;justify-content:space-between;gap:25px}
         .fansOwnerPanel h2{font-size:27px;letter-spacing:-.05em;margin:5px 0 8px}
@@ -241,7 +256,7 @@ export default async function FansPage() {
           {discoveryCreators.length === 0 ? <div className="fansEmpty">Ainda não há criadores ativos publicados no Fans.</div> : <div className="fansCreatorGrid">
             {discoveryCreators.map((item) => <Link key={item.id} href={"/fans/" + item.slug} className="fansCreatorCard">
               <div className="fansCreatorAvatar">{item.avatar_url ? <img src={item.avatar_url} alt={item.display_name} /> : item.display_name.slice(0, 1).toUpperCase()}</div>
-              <div style={{minWidth:0,flex:1}}><strong>{item.display_name}</strong><div className="fansCreatorMeta"><span className="fansOnline" />{planMap.get(item.id) || 0} plano(s) · {offerMap.get(item.id) || 0} experiência(s) privadas</div><div className="fansCreatorBio">{item.bio || "Conteúdos e experiências exclusivas no Pecatho Fans."}</div></div>
+              <div style={{minWidth:0,flex:1}}><strong>{item.display_name}</strong><div className="fansCreatorMeta"><span className="fansOnline" />{planMap.get(item.id) || 0} plano(s) · {offerMap.get(item.id) || 0} experiência(s) privadas</div><div className="fansCreatorBio">{summarizeCreatorBio(item.bio)}</div></div>
               <span className="fansCreatorArrow">›</span>
             </Link>)}
           </div>}
@@ -255,7 +270,7 @@ export default async function FansPage() {
         ) : (
           <>
             <section className="fansOwnerPanel">
-              <div><div className="fansSectionKicker">SEU ESPAÇO DE CRIADOR</div><h2>{creator.display_name}</h2><p>{creator.bio || "Seu espaço de conteúdo está pronto para ser configurado."}</p></div>
+              <div><div className="fansSectionKicker">SEU ESPAÇO DE CRIADOR</div><h2>{creator.display_name}</h2><p>{summarizeCreatorBio(creator.bio, 180)}</p></div>
               <span className="fansOwnerBadge">{creator.status === "active" ? "CRIADOR ATIVO" : creator.status}</span>
             </section>
             <section className="fansStatsBar" style={{marginTop:18}}>
