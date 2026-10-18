@@ -52,6 +52,7 @@ export async function POST(request: Request) {
       amount: Number(order.total),
       buyerEmail: user.email ?? "",
       creatorId,
+      productType: productType === "fans_boost" ? "fans_boost" : undefined,
     });
 
     await admin.from("payments").update({
