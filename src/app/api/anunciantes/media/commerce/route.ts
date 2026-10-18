@@ -37,34 +37,75 @@ export async function POST(request: Request) {
 
   const { data: media, error: mediaError } = await admin
     .from("profile_media")
-    .select("id,profile_id,storage_bucket,storage_path,access_type,price,is_public")
+    .select("id,profile_id,storage_bucket,storage_path,access_type,price,is_public,preview_storage_bucket,preview_storage_path")
     .eq("id", mediaId)
     .eq("profile_id", profile.id)
     .maybeSingle();
   if (mediaError || !media) return NextResponse.json({ error: "Mídia não encontrada." }, { status: 404 });
 
   const targetBucket = accessType === "public" ? PUBLIC_BUCKET : PRIVATE_BUCKET;
+  const targetPreviewBucket = accessType === "private" ? PRIVATE_BUCKET : "pecatho-media-preview";
   const currentBucket = media.storage_bucket;
   const targetPath = currentBucket === targetBucket
     ? media.storage_path
     : `${user.id}/${profile.id}/${media.id}-${basename(media.storage_path)}`;
+  const currentPreviewBucket = media.preview_storage_bucket;
+  const currentPreviewPath = media.preview_storage_path;
+  const targetPreviewPath = !currentPreviewPath || !currentPreviewBucket
+    ? null
+    : currentPreviewBucket === targetPreviewBucket
+      ? currentPreviewPath
+      : `${user.id}/${profile.id}/${media.id}-preview-${basename(currentPreviewPath)}`;
 
   let moved = false;
   let sourceFile: Blob | null = null;
+  let previewMoved = false;
+  let previewSourceFile: Blob | null = null;
+
   if (currentBucket !== targetBucket) {
     const { data: file, error: downloadError } = await admin.storage.from(currentBucket).download(media.storage_path);
     if (downloadError || !file) return NextResponse.json({ error: "Não foi possível preparar o arquivo para a nova política de acesso." }, { status: 409 });
 
     const { error: uploadError } = await admin.storage.from(targetBucket).upload(targetPath, file, { contentType: file.type || undefined, upsert: false });
-    if (uploadError) return NextResponse.json({ error: "Não foi possível proteger o arquivo no armazenamento privado." }, { status: 409 });
-    sourceFile = file;
-    moved = true;
+    if (uploadError) return NextResponse.json({ error: "Não foi possível preparar o arquivo no armazenamento de destino." }, { status: 409 });
 
     const { error: deleteError } = await admin.storage.from(currentBucket).remove([media.storage_path]);
     if (deleteError) {
       await admin.storage.from(targetBucket).remove([targetPath]);
       return NextResponse.json({ error: "Não foi possível concluir a migração segura do arquivo." }, { status: 409 });
     }
+    sourceFile = file;
+    moved = true;
+  }
+
+  if (currentPreviewPath && currentPreviewBucket && targetPreviewPath && currentPreviewBucket !== targetPreviewBucket) {
+    const { data: previewFile, error: previewDownloadError } = await admin.storage.from(currentPreviewBucket).download(currentPreviewPath);
+    if (previewDownloadError || !previewFile) {
+      if (moved && sourceFile) {
+        await admin.storage.from(targetBucket).remove([targetPath]);
+        await admin.storage.from(currentBucket).upload(media.storage_path, sourceFile, { contentType: sourceFile.type || undefined, upsert: false });
+      }
+      return NextResponse.json({ error: "Não foi possível preparar a miniatura para a nova política de acesso." }, { status: 409 });
+    }
+    const { error: previewUploadError } = await admin.storage.from(targetPreviewBucket).upload(targetPreviewPath, previewFile, { contentType: previewFile.type || "image/webp", upsert: false });
+    if (previewUploadError) {
+      if (moved && sourceFile) {
+        await admin.storage.from(targetBucket).remove([targetPath]);
+        await admin.storage.from(currentBucket).upload(media.storage_path, sourceFile, { contentType: sourceFile.type || undefined, upsert: false });
+      }
+      return NextResponse.json({ error: "Não foi possível proteger ou publicar a miniatura." }, { status: 409 });
+    }
+    const { error: previewDeleteError } = await admin.storage.from(currentPreviewBucket).remove([currentPreviewPath]);
+    if (previewDeleteError) {
+      await admin.storage.from(targetPreviewBucket).remove([targetPreviewPath]);
+      if (moved && sourceFile) {
+        await admin.storage.from(targetBucket).remove([targetPath]);
+        await admin.storage.from(currentBucket).upload(media.storage_path, sourceFile, { contentType: sourceFile.type || undefined, upsert: false });
+      }
+      return NextResponse.json({ error: "Não foi possível concluir a migração segura da miniatura." }, { status: 409 });
+    }
+    previewSourceFile = previewFile;
+    previewMoved = true;
   }
 
   const { error: updateError } = await admin
@@ -75,6 +116,8 @@ export async function POST(request: Request) {
       access_type: accessType,
       price: accessType === "paid" ? price : 0,
       is_public: accessType === "public",
+      preview_storage_bucket: targetPreviewPath ? targetPreviewBucket : null,
+      preview_storage_path: targetPreviewPath,
       ...(accessType === "private"
         ? { is_primary: false, is_featured: false, show_in_cards: false, show_in_gallery: false }
         : {}),
@@ -83,11 +126,15 @@ export async function POST(request: Request) {
     .eq("profile_id", profile.id);
 
   if (updateError) {
+    if (previewMoved && previewSourceFile && currentPreviewBucket && currentPreviewPath && targetPreviewPath) {
+      await admin.storage.from(targetPreviewBucket).remove([targetPreviewPath]);
+      await admin.storage.from(currentPreviewBucket).upload(currentPreviewPath, previewSourceFile, { contentType: previewSourceFile.type || "image/webp", upsert: false });
+    }
     if (moved && sourceFile) {
       await admin.storage.from(targetBucket).remove([targetPath]);
       await admin.storage.from(currentBucket).upload(media.storage_path, sourceFile, { contentType: sourceFile.type || undefined, upsert: false });
     }
-    return NextResponse.json({ error: "Arquivo migrado, mas não foi possível atualizar o cadastro da mídia." }, { status: 500 });
+    return NextResponse.json({ error: "Não foi possível concluir a atualização da política de acesso." }, { status: 500 });
   }
 
   if (accessType === "private") {
