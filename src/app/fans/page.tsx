@@ -10,6 +10,11 @@ type PublicFansCreator = {
   bio: string | null;
   status: string;
   avatar_url: string | null;
+  reputation_score?: number;
+  reputation_level?: string;
+  positive_likes?: number;
+  visible_comments?: number;
+  positive_reactions?: number;
 };
 
 function summarizeCreatorBio(value: string | null, maxLength = 132): string {
@@ -44,7 +49,7 @@ export default async function FansPage() {
     { data: creatorPlans },
     { data: creatorOffers },
   ] = await Promise.all([
-    supabase.rpc("get_public_fans_creators", { p_limit: 24 }),
+    supabase.rpc("get_public_fans_creator_leaderboard", { p_limit: 24 }),
     supabase.rpc("get_public_fans_creators_count"),
     supabase.from("fans_plans").select("creator_id").eq("status", "active"),
     supabase.from("fans_live_offers").select("creator_id").eq("status", "active"),
@@ -149,6 +154,7 @@ export default async function FansPage() {
         .fansFeaturedInfo{position:absolute;z-index:2;left:14px;right:14px;bottom:14px}
         .fansFeaturedInfo strong{font-size:14px;line-height:1.35;display:block;color:#fff;overflow-wrap:anywhere}
         .fansFeaturedInfo span{display:block;color:#c4bfb2;font-size:10px;margin-top:6px;line-height:1.5}
+        .fansReputationBadge{display:inline-flex!important;align-items:center;gap:5px;width:max-content;max-width:100%;border:1px solid rgba(231,195,63,.28);border-radius:999px;background:rgba(231,195,63,.09);padding:5px 8px;color:#f0cf63!important;font-size:9px!important;font-weight:850;letter-spacing:.02em;overflow-wrap:anywhere}
         .fansOnline{display:inline-block;width:7px;height:7px;border-radius:50%;background:#39d56f;margin-right:5px}
         .fansCreatorGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:20px}
         .fansCreatorCard{position:relative;isolation:isolate;display:flex;align-items:flex-start;gap:15px;padding:19px;border:1px solid rgba(255,255,255,.085);border-radius:19px;background:radial-gradient(ellipse at 0 0,rgba(231,195,63,.075),transparent 58%),linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.018));text-decoration:none;color:#fff;transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease;min-width:0;overflow:hidden}
@@ -243,7 +249,7 @@ export default async function FansPage() {
           {featuredCreators.length === 0 ? <div className="fansEmpty">Ainda não há criadores ativos para destacar.</div> : <div className="fansFeaturedGrid">
             {featuredCreators.map((item) => <Link key={item.id} href={"/fans/" + item.slug} className="fansFeaturedCard">
               {item.avatar_url ? <img src={item.avatar_url} alt={item.display_name} /> : <div className="fansFeaturedCardFallback">{item.display_name.slice(0, 1).toUpperCase()}</div>}
-              <div className="fansFeaturedInfo"><strong>{item.display_name}</strong><span><i className="fansOnline" />{planMap.get(item.id) || 0} plano(s) disponível(is)</span></div>
+              <div className="fansFeaturedInfo"><strong>{item.display_name}</strong><span className="fansReputationBadge">🏆 {item.reputation_level || "Iniciante"} · {Number(item.reputation_score || 0).toLocaleString("pt-BR")} pontos</span><span><i className="fansOnline" />{planMap.get(item.id) || 0} plano(s) disponível(is)</span></div>
             </Link>)}
           </div>}
         </section>
@@ -256,7 +262,7 @@ export default async function FansPage() {
           {discoveryCreators.length === 0 ? <div className="fansEmpty">Ainda não há criadores ativos publicados no Fans.</div> : <div className="fansCreatorGrid">
             {discoveryCreators.map((item) => <Link key={item.id} href={"/fans/" + item.slug} className="fansCreatorCard">
               <div className="fansCreatorAvatar">{item.avatar_url ? <img src={item.avatar_url} alt={item.display_name} /> : item.display_name.slice(0, 1).toUpperCase()}</div>
-              <div style={{minWidth:0,flex:1}}><strong>{item.display_name}</strong><div className="fansCreatorMeta"><span className="fansOnline" />{planMap.get(item.id) || 0} plano(s) · {offerMap.get(item.id) || 0} experiência(s) privada(s)</div><div className="fansCreatorBio">{summarizeCreatorBio(item.bio)}</div></div>
+              <div style={{minWidth:0,flex:1}}><strong>{item.display_name}</strong><div className="fansCreatorMeta"><span className="fansOnline" />{planMap.get(item.id) || 0} plano(s) · {offerMap.get(item.id) || 0} experiência(s) privada(s)</div><div className="fansReputationBadge" style={{marginTop:8}}>🏆 {item.reputation_level || "Iniciante"} · {Number(item.reputation_score || 0).toLocaleString("pt-BR")} pontos</div><div className="fansCreatorBio">{summarizeCreatorBio(item.bio)}</div></div>
               <span className="fansCreatorArrow">›</span>
             </Link>)}
           </div>}
