@@ -4,7 +4,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
-const PRIVATE_BUCKET = "pecatho-profile-paid";
 
 function safeBasename(path: string) {
   return (path.split("/").pop() || "preview.webp").replace(/[^a-zA-Z0-9._-]/g, "_");
