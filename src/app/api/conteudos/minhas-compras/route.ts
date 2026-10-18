@@ -23,7 +23,10 @@ export async function GET() {
     .eq("buyer_user_id", user.id)
     .order("created_at", { ascending: false });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("Falha ao carregar compras do cliente:", error);
+    return NextResponse.json({ error: "Não foi possível carregar suas compras." }, { status: 500 });
+  }
 
   const productIds = [...new Set((sales ?? []).map((sale) => sale.product_id).filter(Boolean))];
   if (!productIds.length) return NextResponse.json({ purchases: [] });
@@ -33,7 +36,10 @@ export async function GET() {
     .select("id,title,description,product_type,price,currency,owner_type,owner_id")
     .in("id", productIds);
 
-  if (productsError) return NextResponse.json({ error: productsError.message }, { status: 500 });
+  if (productsError) {
+    console.error("Falha ao carregar produtos comprados:", productsError);
+    return NextResponse.json({ error: "Não foi possível carregar suas compras." }, { status: 500 });
+  }
 
   const { data: items, error: itemsError } = await admin
     .from("digital_content_product_items")
@@ -41,12 +47,18 @@ export async function GET() {
     .in("product_id", productIds)
     .order("sort_order", { ascending: true });
 
-  if (itemsError) return NextResponse.json({ error: itemsError.message }, { status: 500 });
+  if (itemsError) {
+    console.error("Falha ao carregar itens dos produtos comprados:", itemsError);
+    return NextResponse.json({ error: "Não foi possível carregar suas compras." }, { status: 500 });
+  }
 
   const advertiserIds = [...new Set((products ?? []).filter((product) => product.owner_type === "advertiser").map((product) => product.owner_id))];
   const creatorIds = [...new Set((products ?? []).filter((product) => product.owner_type === "creator").map((product) => product.owner_id))];
 
-  const [{ data: advertisers }, { data: creators }] = await Promise.all([
+  const [
+    { data: advertisers, error: advertisersError },
+    { data: creators, error: creatorsError },
+  ] = await Promise.all([
     advertiserIds.length
       ? admin.from("advertiser_profiles").select("id,display_name,title,slug").in("id", advertiserIds).eq("status", "published")
       : Promise.resolve({ data: [], error: null }),
@@ -54,6 +66,11 @@ export async function GET() {
       ? admin.from("fans_creators").select("id,display_name,slug").in("id", creatorIds).eq("status", "active")
       : Promise.resolve({ data: [], error: null }),
   ]);
+
+  if (advertisersError || creatorsError) {
+    console.error("Falha ao carregar vendedores das compras:", advertisersError ?? creatorsError);
+    return NextResponse.json({ error: "Não foi possível carregar suas compras." }, { status: 500 });
+  }
 
   const sellerMap = new Map<string, { name: string; href: string }>();
   for (const seller of advertisers ?? []) {
@@ -91,8 +108,10 @@ export async function GET() {
       : Promise.resolve({ data: [], error: null }),
   ]);
 
-  if (reviewsError) return NextResponse.json({ error: reviewsError.message }, { status: 500 });
-  if (sellerSalesError) return NextResponse.json({ error: sellerSalesError.message }, { status: 500 });
+  if (reviewsError || sellerSalesError) {
+    console.error("Falha ao carregar reputação dos vendedores nas compras:", reviewsError ?? sellerSalesError);
+    return NextResponse.json({ error: "Não foi possível carregar suas compras." }, { status: 500 });
+  }
 
   const mediaByAdvertiser = new Map<string, string[]>();
   if (advertiserIds.length) {
@@ -100,7 +119,10 @@ export async function GET() {
       .from("profile_media")
       .select("id,profile_id")
       .in("profile_id", advertiserIds);
-    if (mediaError) return NextResponse.json({ error: mediaError.message }, { status: 500 });
+    if (mediaError) {
+      console.error("Falha ao carregar mídias dos vendedores:", mediaError);
+      return NextResponse.json({ error: "Não foi possível carregar suas compras." }, { status: 500 });
+    }
     for (const item of media ?? []) {
       const current = mediaByAdvertiser.get(item.profile_id) ?? [];
       current.push(item.id);
@@ -116,7 +138,10 @@ export async function GET() {
       .select("media_id")
       .in("media_id", allMediaIds)
       .eq("status", "paid");
-    if (mediaSalesError) return NextResponse.json({ error: mediaSalesError.message }, { status: 500 });
+    if (mediaSalesError) {
+      console.error("Falha ao carregar vendas de mídias dos vendedores:", mediaSalesError);
+      return NextResponse.json({ error: "Não foi possível carregar suas compras." }, { status: 500 });
+    }
 
     const mediaOwnerMap = new Map<string, string>();
     for (const [profileId, ids] of mediaByAdvertiser) {
