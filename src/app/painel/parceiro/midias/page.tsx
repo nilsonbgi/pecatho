@@ -26,7 +26,7 @@ export default function ParceiroMidias(){
     const path=user.id+"/partners/"+venueId+"/"+crypto.randomUUID()+"."+(file.name.split(".").pop()||"bin").toLowerCase();
     const up=await s.storage.from("pecatho-partner-media").upload(path,file,{contentType:file.type,upsert:false});if(up.error)throw up.error;
     let preview_storage_bucket:string|null=null;let preview_storage_path:string|null=null;
-    if(previewFile){preview_storage_bucket="pecatho-profile-paid";preview_storage_path=user.id+"/partners/"+venueId+"/"+crypto.randomUUID()+".webp";const pu=await s.storage.from(preview_storage_bucket).upload(preview_storage_path,previewFile,{contentType:"image/webp",upsert:false});if(pu.error)throw pu.error;}
+    if(previewFile){preview_storage_bucket="pecatho-partner-media";preview_storage_path=user.id+"/partners/"+venueId+"/"+crypto.randomUUID()+".webp";const pu=await s.storage.from(preview_storage_bucket).upload(preview_storage_path,previewFile,{contentType:"image/webp",upsert:false});if(pu.error)throw pu.error;}
     const ins=await s.from("partner_venue_media").insert({venue_id:venueId,owner_user_id:user.id,kind,storage_bucket:"pecatho-partner-media",storage_path:path,preview_storage_bucket,preview_storage_path,original_filename:original.name,mime_type:file.type,size_bytes:file.size,sort_order:order,is_public:false}).select("id").single();if(ins.error)throw ins.error;order++;
    }
    setMessage("Mídia otimizada e enviada para moderação.");await load();
