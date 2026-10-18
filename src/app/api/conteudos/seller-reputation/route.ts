@@ -15,21 +15,37 @@ export async function GET(request: Request) {
   const admin = createAdminClient();
 
   if (ownerType === "advertiser") {
-    const { data: owner } = await admin
+    const { data: owner, error: ownerError } = await admin
       .from("advertiser_profiles")
       .select("id,status,display_name,title,slug")
       .eq("id", ownerId)
       .eq("status", "published")
       .maybeSingle();
 
+    if (ownerError) {
+      console.error(ownerError);
+      return NextResponse.json(
+        { error: "Não foi possível carregar a reputação." },
+        { status: 500 },
+      );
+    }
+
     if (!owner) return NextResponse.json({ reputation: null });
   } else {
-    const { data: owner } = await admin
+    const { data: owner, error: ownerError } = await admin
       .from("fans_creators")
       .select("id,status,display_name,slug")
       .eq("id", ownerId)
       .eq("status", "active")
       .maybeSingle();
+
+    if (ownerError) {
+      console.error(ownerError);
+      return NextResponse.json(
+        { error: "Não foi possível carregar a reputação." },
+        { status: 500 },
+      );
+    }
 
     if (!owner) return NextResponse.json({ reputation: null });
   }
@@ -108,10 +124,6 @@ export async function GET(request: Request) {
     );
   }
 
-  if (reviewError) {
-    console.error(reviewError);
-    return NextResponse.json({ error: "Não foi possível carregar a reputação." }, { status: 500 });
-  }
 
   const verifiedSalesCount = (digitalSalesCount ?? 0) + mediaSalesCount;
   const ratingValues = (ratingRows ?? []).map((review) => Number(review.rating)).filter((value) => Number.isFinite(value));
