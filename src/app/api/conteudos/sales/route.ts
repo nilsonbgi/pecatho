@@ -31,7 +31,10 @@ export async function GET() {
     .eq("owner_user_id", user.id)
     .order("created_at", { ascending: false });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("Falha ao carregar vendas do vendedor:", error);
+    return NextResponse.json({ error: "Não foi possível carregar as vendas." }, { status: 500 });
+  }
 
   const sales = (data ?? []) as SaleRow[];
   const productIds = [...new Set(sales.map((sale) => sale.product_id))];
@@ -39,7 +42,10 @@ export async function GET() {
     ? await admin.from("digital_content_products").select("id,title,product_type").in("id", productIds)
     : { data: [], error: null };
 
-  if (productError) return NextResponse.json({ error: productError.message }, { status: 500 });
+  if (productError) {
+    console.error("Falha ao carregar produtos das vendas:", productError);
+    return NextResponse.json({ error: "Não foi possível carregar as vendas." }, { status: 500 });
+  }
 
   const products = (productData ?? []) as ProductRow[];
   const productMap = new Map(products.map((product) => [product.id, product]));
@@ -47,7 +53,10 @@ export async function GET() {
   const { data: buyerData, error: buyerError } = buyerIds.length
     ? await admin.from("profiles").select("id,display_name").in("id", buyerIds)
     : { data: [], error: null };
-  if (buyerError) return NextResponse.json({ error: buyerError.message }, { status: 500 });
+  if (buyerError) {
+    console.error("Falha ao carregar compradores das vendas:", buyerError);
+    return NextResponse.json({ error: "Não foi possível carregar as vendas." }, { status: 500 });
+  }
   const buyerMap = new Map(((buyerData ?? []) as BuyerRow[]).map((buyer) => [buyer.id, buyer]));
   const paid = sales.filter((row) => row.status.toLowerCase() === "paid");
   const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
