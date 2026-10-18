@@ -349,17 +349,17 @@ export default function AnuncioPage() {
         }
         const kind = original.type.startsWith("video/") ? "video" : "image";
         const path = user.id + "/" + profile.id + "/" + crypto.randomUUID() + "." + (file.name.split(".").pop() || "bin").toLowerCase();
-        const upload = await supabase.storage.from("pecatho-media").upload(path, file, { contentType: file.type, upsert: false });
+        const upload = await supabase.storage.from("pecatho-profile-paid").upload(path, file, { contentType: file.type, upsert: false });
         if (upload.error) throw upload.error;
         let previewStorageBucket: string | null = null;
         let previewStoragePath: string | null = null;
         if (previewFile) {
-          previewStorageBucket = "pecatho-media-preview";
+          previewStorageBucket = "pecatho-profile-paid";
           previewStoragePath = user.id + "/" + profile.id + "/" + crypto.randomUUID() + ".webp";
           const previewUpload = await supabase.storage.from(previewStorageBucket).upload(previewStoragePath, previewFile, { contentType: "image/webp", upsert: false });
           if (previewUpload.error) throw previewUpload.error;
         }
-        const insert = await supabase.from("profile_media").insert({ profile_id: profile.id, kind, storage_bucket: "pecatho-media", storage_path: path, original_filename: original.name, mime_type: file.type, size_bytes: file.size, sort_order: order, width, height, is_primary: order === 0, is_featured: order === 0 && kind === "image", show_in_cards: true, show_in_gallery: true, is_public: true, moderation_status: "pending", access_type: "public", price: 0, preview_storage_bucket: previewStorageBucket, preview_storage_path: previewStoragePath }).select("id,kind,storage_bucket,storage_path,original_filename,mime_type,size_bytes,sort_order,is_primary,is_featured,show_in_cards,show_in_gallery,is_public,moderation_status,access_type,price,preview_storage_bucket,preview_storage_path").single();
+        const insert = await supabase.from("profile_media").insert({ profile_id: profile.id, kind, storage_bucket: "pecatho-profile-paid", storage_path: path, original_filename: original.name, mime_type: file.type, size_bytes: file.size, sort_order: order, width, height, is_primary: false, is_featured: false, show_in_cards: false, show_in_gallery: false, is_public: false, moderation_status: "pending", access_type: "private", price: 0, preview_storage_bucket: previewStorageBucket, preview_storage_path: previewStoragePath }).select("id,kind,storage_bucket,storage_path,original_filename,mime_type,size_bytes,sort_order,is_primary,is_featured,show_in_cards,show_in_gallery,is_public,moderation_status,access_type,price,preview_storage_bucket,preview_storage_path").single();
         if (insert.error) throw insert.error;
         order++;
       }
@@ -379,7 +379,7 @@ export default function AnuncioPage() {
     } catch (err) { setError(err instanceof Error ? err.message : "Não foi possível atualizar a mídia."); } finally { setMediaBusy(false); }
   }
 
-  async function updateMediaCommerce(mediaId: string, accessType: "public" | "paid", priceValue: string) {
+  async function updateMediaCommerce(mediaId: string, accessType: "private" | "public" | "paid", priceValue: string) {
     setMediaBusy(true); setMessage(""); setError("");
     try {
       const parsedPrice = priceValue.trim() === "" ? 0 : Number(priceValue.replace(",", "."));
@@ -396,7 +396,7 @@ export default function AnuncioPage() {
       const profileResult = await createClient().from("advertiser_profiles").select("id").eq("user_id", (await createClient().auth.getUser()).data.user?.id || "").maybeSingle();
       if (profileResult.error || !profileResult.data?.id) throw new Error(profileResult.error?.message || "Anúncio não encontrado.");
       await loadMedia(profileResult.data.id);
-      setMessage(accessType === "paid" ? "Mídia protegida como conteúdo exclusivo pago." : "Mídia configurada como conteúdo público.");
+      setMessage(accessType === "paid" ? "Mídia protegida como conteúdo exclusivo pago." : accessType === "public" ? "Mídia marcada para exibição pública." : "Mídia mantida privada; não será exibida no perfil público.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível atualizar o acesso da mídia.");
     } finally {
@@ -473,7 +473,7 @@ export default function AnuncioPage() {
     {active === "Apresentação" && <><h2>Apresentação</h2><label>Categoria<select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} required><option value="">Selecione a categoria</option>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>{selectedCategory && <p className="fieldNote">Categoria selecionada: <strong>{selectedCategory.name}</strong>. Os campos específicos permanecem vinculados à configuração administrativa.</p>}<label>Título<input value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={120} /></label><label>Nome público<input value={name} onChange={(e) => setName(e.target.value)} maxLength={100} /></label><label>Resumo<textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows={3} maxLength={280} /></label><label>Descrição<FormattedTextEditor value={description} onChange={setDescription} rows={8} maxLength={5000} label="Descrição pública do anúncio" /></label></>}
     {active === "Mídias" && <section>
       <h2>Mídias do anúncio</h2>
-      <p className="fieldNote">Imagens e vídeos são associados ao anúncio e entram no fluxo de moderação. O arquivo original não é exposto por URL pública direta.</p>
+      <p className="fieldNote">Toda mídia nova começa privada, fora dos cards e da galeria. Você decide depois se a torna pública ou se a oferece como conteúdo pago; a moderação é uma etapa separada.</p>
       <label>Adicionar imagens ou vídeos<input type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime" multiple onChange={uploadMedia} disabled={mediaBusy} /></label>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10, margin: "16px 0 18px" }}>
         <div className="card" style={{ padding: 14 }}><small>VENDAS CONFIRMADAS</small><strong style={{ display: "block", fontSize: 22, marginTop: 4 }}>{mediaSalesSummary.paidCount}</strong></div>
@@ -494,14 +494,14 @@ export default function AnuncioPage() {
               <strong>{item.original_filename || "Arquivo"}</strong>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
                 <span style={{ fontSize: 10, fontWeight: 800, padding: "5px 8px", borderRadius: 999, background: item.moderation_status === "approved" ? "rgba(22,163,74,.10)" : item.moderation_status === "rejected" ? "rgba(220,38,38,.10)" : "rgba(245,158,11,.12)", color: item.moderation_status === "approved" ? "#15803d" : item.moderation_status === "rejected" ? "#b91c1c" : "#92400e" }}>{item.moderation_status === "approved" ? "✓ APROVADO" : item.moderation_status === "rejected" ? "✕ REJEITADO" : "◷ EM MODERAÇÃO"}</span>
-                <span style={{ fontSize: 10, fontWeight: 800, padding: "5px 8px", borderRadius: 999, background: "rgba(15,23,42,.05)", color: "#475569" }}>{item.access_type === "paid" ? ("EXCLUSIVO · R$ " + Number(item.price || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })) : "PÚBLICO"}</span>
+                <span style={{ fontSize: 10, fontWeight: 800, padding: "5px 8px", borderRadius: 999, background: "rgba(15,23,42,.05)", color: "#475569" }}>{item.access_type === "paid" ? ("EXCLUSIVO · R$ " + Number(item.price || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })) : item.access_type === "private" || item.is_public === false ? "PRIVADO" : "PÚBLICO"}</span>
                 {item.access_type === "paid" && <span style={{ fontSize: 10, fontWeight: 800, padding: "5px 8px", borderRadius: 999, background: "rgba(15,23,42,.05)", color: "#475569" }}>{item.salesCount || 0} venda(s)</span>}
               </div>
               {item.access_type === "paid" && item.moderation_status !== "approved" && <small style={{ display: "block", marginTop: 7, color: "#92400e" }}>Conteúdo pago: novas compras somente após aprovação da moderação. A prévia permanece protegida.</small>}
               <div className="mediaCommerceControl" style={{ display: "grid", gap: 8, marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(15,23,42,.08)" }}>
-                <label>Acesso<select value={item.access_type === "paid" ? "paid" : "public"} onChange={(e) => { const next = e.target.value === "paid" ? "paid" : "public"; const draftPrice = mediaPriceDrafts[item.id] || ""; if (next === "paid" && (!draftPrice || Number(draftPrice.replace(",", ".")) <= 0)) { setError("Informe primeiro o preço da mídia para ativar o conteúdo pago."); return; } void updateMediaCommerce(item.id, next, draftPrice); }} disabled={mediaBusy}><option value="public">Público</option><option value="paid">Exclusivo pago</option></select></label>
+                <label>Acesso e privacidade<select value={item.access_type === "paid" ? "paid" : item.access_type === "private" || item.is_public === false ? "private" : "public"} onChange={(e) => { const next = e.target.value === "paid" ? "paid" : e.target.value === "private" ? "private" : "public"; const draftPrice = mediaPriceDrafts[item.id] || ""; if (next === "paid" && (!draftPrice || Number(draftPrice.replace(",", ".")) <= 0)) { setError("Informe primeiro o preço da mídia para ativar o conteúdo pago."); return; } void updateMediaCommerce(item.id, next, draftPrice); }} disabled={mediaBusy}><option value="private">Privado — somente você</option><option value="public">Público no perfil</option><option value="paid">Exclusivo pago</option></select></label>
                 <label>Preço do conteúdo (R$)<input value={mediaPriceDrafts[item.id] ?? ""} onChange={(e) => setMediaPriceDrafts((current) => ({ ...current, [item.id]: e.target.value }))} inputMode="decimal" placeholder="0,00" disabled={mediaBusy} /></label>
-                <button type="button" className="secondaryButton" onClick={() => void updateMediaCommerce(item.id, item.access_type === "paid" ? "paid" : "public", mediaPriceDrafts[item.id] || "")} disabled={mediaBusy}>{item.access_type === "paid" ? "Salvar preço e manter exclusivo" : "Salvar configuração pública"}</button>
+                <button type="button" className="secondaryButton" onClick={() => void updateMediaCommerce(item.id, item.access_type === "paid" ? "paid" : item.access_type === "private" || item.is_public === false ? "private" : "public", mediaPriceDrafts[item.id] || "")} disabled={mediaBusy}>{item.access_type === "paid" ? "Salvar preço e manter exclusivo" : item.access_type === "private" || item.is_public === false ? "Manter mídia privada" : "Salvar configuração pública"}</button>
                 <div style={{ display: "grid", gap: 7, padding: 10, borderRadius: 12, background: "rgba(15,23,42,.035)" }}>
                   <strong style={{ fontSize: 11 }}>Onde esta mídia aparece?</strong>
                   <label className="checkRow"><input type="checkbox" checked={Boolean(item.is_featured)} disabled={mediaBusy || item.kind !== "image" || item.moderation_status !== "approved"} onChange={(e) => void updateMediaPresentation(item.id, e.target.checked, item.show_in_cards !== false, item.show_in_gallery !== false)} /> ★ Mídia de destaque do perfil</label>
