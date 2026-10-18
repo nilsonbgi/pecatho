@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   if (payment.status === "paid") return NextResponse.json({ error: "Este pedido já foi pago." }, { status: 409 });
   if (payment.provider_payment_id) return NextResponse.json({ error: "Este pedido já possui uma transação associada no provedor." }, { status: 409 });
 
-  const creatorId = typeof order.metadata?.creator_id === "string" ? order.metadata.creator_id : "";
+  const creatorId = typeof order.metadata?.creator_id === "string" ? order.metadata.creator_id : "";\n  const productType = typeof order.metadata?.product_type === "string" ? order.metadata.product_type : undefined;
   const title = typeof order.metadata?.title === "string" ? order.metadata.title : "Conteúdo Pecatho Fans";
 
   try {
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
       provider_payment_id: null,
       raw_reference: {
         ...(payment.raw_reference && typeof payment.raw_reference === "object" ? payment.raw_reference : {}),
-        channel: "pecatho_fans",
+        channel: productType === "fans_boost" ? "pecatho_fans_boost" : "pecatho_fans",
         provider: "mercadopago",
         preference_id: preference.id,
         order_id: order.id,
