@@ -5,7 +5,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export const dynamic = "force-dynamic";
 
 const PRIVATE_BUCKET = "pecatho-profile-paid";
-const PUBLIC_PREVIEW_BUCKET = "pecatho-media-preview";
 
 function safeBasename(path: string) {
   return (path.split("/").pop() || "preview.webp").replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -35,7 +34,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "A mídia precisa ser aprovada antes de ser exibida publicamente." }, { status: 409 });
   }
 
-  const targetPreviewBucket = body.is_public ? PUBLIC_PREVIEW_BUCKET : PRIVATE_BUCKET;
+  const targetPreviewBucket = "pecatho-partner-media";
   const currentPreviewBucket = media.preview_storage_bucket;
   const currentPreviewPath = media.preview_storage_path;
   const targetPreviewPath = !currentPreviewBucket || !currentPreviewPath
