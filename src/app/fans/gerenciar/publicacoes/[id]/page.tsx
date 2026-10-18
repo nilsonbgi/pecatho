@@ -61,16 +61,47 @@ export default function FansPublicationEditorPage() {
   }
 
   async function uploadFiles(event: React.ChangeEvent<HTMLInputElement>) {
-    if (!post || !["draft", "rejected"].includes(post.status)) return; const files = Array.from(event.target.files ?? []); event.target.value = ""; if (!files.length) return; setMessage("");
-    const invalid = files.find(file => !ALLOWED_TYPES.has(file.type) || file.size > MAX_FILE_SIZE); if (invalid) { setMessage(`Arquivo inválido: ${invalid.name}. Aceitos: JPG, PNG, WebP, GIF, MP4, WebM e MOV até 50 MB.`); return; }
-    setUploading(true); let completed = 0;
-    try { for (const file of files) {
-      const extension = file.name.split(".").pop()?.toLowerCase() || "bin"; const objectPath = `${post.creator_id}/${post.id}/${crypto.randomUUID()}.${extension}`;
-      const { error: uploadError } = await supabase.storage.from("pecatho-private").upload(objectPath, file, { contentType: file.type, upsert: false });
-      if (uploadError) throw new Error(`Falha no upload de ${file.name}: ${uploadError.message}`);
-      const { error: rowError } = await supabase.from("fans_post_media").insert({ post_id: post.id, storage_bucket: "pecatho-private", storage_path: objectPath, media_type: file.type.startsWith("video/") ? "video" : "image", mime_type: file.type, size_bytes: file.size, sort_order: media.length + completed, is_preview: media.length === 0 && completed === 0 });
-      if (rowError) { await supabase.storage.from("pecatho-private").remove([objectPath]); throw new Error(`Falha ao registrar ${file.name}: ${rowError.message}`); } completed += 1;
-    } await loadMedia(post.id); setMessage(`${completed} mídia(s) adicionada(s) com segurança.`); } catch (error) { setMessage(error instanceof Error ? error.message : "Não foi possível concluir o upload."); } finally { setUploading(false); }
+    if (!post || !["draft", "rejected"].includes(post.status)) return;
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (!files.length) return;
+    setMessage("");
+    const invalid = files.find(file => !ALLOWED_TYPES.has(file.type) || file.size <= 0 || file.size > MAX_FILE_SIZE);
+    if (invalid) {
+      setMessage(`Arquivo inválido: ${invalid.name}. Aceitos: JPG, PNG, WebP, GIF, MP4, WebM e MOV até 50 MB.`);
+      return;
+    }
+
+    setUploading(true);
+    let completed = 0;
+    const failures: string[] = [];
+    try {
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append("post_id", post.id);
+        formData.append("file", file, file.name);
+        const response = await fetch("/api/fans/publicacoes/midia", { method: "POST", body: formData });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          failures.push(`${file.name}: ${result.error || "não foi possível enviar"}`);
+          continue;
+        }
+        completed += 1;
+      }
+      await loadMedia(post.id);
+      if (failures.length) {
+        setMessage([
+          completed ? `${completed} mídia(s) enviada(s) com segurança.` : "",
+          ...failures,
+        ].filter(Boolean).join(" "));
+      } else {
+        setMessage(`${completed} mídia(s) enviada(s), verificadas contra duplicidade e armazenadas com segurança.`);
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Não foi possível concluir o upload.");
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function removeMedia(item: Media) {
