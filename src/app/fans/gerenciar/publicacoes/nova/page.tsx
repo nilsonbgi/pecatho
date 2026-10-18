@@ -40,7 +40,12 @@ export default function NewFansPublicationPage() {
     }).select("id").single();
 
     setSaving(false);
-    if (error) { setMessage(error.message); return; }
+    if (error) {
+      setMessage(error.message.includes("duplicate_fans_post_content")
+        ? "Esta publicação repete o mesmo título e texto de outra publicação criada nos últimos 30 dias. Edite a publicação existente ou altere o conteúdo antes de continuar."
+        : error.message);
+      return;
+    }
     router.push(`/fans/gerenciar/publicacoes/${data.id}`);
   }
 
