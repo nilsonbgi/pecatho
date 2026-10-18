@@ -19,7 +19,7 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => null);
   const mediaId = typeof body?.media_id === "string" ? body.media_id : "";
-  const accessType = body?.access_type === "paid" ? "paid" : body?.access_type === "public" ? "public" : "";
+  const accessType = body?.access_type === "private" ? "private" : body?.access_type === "paid" ? "paid" : body?.access_type === "public" ? "public" : "";
   const price = body?.price == null ? 0 : Number(body.price);
 
   if (!mediaId || !accessType) return NextResponse.json({ error: "Configuração de mídia inválida." }, { status: 400 });
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     .maybeSingle();
   if (mediaError || !media) return NextResponse.json({ error: "Mídia não encontrada." }, { status: 404 });
 
-  const targetBucket = accessType === "paid" ? PRIVATE_BUCKET : PUBLIC_BUCKET;
+  const targetBucket = accessType === "public" ? PUBLIC_BUCKET : PRIVATE_BUCKET;
   const currentBucket = media.storage_bucket;
   const targetPath = currentBucket === targetBucket
     ? media.storage_path
