@@ -53,21 +53,12 @@ create policy fans_post_reactions_insert_eligible
     )
   );
 
-drop policy if exists fans_post_reactions_update_own on public.fans_post_reactions;
-create policy fans_post_reactions_update_own
-  on public.fans_post_reactions for update to authenticated
-  using (user_id = (select auth.uid()))
-  with check (
-    user_id = (select auth.uid())
-    and emoji in ('❤️','😍','🔥','👏','😂','😮','💯','😘')
-  );
-
 drop policy if exists fans_post_reactions_delete_own on public.fans_post_reactions;
 create policy fans_post_reactions_delete_own
   on public.fans_post_reactions for delete to authenticated
   using (user_id = (select auth.uid()));
 
-grant select, insert, update, delete on public.fans_post_reactions to authenticated;
+grant select, insert, delete on public.fans_post_reactions to authenticated;
 
 create or replace function public.get_public_fans_post_reaction_summary(p_post_id uuid)
 returns table (emoji text, reaction_count bigint, viewer_reacted boolean)
