@@ -75,6 +75,9 @@ export async function POST(request: Request) {
       access_type: accessType,
       price: accessType === "paid" ? price : 0,
       is_public: accessType === "public",
+      ...(accessType === "private"
+        ? { is_primary: false, is_featured: false, show_in_cards: false, show_in_gallery: false }
+        : {}),
     })
     .eq("id", media.id)
     .eq("profile_id", profile.id);
@@ -85,6 +88,17 @@ export async function POST(request: Request) {
       await admin.storage.from(currentBucket).upload(media.storage_path, sourceFile, { contentType: sourceFile.type || undefined, upsert: false });
     }
     return NextResponse.json({ error: "Arquivo migrado, mas não foi possível atualizar o cadastro da mídia." }, { status: 500 });
+  }
+
+  if (accessType === "private") {
+    const { error: profileUpdateError } = await admin
+      .from("advertiser_profiles")
+      .update({ primary_media_id: null })
+      .eq("id", profile.id)
+      .eq("primary_media_id", media.id);
+    if (profileUpdateError) {
+      return NextResponse.json({ error: "A mídia foi mantida privada, mas não foi possível atualizar a foto principal do anúncio." }, { status: 500 });
+    }
   }
 
   return NextResponse.json({
