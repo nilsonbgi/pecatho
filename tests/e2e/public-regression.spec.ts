@@ -98,7 +98,9 @@ test('cadastro preserves the complete five-step onboarding flow without creating
   await expect(page.locator('input[readonly][value="PR"]')).toHaveValue('PR');
   await expect(page.getByLabel('Logradouro')).toHaveValue('Rua de Teste');
   await expect(page.getByLabel('Bairro')).toHaveValue('Centro');
+  await expect(page.getByText('Consultando CEP...')).toBeHidden();
   await page.getByLabel('Número').fill('100');
+  await expect(page.getByText('Etapa 4 de 5')).toBeVisible();
   await page.getByRole('button', { name: /Continuar/i }).click();
 
   await expect(page.getByText('Etapa 5 de 5')).toBeVisible();
