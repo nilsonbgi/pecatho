@@ -145,6 +145,11 @@ export default async function FansPage() {
         .sort((a, b) => b.multiplier - a.multiplier || new Date(b.ends_at).getTime() - new Date(a.ends_at).getTime())
         .filter((item, index, all) => all.findIndex((candidate) => candidate.id === item.id) === index)
         .slice(0, 6);
+      if (boostedDiscoveryPosts.length > 0) {
+        await boostClient.rpc("record_fans_boost_exposures", {
+          p_post_ids: boostedDiscoveryPosts.map((post) => post.id),
+        });
+      }
     }
   } catch {
     boostedDiscoveryPosts = [];
