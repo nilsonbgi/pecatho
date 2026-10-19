@@ -12,11 +12,11 @@ type Props = {
   boostPlans?: BoostPlan[];
 };
 
-const presets = [20, 50, 100, 200, 500];
+const presets = [5, 10, 20, 50, 100];
 
 export default function GiftButton({ recipientType, recipientId, recipientName, compact = false, boostPlans = [] }: Props) {
   const [open, setOpen] = useState(false);
-  const [amount, setAmount] = useState(50);
+  const [amount, setAmount] = useState(10);
   const [boostPlanId, setBoostPlanId] = useState("");
   const selectedBoostPlan = boostPlans.find((plan) => plan.id === boostPlanId) ?? null;
   const [message, setMessage] = useState("");
@@ -143,7 +143,7 @@ export default function GiftButton({ recipientType, recipientId, recipientName, 
               OUTRO VALOR
               <input
                 type="number"
-                min={10}
+                min={5}
                 max={10000}
                 step={0.01}
                 value={amount}
@@ -179,7 +179,7 @@ export default function GiftButton({ recipientType, recipientId, recipientName, 
 
             <div style={{ display: "flex", gap: 9, justifyContent: "flex-end", marginTop: 18 }}>
               <button type="button" className="secondaryButton" onClick={() => setOpen(false)} disabled={busy}>Cancelar</button>
-              <button type="button" className="primaryButton" onClick={() => void sendGift()} disabled={busy || !Number.isFinite(amount) || amount < 10 || amount > 10000 || (!!selectedBoostPlan && amount < selectedBoostPlan.price)}>
+              <button type="button" className="primaryButton" onClick={() => void sendGift()} disabled={busy || !Number.isFinite(amount) || amount < 5 || amount > 10000 || (!!selectedBoostPlan && amount < selectedBoostPlan.price)}>
                 {busy ? "Abrindo pagamento..." : "Continuar para pagamento"}
               </button>
             </div>
