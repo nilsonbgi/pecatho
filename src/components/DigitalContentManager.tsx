@@ -99,8 +99,9 @@ export default function DigitalContentManager({ownerType}:{ownerType:OwnerType})
    if(unsupportedFiles.length){const names=unsupportedFiles.slice(0,3).map(file=>file.name).join(", ");throw new Error("Formato não permitido para "+names+(unsupportedFiles.length>3?" e mais "+(unsupportedFiles.length-3)+" arquivo(s)":"")+". Use JPG, PNG, WebP, GIF, MP4, WebM, MOV, MP3, M4A, OGG, WAV ou PDF.");}
    if(productType==="single_image"&&(files.length!==1||!files[0].type.startsWith("image/")))throw new Error("Uma venda de imagem deve conter exatamente uma imagem.");
    if(productType==="single_video"&&(files.length!==1||!files[0].type.startsWith("video/")))throw new Error("Uma venda de vídeo deve conter exatamente um vídeo.");
-   for(const file of files)if(file.size>250*1024*1024)throw new Error("Cada arquivo pode ter no máximo 250 MB.");
+   for(const file of files){if(file.size<=0)throw new Error("O arquivo "+file.name+" está vazio. Selecione um arquivo com conteúdo.");if(file.size>250*1024*1024)throw new Error("Cada arquivo pode ter no máximo 250 MB.");}
    const {data:{user}}=await supabase.auth.getUser();if(!user)throw new Error("Sessão expirada.");
+   if(user.id!==ownerUserId)throw new Error("Sua sessão ou perfil mudou desde que o catálogo foi carregado. Atualize a página antes de publicar.");
    ownerUserIdForCleanup=user.id;
    const {data:product,error:productError}=await supabase.from("digital_content_products").insert({owner_type:ownerType,owner_id:ownerId,owner_user_id:user.id,title:title.trim(),description:description.trim()||null,product_type:productType,price:normalized,currency:"BRL",status:"draft"}).select("id").single();
    if(productError||!product)throw new Error(productError?.message||"Não foi possível criar o produto.");
