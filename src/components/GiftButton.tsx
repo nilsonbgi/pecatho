@@ -2,18 +2,23 @@
 
 import { useState } from "react";
 
+type BoostPlan = { id: string; name: string; price: number; duration_hours: number; multiplier: number };
+
 type Props = {
   recipientType: "advertiser" | "creator";
   recipientId: string;
   recipientName: string;
   compact?: boolean;
+  boostPlans?: BoostPlan[];
 };
 
 const presets = [20, 50, 100, 200, 500];
 
-export default function GiftButton({ recipientType, recipientId, recipientName, compact = false }: Props) {
+export default function GiftButton({ recipientType, recipientId, recipientName, compact = false, boostPlans = [] }: Props) {
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState(50);
+  const [boostPlanId, setBoostPlanId] = useState("");
+  const selectedBoostPlan = boostPlans.find((plan) => plan.id === boostPlanId) ?? null;
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
@@ -32,6 +37,7 @@ export default function GiftButton({ recipientType, recipientId, recipientName, 
           recipient_id: recipientId,
           amount,
           message: message.trim() || null,
+          boost_plan_id: recipientType === "creator" && boostPlanId ? boostPlanId : null,
         }),
       });
       const intent = await intentResponse.json().catch(() => ({}));
@@ -106,7 +112,7 @@ export default function GiftButton({ recipientType, recipientId, recipientName, 
                 <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: ".16em", color: "#c4b5fd" }}>PECATHO · PRESENTE</div>
                 <h2 style={{ margin: "8px 0 0", fontSize: 28, letterSpacing: "-.04em" }}>Para {recipientName}</h2>
                 <p style={{ margin: "8px 0 0", color: "#aeb4c2", lineHeight: 1.6, fontSize: 13 }}>
-                  O pagamento é feito pelo checkout oficial. O destinatário recebe somente após a confirmação financeira.
+                  O pagamento é feito pelo checkout oficial. O destinatário recebe somente após a confirmação financeira. Se escolher impulsionamento, a visibilidade extra só será ativada após a confirmação do Mercado Pago.
                 </p>
               </div>
               <button type="button" onClick={() => setOpen(false)} aria-label="Fechar" style={{ border: 0, background: "transparent", color: "#94a3b8", fontSize: 22, cursor: "pointer" }}>×</button>
@@ -146,6 +152,17 @@ export default function GiftButton({ recipientType, recipientId, recipientName, 
               />
             </label>
 
+            {recipientType === "creator" && boostPlans.length > 0 && (
+              <label style={{ display: "block", marginTop: 14, fontSize: 11, fontWeight: 800, color: "#94a3b8" }}>
+                IMPULSIONAR O CRIADOR (OPCIONAL)
+                <select value={boostPlanId} onChange={(event) => setBoostPlanId(event.target.value)} style={{ width: "100%", marginTop: 7, borderRadius: 12, border: "1px solid rgba(255,255,255,.12)", background: "#11131b", color: "#fff", padding: "12px 13px", outline: "none" }}>
+                  <option value="">Somente presente, sem impulsionamento</option>
+                  {boostPlans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name} · mínimo {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(plan.price)} · {plan.duration_hours} h de destaque</option>)}
+                </select>
+                {selectedBoostPlan && <span style={{ display: "block", marginTop: 7, color: amount < selectedBoostPlan.price ? "#fca5a5" : "#aeb4c2", fontSize: 11, lineHeight: 1.5 }}>O presente continua sendo destinado ao criador. Para este destaque, o valor mínimo é {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(selectedBoostPlan.price)}; a publicação elegível será impulsionada após a confirmação do pagamento.</span>}
+              </label>
+            )}
+
             <label style={{ display: "block", marginTop: 14, fontSize: 11, fontWeight: 800, color: "#94a3b8" }}>
               MENSAGEM OPCIONAL
               <textarea
@@ -162,7 +179,7 @@ export default function GiftButton({ recipientType, recipientId, recipientName, 
 
             <div style={{ display: "flex", gap: 9, justifyContent: "flex-end", marginTop: 18 }}>
               <button type="button" className="secondaryButton" onClick={() => setOpen(false)} disabled={busy}>Cancelar</button>
-              <button type="button" className="primaryButton" onClick={() => void sendGift()} disabled={busy || !Number.isFinite(amount) || amount < 10 || amount > 10000}>
+              <button type="button" className="primaryButton" onClick={() => void sendGift()} disabled={busy || !Number.isFinite(amount) || amount < 10 || amount > 10000 || (!!selectedBoostPlan && amount < selectedBoostPlan.price)}>
                 {busy ? "Abrindo pagamento..." : "Continuar para pagamento"}
               </button>
             </div>
