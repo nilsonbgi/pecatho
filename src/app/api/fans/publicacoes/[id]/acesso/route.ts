@@ -26,6 +26,25 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     .eq("id", post.creator_id).maybeSingle();
   if (!creator || creator.status !== "active") return NextResponse.json({ error: "Criador não disponível." }, { status: 404 });
 
+  const nowForBoost = new Date().toISOString();
+  const [{ data: activeBoost }, { data: boostPlans }] = await Promise.all([
+    admin.from("fans_boosts")
+      .select("plan_id")
+      .eq("post_id", post.id)
+      .eq("creator_id", creator.id)
+      .eq("status", "active")
+      .gt("ends_at", nowForBoost)
+      .limit(1)
+      .maybeSingle(),
+    admin.from("fans_boost_plans")
+      .select("id,multiplier")
+      .eq("status", "active"),
+  ]);
+  const activeBoostPlan = activeBoost
+    ? (boostPlans ?? []).find((plan) => plan.id === activeBoost.plan_id)
+    : null;
+  const boostMultiplier = activeBoostPlan ? Number(activeBoostPlan.multiplier) || 1 : null;
+
   const isOwner = !!user && user.id === creator.user_id;
   let isStaff = false;
   if (user) {
@@ -62,6 +81,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   return NextResponse.json({
     post: { id: post.id, title: post.title, body: entitled ? post.body : null, price: post.price, currency: post.currency, access_type: post.access_type, published_at: post.published_at },
+    boost: boostMultiplier === null ? null : { multiplier: boostMultiplier },
     creator: { id: creator.id, slug: creator.slug, display_name: creator.display_name, bio: creator.bio, avatar_url: creator.avatar_url },
     access: { entitled, requires_login: !entitled && post.access_type !== "free", requires_purchase: !entitled && post.access_type === "paid", requires_subscription: !entitled && post.access_type === "subscriber" },
     media: signed.filter(Boolean),
