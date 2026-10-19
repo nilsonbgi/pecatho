@@ -19,16 +19,38 @@ type SaleRow = {
 type ProductRow = { id: string; title: string; product_type: string };
 type BuyerRow = { id: string; display_name: string | null };
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const ownerType = searchParams.get("owner_type");
+  if (ownerType !== "creator" && ownerType !== "advertiser") {
+    return NextResponse.json({ error: "Tipo de vendedor inválido." }, { status: 400 });
+  }
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Sessão expirada." }, { status: 401 });
 
   const admin = createAdminClient();
+  const ownerTable = ownerType === "creator" ? "fans_creators" : "advertiser_profiles";
+  const { data: owner, error: ownerError } = await admin
+    .from(ownerTable)
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (ownerError) {
+    console.error("Falha ao validar o perfil do vendedor:", ownerError);
+    return NextResponse.json({ error: "Não foi possível validar seu perfil de vendedor." }, { status: 500 });
+  }
+  if (!owner) {
+    return NextResponse.json({ error: "Não existe um perfil de vendedor deste tipo para sua conta." }, { status: 403 });
+  }
+
   const { data, error } = await admin
     .from("digital_content_sales")
     .select("id,product_id,order_id,buyer_user_id,amount,owner_amount,status,paid_at,created_at")
     .eq("owner_user_id", user.id)
+    .eq("owner_type", ownerType)
+    .eq("owner_id", owner.id)
     .order("created_at", { ascending: false });
 
   if (error) {
