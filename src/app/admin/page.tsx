@@ -25,7 +25,7 @@ export default function AdminPage() {
       const { data: roleRow, error: roleError } = await supabase.from("user_roles").select("role").eq("user_id", user.id).in("role", ["super_admin", "admin", "moderator", "support", "finance"]).limit(1).maybeSingle();
       if (!active) return;
       if (roleError) { setError(roleError.message); setState("error"); return; }
-      if (roleRow?.role) { setRole(String(roleRow.role)); setState("admin"); } else setState("bootstrap");
+      if (roleRow?.role) { setRole(String(roleRow.role)); setState("admin"); } else if (user.email?.trim().toLowerCase() === "nilson.umasno@gmail.com") { setState("bootstrap"); } else { router.replace("/painel"); return; }
     })().catch((err: unknown) => { if (!active) return; setError(err instanceof Error ? err.message : "Erro inesperado ao carregar a administração."); setState("error"); });
     return () => { active = false; };
   }, [router]);
