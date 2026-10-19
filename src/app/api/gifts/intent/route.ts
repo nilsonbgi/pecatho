@@ -24,8 +24,8 @@ export async function POST(request: Request) {
   if (typeof recipientId !== "string" || !/^[0-9a-f-]{36}$/i.test(recipientId)) {
     return NextResponse.json({ error: "Destinatário inválido." }, { status: 400 });
   }
-  if (!Number.isFinite(amount) || amount < 10 || amount > 10000) {
-    return NextResponse.json({ error: "O presente deve estar entre R$ 10,00 e R$ 10.000,00." }, { status: 400 });
+  if (!Number.isFinite(amount) || amount < 5 || amount > 10000) {
+    return NextResponse.json({ error: "O presente deve estar entre R$ 5,00 e R$ 10.000,00." }, { status: 400 });
   }
 
   const { data, error } = await client.rpc("create_pecatho_gift_with_boost_checkout_intent", {
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       code.includes("NO_ELIGIBLE_PUBLISHED_POST") ? "Este criador não tem uma publicação disponível para impulsionar neste momento." :
       code.includes("BOOST_PLAN_NOT_AVAILABLE") ? "Este plano de impulsionamento não está disponível." :
       code.includes("BOOST_GIFT_REQUIRES_CREATOR") ? "O impulsionamento por presente está disponível apenas para criadores Fans." :
-      code.includes("INVALID_GIFT_AMOUNT") ? "Informe um presente entre R$ 10,00 e R$ 10.000,00." :
+      code.includes("INVALID_GIFT_AMOUNT") ? "Informe um presente entre R$ 5,00 e R$ 10.000,00." :
       "Não foi possível preparar o presente agora. Confira sua conta e tente novamente.";
     return NextResponse.json({ error: message, code: status === 400 ? "GIFT_REQUEST_INVALID" : "GIFT_REQUEST_REJECTED" }, { status });
   }
