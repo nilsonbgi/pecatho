@@ -90,7 +90,7 @@ export default function ReviewPage() {
       setAdvertisers((current) => current.map((item) => item.id === updated.id ? updated : item));
       setMessage("Ação administrativa concluída com segurança.");
       await openAdvertiser(updated);
-    } catch (err) { setError(err instanceof Error ? err.message : "Não foi possível concluir a ação."); }
+    } catch (err) { const detail = err && typeof err === "object" && "message" in err ? String((err as { message?: unknown }).message || "") : err instanceof Error ? err.message : ""; setError(detail || "Não foi possível concluir a ação."); }
     finally { setBusy(false); }
   }
 
