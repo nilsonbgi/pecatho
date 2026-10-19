@@ -46,6 +46,9 @@ export default function CadastroPage() {
 
   async function submit(e: FormEvent) {
     e.preventDefault(); setBusy(true); setError(""); setMsg("");
+    // Do not allow implicit form submission to bypass the address and review steps.
+    // The account may only be created from the final review screen.
+    if (step !== 5) { setError("Conclua todas as etapas do cadastro antes de criar sua conta."); setBusy(false); return; }
     if (!validCpf(cpf)) { setError("Informe um CPF válido."); setBusy(false); return; }
     if (!adult(birthDate)) { setError("É necessário ter 18 anos ou mais para criar uma conta no Pecatho."); setBusy(false); return; }
     if (onlyDigits(cep).length !== 8 || !ibgeCode) { setError("Informe um CEP válido para que o município seja identificado corretamente."); setBusy(false); return; }
@@ -99,7 +102,7 @@ export default function CadastroPage() {
             {step === 5 && <div className="onboardingStep"><div className="stepIcon">✓</div><div className="stepKicker">REVISÃO</div><h2>Está tudo certo?</h2><p>Confira o resumo antes de criar sua conta. Você poderá complementar seu perfil depois do primeiro acesso.</p><div className="reviewBox"><div><span>Experiência</span><strong>{entryMode === "customer" ? "Pecatho — Cliente" : entryMode === "advertiser" ? "Pecatho — Acompanhante" : entryMode === "fans" ? "Pecatho Fans — Criador" : "Pecatho + Fans"}</strong></div><div><span>Nome</span><strong>{name || "Não informado"}</strong></div><div><span>E-mail</span><strong>{email || "Não informado"}</strong></div><div><span>Localização</span><strong>{city && uf ? `${city} — ${uf}` : "Não informado"}</strong></div></div><div className="reviewHint">Ao criar a conta, você receberá um e-mail de confirmação. Depois disso, o Pecatho concluirá o cadastro e levará você ao seu painel.</div></div>}
             {error && <div className="formAlert error">{error}</div>}
             {msg && <div className="formAlert success">{msg}</div>}
-            <div className="stepActions"><button type="button" className="backButton" onClick={() => { setError(""); setStep(v => Math.max(1, v - 1)); }} disabled={step === 1}>Voltar</button>{step < 5 ? <button type="button" className="primaryButton wideButton" onClick={nextStep}>Continuar <span>→</span></button> : <button type="submit" className="primaryButton wideButton" disabled={busy || loadingCep}>{busy ? "Criando sua conta..." : "Criar minha conta"}</button>}</div>
+            <div className="stepActions"><button type="button" className="backButton" onClick={() => { setError(""); setStep(v => Math.max(1, v - 1)); }} disabled={step === 1}>Voltar</button>{step < 5 ? <button type="button" className="primaryButton wideButton" onClick={(event) => { event.preventDefault(); nextStep(); }}>Continuar <span>→</span></button> : <button type="submit" className="primaryButton wideButton" disabled={busy || loadingCep}>{busy ? "Criando sua conta..." : "Criar minha conta"}</button>}</div>
           </form>}
           {step >= 6 && <div className="completion"><div className="completionIcon">✓</div><div className="stepKicker">CADASTRO RECEBIDO</div><h2>Falta só confirmar seu e-mail.</h2><p>{msg}</p><div className="completionActions"><Link href="/login" className="primaryButton">Ir para o login</Link><Link href="/" className="secondaryButton">Voltar ao início</Link></div></div>}
         </section>

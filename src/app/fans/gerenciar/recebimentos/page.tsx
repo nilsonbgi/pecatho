@@ -59,8 +59,11 @@ export default async function FansReceiptsPage() {
   const { data: creator } = await supabase.from("fans_creators").select("id,display_name").eq("user_id", user.id).maybeSingle();
   if (!creator) redirect("/fans/ativar");
 
+  // Keep the authenticated user's JWT on this owner-scoped RPC. The function
+  // validates auth.uid() against fans_creators.user_id, so service-role calls
+  // without a user JWT are intentionally rejected as "Não autorizado".
+  const { data: summaryData, error: summaryError } = await supabase.rpc("fans_financial_summary", { p_creator_id: creator.id });
   const admin = createAdminClient();
-  const { data: summaryData, error: summaryError } = await admin.rpc("fans_financial_summary", { p_creator_id: creator.id });
   if (summaryError) throw new Error(summaryError.message);
   const summary = ((summaryData ?? [])[0] ?? { credits: 0, debits: 0, outstanding_payouts: 0, available: 0 }) as FinancialSummary;
   const credits = Number(summary.credits);

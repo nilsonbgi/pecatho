@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -43,8 +42,7 @@ export default async function FansPublicationsPage() {
   if (error) throw new Error(error.message);
 
   const list = posts ?? [];
-  const admin = createAdminClient();
-  const { data: boostRows, error: boostError } = await admin
+  const { data: boostRows, error: boostError } = await supabase
     .from("fans_boosts")
     .select("id,post_id,plan_id,view_count,status,starts_at,ends_at")
     .eq("creator_id", creator.id)
@@ -53,7 +51,7 @@ export default async function FansPublicationsPage() {
 
   const planIds = [...new Set((boostRows ?? []).map((boost) => boost.plan_id).filter((id): id is string => Boolean(id)))];
   const { data: plans, error: plansError } = planIds.length
-    ? await admin.from("fans_boost_plans").select("id,name,multiplier").in("id", planIds)
+    ? await supabase.from("fans_boost_plans").select("id,name,multiplier").in("id", planIds)
     : { data: [], error: null };
   if (plansError) throw new Error("Não foi possível carregar os planos de impulsionamento.");
 

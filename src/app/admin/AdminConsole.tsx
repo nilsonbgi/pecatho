@@ -1,5 +1,7 @@
 "use client";
 
+import "./admin-redesign.css";
+
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/browser";
@@ -112,7 +114,7 @@ export default function AdminConsole({ role }: { role: string }) {
 
   const nav: [Tab, string][] = [["visao", "Visão geral"], ["anunciantes", "Anunciantes"], ["categorias", "Categorias"], ["localidades", "Localidades"], ["planos", "Planos de publicação"], ["verificacoes", "Verificações"]];
 
-  return <main className="shell">
+  return <main className="shell adminConsoleShell">
     <nav className="topbar"><div className="brand"><span className="brandMark">P</span><span>Pecatho</span></div><div className="navLinks"><Link href="/anunciantes">Anunciantes</Link><Link href="/painel" className="navCta">Painel</Link></div></nav>
     <section className="hero" style={{ maxWidth: 1400 }}>
       <div className="eyebrow">ADMINISTRAÇÃO PECATHO</div>

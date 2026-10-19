@@ -40,12 +40,12 @@ async function expectAuthenticatedPage(page: Page, path: string, expectedText?: 
 }
 
 test.describe('authenticated Pecatho regression', () => {
-  test.skip(!userEmail || !userPassword, 'Set E2E_TEST_EMAIL and E2E_TEST_PASSWORD to enable the authenticated advertiser/account fixture.');
+  test.skip(!userEmail || !userPassword, 'Set E2E_TEST_EMAIL and E2E_TEST_PASSWORD to enable authenticated checks for the configured non-admin test account.');
 
   test('authenticated account reaches the core user workspace without falling back to login', async ({ page }) => {
     await login(page, userEmail!, userPassword!);
     await expect(page).toHaveURL(/\/(painel|admin)(?:\?.*)?$/);
-    await expectAuthenticatedPage(page, '/painel', 'PAINEL DO USUÁRIO');
+    await expectAuthenticatedPage(page, '/painel', 'ÁREA DA ACOMPANHANTE');
 
     for (const path of [
       '/painel/perfil',
@@ -61,17 +61,12 @@ test.describe('authenticated Pecatho regression', () => {
   test('authenticated account cannot silently obtain privileged administration', async ({ page }) => {
     await login(page, userEmail!, userPassword!);
     await page.goto('/admin', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
 
-    const body = await page.locator('body').innerText();
-    const hasAdminWorkspace = /centro de gestão|revisão e moderação|recebimentos fans/i.test(body);
-    const hasBootstrapOnly = /primeiro acesso administrativo/i.test(body);
-
-    if (hasAdminWorkspace) {
-      throw new Error('Non-privileged E2E account reached the administrative workspace.');
-    }
-
-    expect(hasBootstrapOnly || /painel/i.test(body)).toBeTruthy();
+    // /admin initially renders a loading shell containing administration-related copy.
+    // Wait for the authorization decision instead of misclassifying that shell as access.
+    await expect(page).toHaveURL(/\/(painel|login)(?:\?.*)?$/, { timeout: 15_000 });
+    await expect(page).not.toHaveURL(/\/admin(?:\?.*)?$/);
+    await expect(page.getByText('ÁREA DA ACOMPANHANTE', { exact: false }).first()).toBeVisible();
   });
 });
 
