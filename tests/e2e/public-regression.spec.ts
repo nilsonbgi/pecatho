@@ -34,7 +34,7 @@ test('cadastro preserves the complete five-step onboarding flow', async ({ page 
   await page.getByRole('button', { name: /Continuar/i }).click();
 
   await expect(page.getByText('Etapa 2 de 5')).toBeVisible();
-  await page.getByLabel('E-mail').fill('regression@example.com');
+  await page.getByLabel('E-mail').fill('regression@pecatho.invalid');
   await page.getByLabel('Senha').fill('SenhaSegura123!');
   await page.getByRole('button', { name: /Continuar/i }).click();
 
