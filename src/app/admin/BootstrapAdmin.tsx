@@ -13,6 +13,7 @@ export default function BootstrapAdmin() {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { window.location.href = "/login"; return; }
+    if (user.email?.trim().toLowerCase() !== "nilson.umasno@gmail.com") { setError("Somente a conta administrativa designada pode iniciar a configuração."); setBusy(false); return; }
     const { error: dbError } = await supabase.rpc("bootstrap_first_super_admin");
     if (dbError) { setError(dbError.message); setBusy(false); return; }
     window.location.href = "/admin";
