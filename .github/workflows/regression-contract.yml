@@ -34,9 +34,10 @@ jobs:
           E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
           E2E_CREATOR_PASSWORD: ${{ secrets.E2E_CREATOR_PASSWORD }}
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           missing=0
-          for name in E2E_TEST_EMAIL E2E_TEST_PASSWORD E2E_CREATOR_PASSWORD E2E_ADMIN_PASSWORD; do
+          for name in E2E_TEST_EMAIL E2E_TEST_PASSWORD E2E_CREATOR_PASSWORD E2E_ADMIN_PASSWORD SUPABASE_SERVICE_ROLE_KEY; do
             if [ -z "${!name}" ]; then
               echo "::error::Required GitHub Actions secret is missing: ${name}"
               missing=1
@@ -60,6 +61,7 @@ jobs:
           E2E_CREATOR_PASSWORD: ${{ secrets.E2E_CREATOR_PASSWORD }}
           E2E_ADMIN_EMAIL: nilson.umasno@gmail.com
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: npm run test:e2e
       - name: Upload Playwright report
         if: always()
