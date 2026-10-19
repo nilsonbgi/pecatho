@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 
-const userEmail = process.env.E2E_TEST_EMAIL;
-const userPassword = process.env.E2E_TEST_PASSWORD;
+const userEmail = process.env.E2E_CREATOR_EMAIL;
+const userPassword = process.env.E2E_CREATOR_PASSWORD;
 const adminEmail = process.env.E2E_ADMIN_EMAIL;
 const adminPassword = process.env.E2E_ADMIN_PASSWORD;
 const creatorEmail = process.env.E2E_CREATOR_EMAIL;
@@ -40,7 +40,7 @@ async function expectAuthenticatedPage(page: Page, path: string, expectedText?: 
 }
 
 test.describe('authenticated Pecatho regression', () => {
-  test.skip(!userEmail || !userPassword, 'Set E2E_TEST_EMAIL and E2E_TEST_PASSWORD to enable the authenticated advertiser/account fixture.');
+  test.skip(!userEmail || !userPassword, 'Set E2E_CREATOR_PASSWORD to enable authenticated checks using the controlled creator account social@pecatho.com.');
 
   test('authenticated account reaches the core user workspace without falling back to login', async ({ page }) => {
     await login(page, userEmail!, userPassword!);
