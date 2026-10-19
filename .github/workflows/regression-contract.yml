@@ -31,11 +31,10 @@ jobs:
       - name: Require authenticated E2E test credentials
         env:
           E2E_CREATOR_PASSWORD: ${{ secrets.E2E_CREATOR_PASSWORD }}
-          E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
         run: |
           missing=0
-          for name in E2E_CREATOR_PASSWORD E2E_ADMIN_EMAIL E2E_ADMIN_PASSWORD; do
+          for name in E2E_CREATOR_PASSWORD E2E_ADMIN_PASSWORD; do
             if [ -z "${!name}" ]; then
               echo "::error::Required GitHub Actions secret is missing: ${name}"
               missing=1
@@ -55,7 +54,7 @@ jobs:
         env:
           E2E_CREATOR_EMAIL: social@pecatho.com
           E2E_CREATOR_PASSWORD: ${{ secrets.E2E_CREATOR_PASSWORD }}
-          E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+          E2E_ADMIN_EMAIL: nilson.umasno@gmail.com
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
         run: npm run test:e2e
       - name: Upload Playwright report
