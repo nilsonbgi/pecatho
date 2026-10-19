@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic="force-dynamic";
 type CountResult={count:number|null};
@@ -20,8 +19,7 @@ export default async function FansManagePage(){
  ]) as [CountResult,CountResult,CountResult,CountResult,CountResult,CountResult,{data:{id:string;type:string;read_at:string|null;created_at:string}[]|null;count:number|null}];
  const activePlans=await supabase.from("fans_plans").select("id",{count:"exact",head:true}).eq("creator_id",creator.id).eq("status","active");
  const publishedPosts=await supabase.from("fans_posts").select("id",{count:"exact",head:true}).eq("creator_id",creator.id).eq("status","published");
- const admin=createAdminClient();
- const {data:boostRows}=await admin.from("fans_boosts").select("view_count,status,ends_at").eq("creator_id",creator.id);
+ const {data:boostRows}=await supabase.from("fans_boosts").select("view_count,status,ends_at").eq("creator_id",creator.id);
  const boostExposureTotal=(boostRows??[]).reduce((total,row)=>total+Math.max(0,Number(row.view_count)||0),0);
  const activeBoostCount=(boostRows??[]).filter(row=>row.status==="active"&&new Date(row.ends_at).getTime()>Date.now()).length;
  const unreadActivity=activity.data?.filter(i=>!i.read_at).length??0;
