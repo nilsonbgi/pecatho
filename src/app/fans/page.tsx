@@ -1,7 +1,21 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
+
+type BoostedDiscoveryPost = {
+  id: string;
+  title: string;
+  access_type: "free" | "paid" | "subscriber";
+  price: number;
+  currency: string;
+  creator_id: string;
+  creator_slug: string;
+  creator_name: string;
+  multiplier: number;
+  ends_at: string;
+};
 
 type PublicFansCreator = {
   id: string;
@@ -77,6 +91,65 @@ export default async function FansPage() {
     postsCount = posts || 0;
   }
 
+  let boostedDiscoveryPosts: BoostedDiscoveryPost[] = [];
+  try {
+    const boostClient = createAdminClient();
+    const now = new Date().toISOString();
+    const [{ data: activeBoostRows }, { data: boostPlans }] = await Promise.all([
+      boostClient.from("fans_boosts")
+        .select("post_id,creator_id,plan_id,ends_at")
+        .eq("status", "active")
+        .gt("ends_at", now)
+        .order("ends_at", { ascending: false })
+        .limit(30),
+      boostClient.from("fans_boost_plans")
+        .select("id,multiplier")
+        .eq("status", "active"),
+    ]);
+    const boostRows = activeBoostRows ?? [];
+    const postIds = [...new Set(boostRows.map((row) => row.post_id))];
+    const creatorIdsForBoosts = [...new Set(boostRows.map((row) => row.creator_id))];
+    if (postIds.length > 0 && creatorIdsForBoosts.length > 0) {
+      const [{ data: boostedPosts }, { data: boostCreators }] = await Promise.all([
+        boostClient.from("fans_posts")
+          .select("id,title,access_type,price,currency,creator_id,published_at,created_at")
+          .in("id", postIds)
+          .eq("status", "published"),
+        boostClient.from("fans_creators")
+          .select("id,slug,display_name,status")
+          .in("id", creatorIdsForBoosts)
+          .eq("status", "active"),
+      ]);
+      const multiplierByPlan = new Map((boostPlans ?? []).map((plan) => [plan.id, Number(plan.multiplier) || 1]));
+      const creatorById = new Map((boostCreators ?? []).map((item) => [item.id, item]));
+      const postById = new Map((boostedPosts ?? []).map((item) => [item.id, item]));
+      boostedDiscoveryPosts = boostRows
+        .map((boost) => {
+          const post = postById.get(boost.post_id);
+          const boostedCreator = creatorById.get(boost.creator_id);
+          if (!post || !boostedCreator || post.creator_id !== boostedCreator.id) return null;
+          return {
+            id: post.id,
+            title: post.title,
+            access_type: post.access_type as "free" | "paid" | "subscriber",
+            price: Number(post.price) || 0,
+            currency: post.currency || "BRL",
+            creator_id: boostedCreator.id,
+            creator_slug: boostedCreator.slug,
+            creator_name: boostedCreator.display_name,
+            multiplier: multiplierByPlan.get(boost.plan_id) ?? 1,
+            ends_at: boost.ends_at,
+          };
+        })
+        .filter((item): item is BoostedDiscoveryPost => item !== null)
+        .sort((a, b) => b.multiplier - a.multiplier || new Date(b.ends_at).getTime() - new Date(a.ends_at).getTime())
+        .filter((item, index, all) => all.findIndex((candidate) => candidate.id === item.id) === index)
+        .slice(0, 6);
+    }
+  } catch {
+    boostedDiscoveryPosts = [];
+  }
+
   const featuredCreators = publicCreators.slice(0, 6);
   const discoveryCreators = publicCreators.slice(0, 12);
   const heroCreator = featuredCreators[0] || null;
@@ -139,6 +212,12 @@ export default async function FansPage() {
         .fansStatIcon{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:rgba(231,195,63,.08);border:1px solid rgba(231,195,63,.17);color:#e7c33f;font-size:18px}
         .fansStat strong{display:block;font-size:22px;letter-spacing:-.04em;color:#f1eee7}
         .fansStat span{display:block;font-size:10px;color:#8d8a82;margin-top:2px}
+        .fansBoostDiscoveryGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:20px}
+        .fansBoostDiscoveryCard{display:flex;flex-direction:column;min-height:190px;padding:21px;border:1px solid rgba(231,195,63,.25);border-radius:18px;background:radial-gradient(ellipse at 0 0,rgba(231,195,63,.12),transparent 65%),linear-gradient(145deg,rgba(255,255,255,.06),rgba(255,255,255,.02));color:#f7f3e8;text-decoration:none;transition:transform .2s,border-color .2s}
+        .fansBoostDiscoveryCard:hover{transform:translateY(-3px);border-color:rgba(231,195,63,.58)}
+        .fansBoostDiscoveryTag{align-self:flex-start;border:1px solid rgba(231,195,63,.35);border-radius:999px;padding:6px 9px;color:#f0cf63;font-size:9px;font-weight:900;letter-spacing:.06em}
+        .fansBoostDiscoveryCard strong{display:block;margin-top:15px;font-size:17px;line-height:1.35;overflow-wrap:anywhere}
+        .fansBoostDiscoveryCard span:last-child{margin-top:auto;padding-top:16px;color:#aaa59b;font-size:11px;line-height:1.5}
         .fansSection{padding:68px 0 0;position:relative;z-index:2}
         .fansSectionHead{display:flex;align-items:end;justify-content:space-between;gap:20px;margin-bottom:22px}
         .fansSectionKicker{color:#e7c33f;font-size:10px;letter-spacing:.18em;font-weight:900}
@@ -178,8 +257,8 @@ export default async function FansPage() {
         .fansFlow b{color:#e7c33f}
         .fansFooter{border-top:1px solid rgba(255,255,255,.07);margin-top:20px;padding:25px 0 38px;display:flex;justify-content:space-between;gap:20px;color:#626057;font-size:10px}
         .fansEmpty{border:1px dashed rgba(231,195,63,.2);border-radius:18px;padding:35px;text-align:center;color:#7f7b73;background:rgba(255,255,255,.02)}
-        @media(max-width:1100px){.fansPageWrap{padding:0 24px}.fansMainNav{gap:18px}.fansSearch{width:170px}.fansFeaturedGrid{grid-template-columns:repeat(3,1fr)}.fansFeaturedCard{height:300px}.fansHero{grid-template-columns:1fr .82fr}.fansHeroImage{width:360px;height:450px}.fansHeroCreatorTag{left:-10px}.fansHeroBadge{right:-2px}.fansCreatorGrid{grid-template-columns:repeat(2,1fr)}}
-        @media(max-width:800px){.fansPageWrap{padding:0 16px}.fansTopbar{height:72px}.fansMainNav{display:none}.fansTopActions{gap:7px}.fansSearch{display:none}.fansIconBtn{display:none}.fansLogoText{font-size:19px}.fansLogoMark{width:37px;height:37px}.fansHero{grid-template-columns:1fr;padding:52px 0 44px;min-height:auto}.fansHeroCopy{padding:0}.fansHero h1{font-size:51px}.fansLead{font-size:15px}.fansBenefits{grid-template-columns:1fr;gap:12px;margin-top:34px}.fansHeroVisual{min-height:430px;margin-top:18px}.fansHeroImage{width:300px;height:385px}.fansHeroCreatorTag{left:0;bottom:18px}.fansHeroBadge{right:0;top:28px}.fansStatsBar{grid-template-columns:repeat(2,1fr);padding:13px}.fansStat{padding:12px 8px;border-right:0}.fansStat:nth-child(1),.fansStat:nth-child(2){border-bottom:1px solid rgba(255,255,255,.08)}.fansStat strong{font-size:18px}.fansStatIcon{width:36px;height:36px}.fansSection{padding-top:50px}.fansSectionHead{align-items:start;flex-direction:column}.fansFeaturedGrid{grid-template-columns:repeat(2,1fr);gap:10px}.fansFeaturedCard{height:270px}.fansCreatorGrid{grid-template-columns:1fr}.fansOwnerPanel{align-items:flex-start;flex-direction:column;margin-top:50px}.fansArchitecture{grid-template-columns:1fr;gap:30px;margin-top:55px}.fansArchitecture h2{font-size:34px}.fansFooter{flex-direction:column}}
+        @media(max-width:1100px){.fansBoostDiscoveryGrid{grid-template-columns:repeat(2,1fr)}.fansPageWrap{padding:0 24px}.fansMainNav{gap:18px}.fansSearch{width:170px}.fansFeaturedGrid{grid-template-columns:repeat(3,1fr)}.fansFeaturedCard{height:300px}.fansHero{grid-template-columns:1fr .82fr}.fansHeroImage{width:360px;height:450px}.fansHeroCreatorTag{left:-10px}.fansHeroBadge{right:-2px}.fansCreatorGrid{grid-template-columns:repeat(2,1fr)}}
+        @media(max-width:800px){.fansBoostDiscoveryGrid{grid-template-columns:1fr}.fansPageWrap{padding:0 16px}.fansTopbar{height:72px}.fansMainNav{display:none}.fansTopActions{gap:7px}.fansSearch{display:none}.fansIconBtn{display:none}.fansLogoText{font-size:19px}.fansLogoMark{width:37px;height:37px}.fansHero{grid-template-columns:1fr;padding:52px 0 44px;min-height:auto}.fansHeroCopy{padding:0}.fansHero h1{font-size:51px}.fansLead{font-size:15px}.fansBenefits{grid-template-columns:1fr;gap:12px;margin-top:34px}.fansHeroVisual{min-height:430px;margin-top:18px}.fansHeroImage{width:300px;height:385px}.fansHeroCreatorTag{left:0;bottom:18px}.fansHeroBadge{right:0;top:28px}.fansStatsBar{grid-template-columns:repeat(2,1fr);padding:13px}.fansStat{padding:12px 8px;border-right:0}.fansStat:nth-child(1),.fansStat:nth-child(2){border-bottom:1px solid rgba(255,255,255,.08)}.fansStat strong{font-size:18px}.fansStatIcon{width:36px;height:36px}.fansSection{padding-top:50px}.fansSectionHead{align-items:start;flex-direction:column}.fansFeaturedGrid{grid-template-columns:repeat(2,1fr);gap:10px}.fansFeaturedCard{height:270px}.fansCreatorGrid{grid-template-columns:1fr}.fansOwnerPanel{align-items:flex-start;flex-direction:column;margin-top:50px}.fansArchitecture{grid-template-columns:1fr;gap:30px;margin-top:55px}.fansArchitecture h2{font-size:34px}.fansFooter{flex-direction:column}}
         @media(max-width:430px){.fansCreatorCard{gap:11px;padding:14px}.fansCreatorAvatar{width:54px;height:54px;border-radius:14px}.fansCreatorArrow{width:24px;height:24px;font-size:19px}.fansHero h1{font-size:44px}.fansFeaturedGrid{grid-template-columns:1fr 1fr}.fansFeaturedCard{height:235px}.fansHeroCreatorTag{min-width:205px}.fansHeroBadge{padding:11px 13px}.fansStat{gap:8px}.fansStat span{font-size:9px}}
       `}</style>
 
@@ -239,6 +318,23 @@ export default async function FansPage() {
           <div className="fansStat"><span className="fansStatIcon">▣</span><div><strong>{creatorOffers?.length || 0}</strong><span>Experiências privadas</span></div></div>
           <div className="fansStat"><span className="fansStatIcon">◎</span><div><strong>24/7</strong><span>Ecossistema disponível</span></div></div>
         </section>
+
+        {boostedDiscoveryPosts.length > 0 && (
+          <section id="publicacoes-impulsionadas" className="fansSection">
+            <div className="fansSectionHead">
+              <div><div className="fansSectionKicker">VISIBILIDADE EXTRA</div><h2 className="fansSectionTitle">Publicações impulsionadas</h2><p className="fansSectionLead">Conteúdos de criadores com impulsionamento ativo, priorizados pelo multiplicador contratado.</p></div>
+            </div>
+            <div className="fansBoostDiscoveryGrid">
+              {boostedDiscoveryPosts.map((post) => (
+                <Link key={post.id} href={`/fans/publicacoes/${post.id}`} className="fansBoostDiscoveryCard">
+                  <span className="fansBoostDiscoveryTag">✦ IMPULSIONADO · {post.multiplier.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}×</span>
+                  <strong>{post.title}</strong>
+                  <span>{post.creator_name} · {post.access_type === "free" ? "Acesso gratuito" : post.access_type === "paid" ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: post.currency }).format(post.price) : "Exclusivo para assinantes"} · Ver publicação →</span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section id="destaques" className="fansSection">
           <div className="fansSectionHead">
