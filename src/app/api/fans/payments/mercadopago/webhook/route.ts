@@ -37,10 +37,10 @@ export async function POST(request: Request) {
   }
 
   const notification = body as Record<string, unknown>;
-  const data = notification.data;
+  const notificationData = notification.data;
   const type = notification.type ?? notification.action;
-  const paymentId = data && typeof data === "object" && !Array.isArray(data)
-    ? (data as Record<string, unknown>).id
+  const paymentId = notificationData && typeof notificationData === "object" && !Array.isArray(notificationData)
+    ? (notificationData as Record<string, unknown>).id
     : undefined;
   if (type !== "payment" || (typeof paymentId !== "string" && typeof paymentId !== "number") || !String(paymentId).trim()) {
     return NextResponse.json({ ok: true, ignored: true });
