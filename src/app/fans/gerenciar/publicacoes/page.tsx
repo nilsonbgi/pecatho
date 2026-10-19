@@ -109,7 +109,7 @@ export default async function FansPublicationsPage() {
           <div className="eyebrow">CATÁLOGO DE CONTEÚDO</div>
           {list.length ? <div style={{ display: "grid", gap: 12 }}>{list.map((post) => {
             const boost = activeBoostByPost.get(post.id);
-            const plan = boost ? planById.get(boost.plan_id) : null;
+            const plan = boost?.plan_id ? planById.get(boost.plan_id) : null;
             return (
               <article key={post.id} className="card fp-post-row">
                 <div className="fp-post-main">
