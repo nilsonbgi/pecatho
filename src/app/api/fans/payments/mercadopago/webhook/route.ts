@@ -22,9 +22,15 @@ export async function POST(request: Request) {
   if (!secret || !accessToken) return NextResponse.json({ error: "Mercado Pago não configurado." }, { status: 503 });
 
   const body = await request.json().catch(() => null);
-  const type = body?.type ?? body?.action;
-  const paymentId = body?.data?.id;
-  if (type !== "payment" || !paymentId) return NextResponse.json({ ok: true, ignored: true });
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return NextResponse.json({ error: "Notificação inválida." }, { status: 400 });
+  }
+
+  const type = body.type ?? body.action;
+  const paymentId = body.data?.id;
+  if (type !== "payment" || (typeof paymentId !== "string" && typeof paymentId !== "number") || !String(paymentId).trim()) {
+    return NextResponse.json({ ok: true, ignored: true });
+  }
 
   const xSignature = request.headers.get("x-signature") ?? "";
   const xRequestId = request.headers.get("x-request-id") ?? "";
@@ -45,12 +51,19 @@ export async function POST(request: Request) {
 
   const response = await fetch("https://api.mercadopago.com/v1/payments/" + encodeURIComponent(String(paymentId)), {
     headers: { Authorization: "Bearer " + accessToken },
+    cache: "no-store",
   });
   if (!response.ok) return NextResponse.json({ error: "Não foi possível consultar o pagamento no provedor." }, { status: 502 });
 
-  const payment = await response.json();
-  const orderId = payment?.external_reference;
-  if (typeof orderId !== "string") return NextResponse.json({ error: "Pagamento sem referência Pecatho." }, { status: 422 });
+  const payment = await response.json().catch(() => null);
+  if (!payment || typeof payment !== "object" || Array.isArray(payment)) {
+    return NextResponse.json({ error: "Resposta inválida do provedor de pagamento." }, { status: 502 });
+  }
+
+  const orderId = payment.external_reference;
+  if (typeof orderId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(orderId)) {
+    return NextResponse.json({ error: "Pagamento sem referência Pecatho válida." }, { status: 422 });
+  }
 
   const admin = createAdminClient();
   const { data: order, error: orderError } = await admin
@@ -58,11 +71,15 @@ export async function POST(request: Request) {
     .select("id,user_id,total,currency,status,metadata")
     .eq("id", orderId)
     .maybeSingle();
-  if (orderError || !order) return NextResponse.json({ error: "Pedido Pecatho não encontrado." }, { status: 404 });
-  if (order.currency !== "BRL" || Math.abs(Number(order.total) - Number(payment?.transaction_amount)) > 0.01) {
+  if (orderError) {
+    console.error("Falha ao consultar pedido para conciliação Mercado Pago:", orderError);
+    return NextResponse.json({ error: "Não foi possível validar o pedido Pecatho." }, { status: 500 });
+  }
+  if (!order) return NextResponse.json({ error: "Pedido Pecatho não encontrado." }, { status: 404 });
+  if (order.currency !== "BRL" || !Number.isFinite(Number(payment.transaction_amount)) || Math.abs(Number(order.total) - Number(payment.transaction_amount)) > 0.01) {
     return NextResponse.json({ error: "Valor ou moeda do pagamento não correspondem ao pedido." }, { status: 409 });
   }
-  if (payment?.status === "approved" && payment?.currency_id !== "BRL") {
+  if (payment.status === "approved" && payment.currency_id !== "BRL") {
     return NextResponse.json({ error: "Moeda do pagamento inválida." }, { status: 409 });
   }
 
@@ -76,11 +93,14 @@ export async function POST(request: Request) {
     refunded: "refunded",
     charged_back: "chargeback",
   };
-  const status = statusMap[payment?.status] ?? "pending";
-  const providerFee = Array.isArray(payment?.fee_details)
-    ? payment.fee_details.reduce((sum: number, item: { amount?: number|string }) => sum + Math.max(Number(item.amount ?? 0), 0), 0)
+  const status = typeof payment.status === "string" ? statusMap[payment.status] ?? "pending" : "pending";
+  const providerFee = Array.isArray(payment.fee_details)
+    ? payment.fee_details.reduce((sum: number, item: { amount?: number | string }) => {
+        const amount = Number(item?.amount ?? 0);
+        return sum + (Number.isFinite(amount) ? Math.max(amount, 0) : 0);
+      }, 0)
     : 0;
-  const paymentMethod = typeof payment?.payment_method_id === "string" ? payment.payment_method_id : null;
+  const paymentMethod = typeof payment.payment_method_id === "string" ? payment.payment_method_id : null;
 
   const productType = order.metadata?.product_type;
   const settlementFunction = productType === "premium_subscription"
@@ -102,6 +122,9 @@ export async function POST(request: Request) {
     p_provider_fee: providerFee,
   });
 
-  if (error) return NextResponse.json({ error: "Não foi possível conciliar o pagamento.", detail: error.message }, { status: 500 });
+  if (error) {
+    console.error("Falha na conciliação Mercado Pago:", { orderId, paymentId: String(paymentId), code: error.code });
+    return NextResponse.json({ error: "Não foi possível conciliar o pagamento." }, { status: 500 });
+  }
   return NextResponse.json(data);
 }
