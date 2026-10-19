@@ -103,7 +103,9 @@ test('cadastro preserves the complete five-step onboarding flow without creating
   await expect(page.getByText('Etapa 4 de 5')).toBeVisible();
   await page.getByRole('button', { name: /Continuar/i }).click();
 
+  // Advancing to review must never submit the form or create an Auth user.
   await expect(page.getByText('Etapa 5 de 5')).toBeVisible();
+  expect(signupIntercepted, 'Signup must not run before the final review confirmation').toBe(false);
   await expect(page.getByText('Usuário de Teste')).toBeVisible();
   await expect(page.getByText('Curitiba — PR')).toBeVisible();
   await page.getByRole('button', { name: /Criar minha conta/i }).click();
