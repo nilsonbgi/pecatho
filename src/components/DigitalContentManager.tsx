@@ -11,6 +11,13 @@ type ProductMediaItem = { product_id:string; media_type:string|null; size_bytes:
 type ProductMediaSummary = { count:number; images:number; videos:number; audio:number; documents:number; bytes:number };
 type Sale = { id:string; product_id:string; order_id:string; buyer_user_id:string; buyer:{id:string;display_name:string|null}|null; amount:number; owner_amount:number; status:string; paid_at:string|null; created_at:string; product:{id:string;title:string;product_type:string}|null };
 
+const ALLOWED_DIGITAL_CONTENT_MIME_TYPES = new Set([
+ "image/jpeg", "image/png", "image/webp", "image/gif",
+ "video/mp4", "video/webm", "video/quicktime",
+ "audio/mpeg", "audio/mp4", "audio/ogg", "audio/wav", "audio/webm",
+ "application/pdf",
+]);
+
 function brl(value:number){return new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(value);}
 function fileSize(value:number){if(value<1024*1024)return Math.max(1,Math.round(value/1024))+" KB";return (value/1024/1024).toFixed(1).replace(".",",")+" MB";}
 function parsePrice(value:string):number{
@@ -88,6 +95,8 @@ export default function DigitalContentManager({ownerType}:{ownerType:OwnerType})
    if(!title.trim())throw new Error("Informe o título do conteúdo.");
    if(!Number.isFinite(normalized))throw new Error("Informe um preço válido, por exemplo 49,90 ou 1.234,56.");
    if(!files.length)throw new Error("Adicione pelo menos um arquivo.");
+   const unsupportedFiles=files.filter(file=>!ALLOWED_DIGITAL_CONTENT_MIME_TYPES.has(file.type));
+   if(unsupportedFiles.length){const names=unsupportedFiles.slice(0,3).map(file=>file.name).join(", ");throw new Error("Formato não permitido para "+names+(unsupportedFiles.length>3?" e mais "+(unsupportedFiles.length-3)+" arquivo(s)":"")+". Use JPG, PNG, WebP, GIF, MP4, WebM, MOV, MP3, M4A, OGG, WAV ou PDF.");}
    if(productType==="single_image"&&(files.length!==1||!files[0].type.startsWith("image/")))throw new Error("Uma venda de imagem deve conter exatamente uma imagem.");
    if(productType==="single_video"&&(files.length!==1||!files[0].type.startsWith("video/")))throw new Error("Uma venda de vídeo deve conter exatamente um vídeo.");
    for(const file of files)if(file.size>250*1024*1024)throw new Error("Cada arquivo pode ter no máximo 250 MB.");
@@ -97,7 +106,7 @@ export default function DigitalContentManager({ownerType}:{ownerType:OwnerType})
    if(productError||!product)throw new Error(productError?.message||"Não foi possível criar o produto.");
    createdProductId=product.id;
    const rows=[];
-   for(let i=0;i<files.length;i++){const original=files[i];const file=original.type.startsWith("image/")?(await optimizeImage(original,2560,0.9)).file:original;const safe=original.name.normalize("NFKD").replace(/[^a-zA-Z0-9._-]+/g,"-").replace(/-+/g,"-").replace(/^-|-$/g,"").slice(0,120)||"arquivo";const path=user.id+"/digital-products/"+product.id+"/"+crypto.randomUUID()+"-"+(file.type==="image/webp"?"imagem.webp":safe);const {error:uploadError}=await supabase.storage.from("pecatho-private").upload(path,file,{upsert:false,contentType:file.type||"application/octet-stream"});if(uploadError)throw new Error("Falha no upload de "+original.name+": "+uploadError.message);uploadedPaths.push(path);const mediaType=file.type.startsWith("image/")?"image":file.type.startsWith("video/")?"video":file.type.startsWith("audio/")?"audio":"document";rows.push({product_id:product.id,owner_user_id:user.id,storage_bucket:"pecatho-private",storage_path:path,original_filename:original.name,mime_type:file.type||null,size_bytes:file.size,media_type:mediaType,sort_order:i});}
+   for(let i=0;i<files.length;i++){const original=files[i];const file=original.type.startsWith("image/")&&original.type!=="image/gif"?(await optimizeImage(original,2560,0.9)).file:original;const safe=original.name.normalize("NFKD").replace(/[^a-zA-Z0-9._-]+/g,"-").replace(/-+/g,"-").replace(/^-|-$/g,"").slice(0,120)||"arquivo";const path=user.id+"/digital-products/"+product.id+"/"+crypto.randomUUID()+"-"+(file.type==="image/webp"?"imagem.webp":safe);const {error:uploadError}=await supabase.storage.from("pecatho-private").upload(path,file,{upsert:false,contentType:file.type||"application/octet-stream"});if(uploadError)throw new Error("Falha no upload de "+original.name+": "+uploadError.message);uploadedPaths.push(path);const mediaType=file.type.startsWith("image/")?"image":file.type.startsWith("video/")?"video":file.type.startsWith("audio/")?"audio":"document";rows.push({product_id:product.id,owner_user_id:user.id,storage_bucket:"pecatho-private",storage_path:path,original_filename:original.name,mime_type:file.type||null,size_bytes:file.size,media_type:mediaType,sort_order:i});}
    const {error:itemError}=await supabase.from("digital_content_product_items").insert(rows);if(itemError)throw new Error(itemError.message);
    const {data:publishedProduct,error:publishError}=await supabase.from("digital_content_products").update({status:"published",updated_at:new Date().toISOString()}).eq("id",product.id).eq("owner_user_id",user.id).eq("owner_type",ownerType).eq("status","draft").select("id").maybeSingle();if(publishError)throw new Error(publishError.message);if(!publishedProduct)throw new Error("Os arquivos foram enviados, mas não foi possível confirmar a publicação. O rascunho incompleto será removido.");
    createdProductId=null;
