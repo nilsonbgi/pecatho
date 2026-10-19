@@ -2,7 +2,7 @@ create or replace function private.capture_registration_metadata()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, private
+set search_path = ''
 as $function$
 declare
   m jsonb := coalesce(new.raw_user_meta_data, '{}'::jsonb);
