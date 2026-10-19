@@ -46,6 +46,9 @@ export default function CadastroPage() {
 
   async function submit(e: FormEvent) {
     e.preventDefault(); setBusy(true); setError(""); setMsg("");
+    // Do not allow implicit form submission to bypass the address and review steps.
+    // The account may only be created from the final review screen.
+    if (step !== 5) { setError("Conclua todas as etapas do cadastro antes de criar sua conta."); setBusy(false); return; }
     if (!validCpf(cpf)) { setError("Informe um CPF válido."); setBusy(false); return; }
     if (!adult(birthDate)) { setError("É necessário ter 18 anos ou mais para criar uma conta no Pecatho."); setBusy(false); return; }
     if (onlyDigits(cep).length !== 8 || !ibgeCode) { setError("Informe um CEP válido para que o município seja identificado corretamente."); setBusy(false); return; }
