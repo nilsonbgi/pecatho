@@ -21,7 +21,33 @@ for (const route of publicRoutes) {
   });
 }
 
-test('cadastro preserves the complete five-step onboarding flow', async ({ page }) => {
+test('cadastro preserves the complete five-step onboarding flow without creating production users', async ({ page }) => {
+  // This suite may run against the production URL. Intercept Supabase Auth signup so
+  // the browser validates the full completion UI without creating accounts or sending email.
+  await page.route('**/auth/v1/signup**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        access_token: '',
+        token_type: 'bearer',
+        expires_in: 0,
+        refresh_token: '',
+        user: {
+          id: '00000000-0000-4000-8000-000000000099',
+          aud: 'authenticated',
+          role: 'authenticated',
+          email: 'regression@pecatho.invalid',
+          email_confirmed_at: null,
+          app_metadata: { provider: 'email', providers: ['email'] },
+          user_metadata: { display_name: 'Usuário de Teste' },
+          identities: [],
+          created_at: '2026-01-01T00:00:00.000Z',
+        },
+      }),
+    });
+  });
+
   await page.goto('/cadastro', { waitUntil: 'domcontentloaded' });
 
   await expect(page.getByText('Etapa 1 de 5')).toBeVisible();
@@ -67,7 +93,9 @@ test('cadastro preserves the complete five-step onboarding flow', async ({ page 
   await expect(page.getByText('Etapa 5 de 5')).toBeVisible();
   await expect(page.getByText('Usuário de Teste')).toBeVisible();
   await expect(page.getByText('Curitiba — PR')).toBeVisible();
-  await expect(page.getByRole('button', { name: /Criar minha conta/i })).toBeVisible();
+  await page.getByRole('button', { name: /Criar minha conta/i }).click();
+  await expect(page.getByText('Falta só confirmar seu e-mail.')).toBeVisible();
+  await expect(page.getByRole('link', { name: /Ir para o login/i })).toBeVisible();
 });
 
 test('cadastro remains usable on mobile without horizontal overflow', async ({ page }) => {
