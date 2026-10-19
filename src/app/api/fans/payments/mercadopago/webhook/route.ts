@@ -21,13 +21,27 @@ export async function POST(request: Request) {
   const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
   if (!secret || !accessToken) return NextResponse.json({ error: "Mercado Pago não configurado." }, { status: 503 });
 
-  const body = await request.json().catch(() => null);
+  const rawBody = await request.text();
+  if (rawBody.length > 64 * 1024) {
+    return NextResponse.json({ error: "Payload excede o limite permitido." }, { status: 413 });
+  }
+
+  let body: unknown;
+  try {
+    body = JSON.parse(rawBody);
+  } catch {
+    return NextResponse.json({ error: "Notificação inválida." }, { status: 400 });
+  }
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     return NextResponse.json({ error: "Notificação inválida." }, { status: 400 });
   }
 
-  const type = body.type ?? body.action;
-  const paymentId = body.data?.id;
+  const notification = body as Record<string, unknown>;
+  const data = notification.data;
+  const type = notification.type ?? notification.action;
+  const paymentId = data && typeof data === "object" && !Array.isArray(data)
+    ? (data as Record<string, unknown>).id
+    : undefined;
   if (type !== "payment" || (typeof paymentId !== "string" && typeof paymentId !== "number") || !String(paymentId).trim()) {
     return NextResponse.json({ ok: true, ignored: true });
   }
