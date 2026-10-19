@@ -1,6 +1,6 @@
 "use client";
 
-import "../admin/admin-redesign.css";
+import "../admin-redesign.css";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
