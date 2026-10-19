@@ -24,7 +24,9 @@ for (const route of publicRoutes) {
 test('cadastro preserves the complete five-step onboarding flow without creating production users', async ({ page }) => {
   // This suite may run against the production URL. Intercept Supabase Auth signup so
   // the browser validates the full completion UI without creating accounts or sending email.
-  await page.route('**/auth/v1/signup**', async (route) => {
+  let signupIntercepted = false;
+  await page.route(/\/auth\/v1\/signup(?:\?.*)?$/, async (route) => {
+    signupIntercepted = true;
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -55,8 +57,15 @@ test('cadastro preserves the complete five-step onboarding flow without creating
   await expect(page.getByRole('button', { name: /Quero criar no Fans/i })).toBeVisible();
   await expect(page.getByRole('button', { name: /Quero os dois/i })).toBeVisible();
 
-  await page.getByLabel('Nome completo').fill('Usuário de Teste');
-  await page.getByLabel('Data de nascimento').fill('1990-01-01');
+  // Select the intended account type after hydration before interacting with the form.
+  await page.getByRole('button', { name: /Quero criar no Fans/i }).click();
+  const nameInput = page.getByLabel('Nome completo');
+  const birthDateInput = page.getByLabel('Data de nascimento');
+  await expect(nameInput).toBeVisible();
+  await nameInput.fill('Usuário de Teste');
+  await expect(nameInput).toHaveValue('Usuário de Teste');
+  await birthDateInput.fill('1990-01-01');
+  await expect(birthDateInput).toHaveValue('1990-01-01');
   await page.getByRole('button', { name: /Continuar/i }).click();
 
   await expect(page.getByText('Etapa 2 de 5')).toBeVisible();
@@ -94,6 +103,7 @@ test('cadastro preserves the complete five-step onboarding flow without creating
   await expect(page.getByText('Usuário de Teste')).toBeVisible();
   await expect(page.getByText('Curitiba — PR')).toBeVisible();
   await page.getByRole('button', { name: /Criar minha conta/i }).click();
+  await expect.poll(() => signupIntercepted).toBe(true);
   await expect(page.getByText('Falta só confirmar seu e-mail.')).toBeVisible();
   await expect(page.getByRole('link', { name: /Ir para o login/i })).toBeVisible();
 });
