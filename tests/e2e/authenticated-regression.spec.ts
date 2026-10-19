@@ -45,7 +45,7 @@ test.describe('authenticated Pecatho regression', () => {
   test('authenticated account reaches the core user workspace without falling back to login', async ({ page }) => {
     await login(page, userEmail!, userPassword!);
     await expect(page).toHaveURL(/\/(painel|admin)(?:\?.*)?$/);
-    await expectAuthenticatedPage(page, '/painel', 'PAINEL DO USUÁRIO');
+    await expectAuthenticatedPage(page, '/painel', 'ÁREA DA ACOMPANHANTE');
 
     for (const path of [
       '/painel/perfil',
@@ -66,7 +66,7 @@ test.describe('authenticated Pecatho regression', () => {
     // Wait for the authorization decision instead of misclassifying that shell as access.
     await expect(page).toHaveURL(/\/(painel|login)(?:\?.*)?$/, { timeout: 15_000 });
     await expect(page).not.toHaveURL(/\/admin(?:\?.*)?$/);
-    await expect(page.getByText('PAINEL DO USUÁRIO', { exact: false }).first()).toBeVisible();
+    await expect(page.getByText('ÁREA DA ACOMPANHANTE', { exact: false }).first()).toBeVisible();
   });
 });
 
