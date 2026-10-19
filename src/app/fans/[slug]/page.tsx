@@ -63,6 +63,12 @@ export default async function FansCreatorPublicPage({params}:Props){
   if(preview?.storage_path){const bucket=String(preview.storage_bucket||"fans-private").trim();if(bucket){const {data}=await dataClient.storage.from(bucket).createSignedUrl(preview.storage_path,180);previewUrl=data?.signedUrl??null;}}
   return {...post,body:isOwner||post.access_type==="free"?post.body:null,previewUrl,previewType:preview?.media_type??null,likesCount:likesCount??0,commentsCount:commentsCount??0,isBoosted:boostMultiplierByPost.has(post.id),boostMultiplier:boostMultiplierByPost.get(post.id)??null} as Card;
  }));
+ if(admin){
+  const exposedPostIds=cards.filter(post=>post.isBoosted).map(post=>post.id);
+  if(exposedPostIds.length>0){
+   await admin.rpc("record_fans_boost_exposures",{p_post_ids:exposedPostIds});
+  }
+ }
  const activePlans=(plans??[]) as Plan[]; const activeLiveOffers=(liveOffers??[]) as LiveOffer[];
  return <main className="min-h-screen bg-[#f5f5f7] text-slate-950">
   <style>{`
