@@ -11,8 +11,25 @@ async function login(page: Page, email: string, password: string) {
   await page.goto('/login');
   await page.getByLabel('E-mail').fill(email);
   await page.getByLabel('Senha').fill(password);
+
+  const navigation = page.waitForURL(
+    (url) => !/^\/login\/?$/.test(url.pathname),
+    { timeout: 15_000 },
+  );
+
   await page.getByRole('button', { name: 'Entrar' }).click();
-  await page.waitForLoadState('domcontentloaded');
+
+  try {
+    await navigation;
+  } catch {
+    const visibleError = await page.locator('.formError').textContent().catch(() => null);
+    const normalizedError = visibleError?.trim();
+    throw new Error(
+      normalizedError
+        ? `Login did not leave /login. Application error: ${normalizedError}`
+        : `Login did not leave /login within 15 seconds. Current URL: ${page.url()}. No visible form error was rendered.`,
+    );
+  }
 }
 
 async function expectAuthenticatedPage(page: Page, path: string, expectedText?: string) {
