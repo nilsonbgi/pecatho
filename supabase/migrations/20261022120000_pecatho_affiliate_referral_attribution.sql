@@ -16,8 +16,7 @@ CREATE TABLE IF NOT EXISTS public.pecatho_affiliate_referrals (
   first_paid_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT pecatho_affiliate_referrals_one_creator_per_user UNIQUE (referred_user_id),
-  CONSTRAINT pecatho_affiliate_referrals_no_self CHECK (creator_id IS DISTINCT FROM referred_user_id)
+  CONSTRAINT pecatho_affiliate_referrals_one_creator_per_user UNIQUE (referred_user_id)
 );
 
 CREATE INDEX IF NOT EXISTS pecatho_affiliate_referrals_creator_status_idx
