@@ -793,9 +793,11 @@ DECLARE
   v_key text;
   v_entry_type public.ledger_entry_type;
   v_balance numeric(12,2);
+  v_target_reversed numeric(12,2) := 0;
+  v_reversal_delta numeric(12,2) := 0;
 BEGIN
-  IF NEW.status NOT IN ('paid','refunded','chargeback') OR
-     (TG_OP='UPDATE' AND NEW.status IS NOT DISTINCT FROM OLD.status) THEN
+  IF NEW.status NOT IN ('paid','partially_refunded','refunded','chargeback') OR
+     (TG_OP='UPDATE' AND NEW.status IS NOT DISTINCT FROM OLD.status AND NEW.refunded_amount IS NOT DISTINCT FROM OLD.refunded_amount) THEN
     RETURN NEW;
   END IF;
 
@@ -876,24 +878,44 @@ BEGIN
   END IF;
 
   SELECT * INTO v_existing FROM public.pecatho_affiliate_commissions WHERE payment_id=NEW.id FOR UPDATE;
-  IF NOT FOUND OR v_existing.status='reversed' THEN RETURN NEW; END IF;
+  IF NOT FOUND OR v_existing.reversed_amount >= v_existing.commission_amount THEN RETURN NEW; END IF;
+
+  IF NEW.status IN ('refunded','chargeback') THEN
+    v_target_reversed := v_existing.commission_amount;
+  ELSIF NEW.status='partially_refunded' THEN
+    IF coalesce(NEW.refunded_amount,0) <= 0 OR coalesce(NEW.amount,0) <= 0 THEN RETURN NEW; END IF;
+    v_target_reversed := least(v_existing.commission_amount,
+      round(v_existing.commission_amount * least(NEW.refunded_amount / NEW.amount,1),2));
+  ELSE
+    RETURN NEW;
+  END IF;
+
+  v_reversal_delta := round(v_target_reversed - v_existing.reversed_amount,2);
+  IF v_reversal_delta <= 0 THEN RETURN NEW; END IF;
 
   v_entry_type := CASE WHEN NEW.status='chargeback' THEN 'chargeback'::public.ledger_entry_type ELSE 'refund'::public.ledger_entry_type END;
-  v_key := 'pecatho-affiliate-reversal:'||NEW.id::text;
+  v_key := 'pecatho-affiliate-reversal:'||NEW.id::text||':'||to_char(v_target_reversed,'FM999999999990.00');
   SELECT coalesce(sum(CASE WHEN le.entry_type IN ('credit','adjustment') THEN le.amount ELSE -le.amount END),0)
     INTO v_balance FROM public.ledger_entries le WHERE le.user_id=v_existing.affiliate_user_id;
   INSERT INTO public.ledger_entries(
     user_id,order_id,payment_id,entry_type,amount,currency,balance_after,description,idempotency_key,metadata
   ) VALUES (
-    v_existing.affiliate_user_id,NEW.order_id,NEW.id,v_entry_type,v_existing.commission_amount,NEW.currency,
-    v_balance-v_existing.commission_amount,
-    CASE WHEN NEW.status='chargeback' THEN 'Estorno de comissão de afiliado por chargeback' ELSE 'Estorno de comissão de afiliado por reembolso' END,
+    v_existing.affiliate_user_id,NEW.order_id,NEW.id,v_entry_type,v_reversal_delta,NEW.currency,
+    v_balance-v_reversal_delta,
+    CASE WHEN NEW.status='chargeback' THEN 'Estorno de comissão de afiliado por chargeback'
+      ELSE CASE WHEN NEW.status='partially_refunded' THEN 'Ajuste proporcional da comissão de afiliado por reembolso parcial'
+        ELSE 'Estorno de comissão de afiliado por reembolso' END END,
     v_key,jsonb_build_object('source','pecatho','kind','affiliate_commission_reversal',
       'commission_id',v_existing.id,'referral_id',v_existing.referral_id,
-      'commission_amount_reversed',v_existing.commission_amount,'payment_status',NEW.status)
+      'commission_amount_reversed_total',v_target_reversed,'commission_amount_reversed_delta',v_reversal_delta,
+      'refunded_amount',NEW.refunded_amount,'payment_amount',NEW.amount,'payment_status',NEW.status)
   ) ON CONFLICT (idempotency_key) DO NOTHING;
 
-  UPDATE public.pecatho_affiliate_commissions SET status='reversed',reversal_status=NEW.status,updated_at=now()
+  UPDATE public.pecatho_affiliate_commissions
+    SET reversed_amount=v_target_reversed,
+        status=CASE WHEN v_target_reversed >= commission_amount THEN 'reversed' ELSE 'credited' END,
+        reversal_status=CASE WHEN v_target_reversed >= commission_amount THEN NEW.status ELSE NULL END,
+        updated_at=now()
     WHERE id=v_existing.id;
   RETURN NEW;
 END;
@@ -904,5 +926,6 @@ CREATE CONSTRAINT TRIGGER pecatho_affiliate_commission_payment_trigger
 AFTER INSERT OR UPDATE ON public.payments
 DEFERRABLE INITIALLY DEFERRED
 FOR EACH ROW EXECUTE FUNCTION public.post_pecatho_affiliate_commission();
+
 
 REVOKE ALL ON FUNCTION public.post_pecatho_affiliate_commission() FROM PUBLIC, anon, authenticated;
