@@ -39,21 +39,39 @@ export default async function FansPublicationsPage() {
     .select("id,title,body,price,currency,access_type,status,published_at,created_at,updated_at")
     .eq("creator_id", creator.id)
     .order("created_at", { ascending: false });
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error("Falha ao carregar publicações do criador:", {
+      creatorId: creator.id,
+      code: error.code,
+    });
+  }
 
+  const publicationLoadError = Boolean(error);
   const list = posts ?? [];
   const { data: boostRows, error: boostError } = await supabase
     .from("fans_boosts")
     .select("id,post_id,plan_id,view_count,status,starts_at,ends_at")
     .eq("creator_id", creator.id)
     .order("created_at", { ascending: false });
-  if (boostError) throw new Error("Não foi possível carregar os dados de impulsionamento.");
+  if (boostError) {
+    console.error("Falha ao carregar impulsionamentos do criador:", {
+      creatorId: creator.id,
+      code: boostError.code,
+    });
+  }
+  const boostLoadError = Boolean(boostError);
 
   const planIds = [...new Set((boostRows ?? []).map((boost) => boost.plan_id).filter((id): id is string => Boolean(id)))];
   const { data: plans, error: plansError } = planIds.length
     ? await supabase.from("fans_boost_plans").select("id,name,multiplier").in("id", planIds)
     : { data: [], error: null };
-  if (plansError) throw new Error("Não foi possível carregar os planos de impulsionamento.");
+  if (plansError) {
+    console.error("Falha ao carregar planos de impulsionamento:", {
+      creatorId: creator.id,
+      code: plansError.code,
+    });
+  }
+  const boostPlansLoadError = Boolean(plansError);
 
   const planById = new Map((plans ?? []).map((plan) => [plan.id, plan]));
   const now = Date.now();
@@ -92,20 +110,20 @@ export default async function FansPublicationsPage() {
         <div className="heroActions"><Link className="primaryButton" href="/fans/gerenciar/publicacoes/nova">Nova publicação</Link><Link className="secondaryButton" href="/fans/gerenciar/conteudos">Loja de conteúdo</Link><Link className="secondaryButton" href="/fans/gerenciar">Voltar à central</Link></div>
 
         <section className="fansMetrics">
-          <article className="card"><span className="metricLabel">TOTAL</span><strong>{list.length}</strong><p>Publicações</p></article>
-          <article className="card"><span className="metricLabel">PUBLICADAS</span><strong>{list.filter((p) => p.status === "published").length}</strong><p>Conteúdos ativos</p></article>
-          <article className="card"><span className="metricLabel">EM ANÁLISE</span><strong>{list.filter((p) => p.status === "pending_review").length}</strong><p>Aguardando moderação</p></article>
+          <article className="card"><span className="metricLabel">TOTAL</span><strong>{publicationLoadError ? "—" : list.length}</strong><p>Publicações</p></article>
+          <article className="card"><span className="metricLabel">PUBLICADAS</span><strong>{publicationLoadError ? "—" : list.filter((p) => p.status === "published").length}</strong><p>Conteúdos ativos</p></article>
+          <article className="card"><span className="metricLabel">EM ANÁLISE</span><strong>{publicationLoadError ? "—" : list.filter((p) => p.status === "pending_review").length}</strong><p>Aguardando moderação</p></article>
         </section>
 
         <section className="fp-boost-summary" aria-label="Resumo dos impulsionamentos">
-          <article className="fp-boost-stat"><span>IMPULSIONAMENTOS ATIVOS</span><strong>{activeBoosts.length}</strong></article>
-          <article className="fp-boost-stat"><span>EXPOSIÇÕES REGISTRADAS</span><strong>{totalBoostExposures.toLocaleString("pt-BR")}</strong></article>
-          <article className="fp-boost-stat"><span>PUBLICAÇÕES IMPULSIONADAS</span><strong>{activeBoostByPost.size}</strong></article>
+          <article className="fp-boost-stat"><span>IMPULSIONAMENTOS ATIVOS</span><strong>{boostLoadError ? "—" : activeBoosts.length}</strong></article>
+          <article className="fp-boost-stat"><span>EXPOSIÇÕES REGISTRADAS</span><strong>{boostLoadError ? "—" : totalBoostExposures.toLocaleString("pt-BR")}</strong></article>
+          <article className="fp-boost-stat"><span>PUBLICAÇÕES IMPULSIONADAS</span><strong>{boostLoadError ? "—" : activeBoostByPost.size}</strong></article>
         </section>
 
         <section className="fansOnboarding card">
           <div className="eyebrow">CATÁLOGO DE CONTEÚDO</div>
-          {list.length ? <div style={{ display: "grid", gap: 12 }}>{list.map((post) => {
+          {publicationLoadError ? <div role="alert" className="card"><h2>Não foi possível carregar suas publicações</h2><p>Seus conteúdos não foram alterados. Atualize a página; se o problema persistir, entre em contato com o suporte.</p></div> : list.length ? <div style={{ display: "grid", gap: 12 }}>{list.map((post) => {
             const boost = activeBoostByPost.get(post.id);
             const plan = boost?.plan_id ? planById.get(boost.plan_id) : null;
             return (
