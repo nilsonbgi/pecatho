@@ -9,10 +9,11 @@ import DigitalContentShowcase from "@/components/DigitalContentShowcase";
 import FansFormattedBio from "@/components/fans/FansFormattedBio";
 import ProfileCommerceHub from "@/components/ProfileCommerceHub";
 import GiftButton from "@/components/GiftButton";
+import { groupGalleryMedia, isGifMedia } from "@/lib/media-gallery-layout";
 
 type Profile = { id: string; slug: string; title: string | null; display_name: string | null; summary: string | null; description: string | null; status: string; verification_status: string | null; city_id: number | null; state_id: number | null; category_id: number | null; age_years: number | null; height_cm: number | null; weight_kg: number | null; availability: string | null; phone: string | null; whatsapp: string | null; positioning: string | null; pricing: Record<string, unknown> | null; payment_options: Record<string, unknown> | null; social_links: Record<string, string> | null; public_latitude: number | null; public_longitude: number | null; is_owner: boolean };
 type Address = { public_latitude: number | null; public_longitude: number | null };
-type Media = { id: string; profile_id: string; storage_bucket: string; storage_path: string; preview_storage_bucket: string | null; preview_storage_path: string | null; kind: string; access_type: "public" | "paid"; price: number; currency: string; is_primary: boolean; is_featured: boolean; width: number | null; height: number | null; show_in_cards: boolean; show_in_gallery: boolean; sort_order: number; moderation_status: string };
+type Media = { id: string; profile_id: string; storage_bucket: string; storage_path: string; preview_storage_bucket: string | null; preview_storage_path: string | null; mime_type?: string | null; original_filename?: string | null; kind: string; access_type: "public" | "paid"; price: number; currency: string; is_primary: boolean; is_featured: boolean; width: number | null; height: number | null; show_in_cards: boolean; show_in_gallery: boolean; sort_order: number; moderation_status: string };
 type Review = { id: string; rating: number | null; comment: string | null; created_at: string; experience_verified: boolean };
 type City = { name: string };
 type State = { uf: string; name: string };
@@ -71,7 +72,7 @@ export default function PublicAdvertiserPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [mediaTab, setMediaTab] = useState<"all" | "image" | "video">("all");
+  const [mediaTab, setMediaTab] = useState<"all" | "image" | "video" | "gif">("all");
   const [unlocking, setUnlocking] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const [following, setFollowing] = useState(false);
@@ -144,7 +145,8 @@ export default function PublicAdvertiserPage() {
     return () => { active = false; };
   }, [params.slug]);
 
-  const filteredMedia = useMemo(() => media.filter((item) => mediaTab === "all" || item.kind === mediaTab), [media, mediaTab]);
+  const filteredMedia = useMemo(() => media.filter((item) => mediaTab === "all" || (mediaTab === "gif" ? isGifMedia(item) : item.kind === mediaTab && !isGifMedia(item))), [media, mediaTab]);
+  const mediaGroups = useMemo(() => groupGalleryMedia(filteredMedia), [filteredMedia]);
   const primaryMedia = media.find((item) => item.is_featured) || media.find((item) => item.is_primary) || media[0] || null;
   const averageRating = reviews.length ? reviews.reduce((sum, item) => sum + Number(item.rating || 0), 0) / reviews.length : 0;
   const publicImages = media.filter((item) => item.kind === "image" && item.show_in_gallery !== false).length;
@@ -425,30 +427,24 @@ export default function PublicAdvertiserPage() {
       {profile.availability && <section className="profileAvailability card"><div className="eyebrow">DISPONIBILIDADE</div><h2>Horários de atendimento</h2><p>{profile.availability}</p></section>}
 
       <section id="galeria" className="profileMediaSection">
-        <div className="sectionHeading"><div><div className="eyebrow">GALERIA</div><h2>Fotos e vídeos</h2><p>Conteúdo público e conteúdo exclusivo com acesso pago definido pela própria anunciante.</p></div><div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", justifyContent: "flex-end" }}><Link href="/conteudos/minhas-compras" className="secondaryButton" style={{ textDecoration: "none" }}>Minhas compras</Link><div className="mediaTabs"><button className={mediaTab === "all" ? "active" : ""} onClick={() => setMediaTab("all")}>Tudo</button><button className={mediaTab === "image" ? "active" : ""} onClick={() => setMediaTab("image")}>Fotos</button><button className={mediaTab === "video" ? "active" : ""} onClick={() => setMediaTab("video")}>Vídeos</button></div></div></div>
+        <div className="sectionHeading"><div><div className="eyebrow">GALERIA INTELIGENTE</div><h2>Fotos, GIFs e vídeos</h2><p>Separação automática por tipo de mídia e proporção original, sem cortar retratos ou vídeos verticais.</p></div><div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", justifyContent: "flex-end" }}><Link href="/conteudos/minhas-compras" className="secondaryButton" style={{ textDecoration: "none" }}>Minhas compras</Link><div className="mediaTabs"><button className={mediaTab === "all" ? "active" : ""} onClick={() => setMediaTab("all")}>Tudo</button><button className={mediaTab === "image" ? "active" : ""} onClick={() => setMediaTab("image")}>Fotos</button><button className={mediaTab === "gif" ? "active" : ""} onClick={() => setMediaTab("gif")}>GIFs</button><button className={mediaTab === "video" ? "active" : ""} onClick={() => setMediaTab("video")}>Vídeos</button></div></div></div>
         {notice && <div className="mediaNotice">{notice}</div>}
-        {filteredMedia.length === 0 ? <div className="emptyDiscovery"><h2>Galeria em preparação</h2><p>Esta acompanhante ainda não publicou mídia aprovada nesta categoria.</p></div> : <div className="profileGallery">{filteredMedia.map((item) => {
-          const unlocked = Boolean(item.unlockedUrl);
-          const isVideo = item.kind === "video";
-          const src = unlocked ? item.unlockedUrl : item.url || item.previewUrl; const blurPreview = item.access_type === "paid" && !unlocked; const mediaRatio = item.width && item.height ? item.width / item.height : isVideo ? 16 / 9 : 1;
-          return <article className={`profileMediaCard ${item.access_type === "paid" ? "paid" : "public"}`} key={item.id}>
-            <div className="profileMediaVisual" style={{ aspectRatio: String(mediaRatio), maxHeight: "min(72vh, 760px)" }}>{src ? (isVideo && unlocked ? <video src={src} controls playsInline preload="metadata" /> : <img src={src} alt={item.access_type === "paid" ? "Prévia de conteúdo exclusivo" : "Foto do perfil"} style={{ filter: blurPreview ? "blur(18px)" : undefined, transform: blurPreview ? "scale(1.08)" : undefined }} />) : <div className="lockedMedia"><span>{isVideo ? "▶" : "✦"}</span><strong>Conteúdo exclusivo</strong><small>Prévia não publicada</small></div>}
-              {item.access_type === "paid" && !unlocked && <div className="paidOverlay"><span>🔒 EXCLUSIVO</span><strong>{brl(Number(item.price))}</strong><button type="button" onClick={() => unlock(item)} disabled={unlocking === item.id}>{unlocking === item.id ? "Preparando compra..." : `Comprar conteúdo · ${brl(Number(item.price))}`}</button></div>}
-              {item.access_type === "paid" && unlocked && (
-                <div className="mediaBadge" style={{ background: "rgba(16,185,129,.92)", color: "#fff", right: 12, left: "auto" }}>
-                  ✓ ACESSO LIBERADO
-                </div>
-              )}
-              {item.access_type === "public" && <span className="mediaBadge">PÚBLICO</span>}
-            </div>
-            {item.access_type === "paid" && unlocked && item.unlockedUrl && (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: 10, borderTop: "1px solid rgba(15,23,42,.08)", background: "#fff" }}>
-                <span style={{ fontSize: 11, fontWeight: 800, color: "#059669" }}>✓ Conteúdo adquirido</span>
-                <a href={item.unlockedUrl} target="_blank" rel="noreferrer" download className="secondaryButton" style={{ textDecoration: "none", padding: "8px 11px", fontSize: 11 }}>Abrir / baixar</a>
+        {filteredMedia.length === 0 ? <div className="emptyDiscovery"><h2>Galeria em preparação</h2><p>Esta acompanhante ainda não publicou mídia aprovada nesta categoria.</p></div> : <div className="profileGalleryGroups">{mediaGroups.map((group) => <section className="profileGalleryGroup" key={group.key} aria-label={group.title}>
+          <header className="profileGalleryGroupHeading"><div><h3>{group.title}</h3><p>{group.description}</p></div><span>{group.items.length} {group.items.length === 1 ? "arquivo" : "arquivos"}</span></header>
+          <div className="profileGallery">{group.items.map((item) => {
+            const unlocked = Boolean(item.unlockedUrl);
+            const isVideo = item.kind === "video";
+            const src = unlocked ? item.unlockedUrl : item.url || item.previewUrl; const blurPreview = item.access_type === "paid" && !unlocked; const mediaRatio = item.width && item.height ? item.width / item.height : isVideo ? 16 / 9 : 1;
+            return <article className={`profileMediaCard ${item.access_type === "paid" ? "paid" : "public"}`} key={item.id}>
+              <div className="profileMediaVisual" style={{ aspectRatio: String(mediaRatio), maxHeight: "min(72vh, 760px)" }}>{src ? (isVideo && unlocked ? <video src={src} controls playsInline preload="metadata" /> : <img src={src} loading="lazy" decoding="async" alt={item.access_type === "paid" ? "Prévia de conteúdo exclusivo" : isGifMedia(item) ? "GIF animado do perfil" : "Foto do perfil"} style={{ filter: blurPreview ? "blur(18px)" : undefined, transform: blurPreview ? "scale(1.08)" : undefined }} />) : <div className="lockedMedia"><span>{isVideo ? "▶" : "✦"}</span><strong>Conteúdo exclusivo</strong><small>Prévia não publicada</small></div>}
+                {item.access_type === "paid" && !unlocked && <div className="paidOverlay"><span>🔒 EXCLUSIVO</span><strong>{brl(Number(item.price))}</strong><button type="button" onClick={() => unlock(item)} disabled={unlocking === item.id}>{unlocking === item.id ? "Preparando compra..." : `Comprar conteúdo · ${brl(Number(item.price))}`}</button></div>}
+                {item.access_type === "paid" && unlocked && <div className="mediaBadge" style={{ background: "rgba(16,185,129,.92)", color: "#fff", right: 12, left: "auto" }}>✓ ACESSO LIBERADO</div>}
+                {item.access_type === "public" && <span className="mediaBadge">PÚBLICO</span>}
               </div>
-            )}
-          </article>;
-        })}</div>}
+              {item.access_type === "paid" && unlocked && item.unlockedUrl && <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: 10, borderTop: "1px solid rgba(15,23,42,.08)", background: "#fff" }}><span style={{ fontSize: 11, fontWeight: 800, color: "#059669" }}>✓ Conteúdo adquirido</span><a href={item.unlockedUrl} target="_blank" rel="noreferrer" download className="secondaryButton" style={{ textDecoration: "none", padding: "8px 11px", fontSize: 11 }}>Abrir / baixar</a></div>}
+            </article>;
+          })}</div>
+        </section>)}</div>}
       </section>
 
       <section className="profileContentGrid">
