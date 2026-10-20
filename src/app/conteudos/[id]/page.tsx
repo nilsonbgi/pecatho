@@ -30,6 +30,7 @@ type Product = {
   file_count: number;
   media_types: string[];
   media_groups: Array<{ key:string; media_type:string; title:string; count:number; total_bytes:number; total_duration_seconds:number }>;
+  media_previews: Array<{url:string;mime_type:string;width:number|null;height:number|null;duration_seconds:number|null}>;
   owner_name: string;
   owner_slug: string;
 };
@@ -398,6 +399,17 @@ export default function DigitalContentProductPage() {
               </div>
             )}
 
+            {product.media_previews?.length > 0 && (
+              <section className="mt-6 rounded-2xl border border-amber-200/15 bg-black/30 p-4">
+                <div className="text-[10px] font-black uppercase tracking-[.16em] text-amber-200/75">Prévias animadas</div>
+                <p className="mt-2 text-xs leading-5 text-white/50">Vídeos grandes são representados por prévias curtas e leves. O arquivo completo continua protegido e só pode ser acessado conforme as regras de compra.</p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  {product.media_previews.map((preview,index) => (
+                    <video key={preview.url} src={preview.url} muted loop autoPlay playsInline controls={false} preload="metadata" aria-label={"Prévia animada " + (index+1)} className="w-full rounded-xl border border-white/10 bg-black object-contain" style={{maxHeight:360,aspectRatio:preview.width&&preview.height?String(preview.width)+"/"+String(preview.height):"16 / 9"}} />
+                  ))}
+                </div>
+              </section>
+            )}
             {product.media_groups?.length > 0 && (
               <section className="mt-6 rounded-2xl border border-amber-200/15 bg-amber-300/[.035] p-4">
                 <div className="text-[10px] font-black uppercase tracking-[.16em] text-amber-200/75">Conteúdo organizado por formato</div>
