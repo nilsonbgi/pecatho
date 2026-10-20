@@ -45,6 +45,10 @@ export async function GET(request: Request) {
   const uf = String(registration?.uf || "").trim().toUpperCase();
   const ibgeCode = String(registration?.ibge_code || "").trim();
   const entryMode = ["customer", "advertiser", "fans", "both"].includes(String(registration?.entry_mode)) ? String(registration?.entry_mode) : "customer";
+  const referralCreatorId = String(registration?.referral_creator_id || "");
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(referralCreatorId)) {
+    await supabase.rpc("record_pecatho_affiliate_referral", { p_creator_id: referralCreatorId });
+  }
 
   if (name && user.email && validCpf(cpf) && isAdult(birthDate)) {
     const { data: existingCpf, error: cpfError } = await supabase.from("profiles").select("id").eq("cpf", cpf).neq("id", user.id).maybeSingle();
