@@ -694,7 +694,60 @@ revoke all on function public.create_pecatho_customer_premium_checkout(uuid,uuid
 grant execute on function public.create_pecatho_customer_premium_checkout(uuid,uuid) to authenticated;
 
 -- Retire the legacy admin RPC so all plan edits pass audience, period and feature validation.
-revoke all on function public.admin_save_pecatho_customer_premium_plan(uuid,text,text,text,numeric,integer,jsonb,boolean) from public, anon, authenticated;
+-- Keep the deployed editor compatible during the migration/deployment window, while routing
+-- every legacy save through the new validation and entitlement rules.
+create or replace function public.admin_save_pecatho_customer_premium_plan(
+  p_plan_id uuid,
+  p_plan_key text,
+  p_name text,
+  p_description text,
+  p_price numeric,
+  p_duration_days integer,
+  p_benefits jsonb,
+  p_active boolean
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $function$
+declare
+  v_existing public.pecatho_customer_premium_plans%rowtype;
+  v_audience text;
+  v_features jsonb;
+  v_card_style text;
+  v_badge_label text;
+  v_sort_order integer;
+begin
+  if p_plan_id is not null then
+    select * into v_existing
+    from public.pecatho_customer_premium_plans
+    where id=p_plan_id
+    for update;
+    if not found then raise exception 'PLAN_NOT_FOUND'; end if;
+    v_audience:=v_existing.audience;
+    v_features:=v_existing.feature_flags;
+    v_card_style:=v_existing.card_style;
+    v_badge_label:=v_existing.badge_label;
+    v_sort_order:=v_existing.sort_order;
+  else
+    v_audience:='customer';
+    v_features:='{"private_seller_contact":true,"featured_card":false,"search_priority":false,"premium_profile":false,"profile_badge":false}'::jsonb;
+    v_card_style:='standard';
+    v_badge_label:=null;
+    v_sort_order:=0;
+  end if;
+
+  return public.admin_save_pecatho_customer_premium_plan(
+    p_plan_id,v_audience,p_plan_key,p_name,p_description,p_price,p_duration_days,
+    p_benefits,p_active,v_features,v_card_style,v_badge_label,v_sort_order
+  );
+end;
+$function$;
+
+revoke all on function public.admin_save_pecatho_customer_premium_plan(uuid,text,text,text,numeric,integer,jsonb,boolean) from public, anon;
+grant execute on function public.admin_save_pecatho_customer_premium_plan(uuid,text,text,text,numeric,integer,jsonb,boolean) to authenticated;
+notify pgrst, 'reload schema';
 
 
 -- Use the period snapshot captured at checkout; later plan edits never change a paid order.
