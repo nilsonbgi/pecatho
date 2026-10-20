@@ -57,7 +57,7 @@ BEGIN
   END IF;
 
   IF m ? 'cpf' AND m ? 'birth_date' THEN
-    INSERT INTO public.registration_intents (
+    INSERT INTO public.registration_intents AS ri (
       user_id, token_hash, email, display_name, cpf, birth_date, phone,
       zipcode, street, number, complement, neighborhood, city, uf, ibge_code,
       entry_mode, referral_creator_id
@@ -71,13 +71,13 @@ BEGIN
       coalesce(m->>'city',''), coalesce(m->>'uf',''), coalesce(m->>'ibge_code',''),
       v_entry_mode, v_creator_id
     )
-    ON CONFLICT (user_id) DO UPDATE SET
+    ON CONFLICT (user_id) WHERE user_id IS NOT NULL DO UPDATE SET
       email=excluded.email, display_name=excluded.display_name, cpf=excluded.cpf,
       birth_date=excluded.birth_date, phone=excluded.phone, zipcode=excluded.zipcode,
       street=excluded.street, number=excluded.number, complement=excluded.complement,
       neighborhood=excluded.neighborhood, city=excluded.city, uf=excluded.uf,
       ibge_code=excluded.ibge_code, entry_mode=excluded.entry_mode,
-      referral_creator_id=coalesce(public.registration_intents.referral_creator_id, excluded.referral_creator_id),
+      referral_creator_id=coalesce(ri.referral_creator_id, excluded.referral_creator_id),
       expires_at=now()+interval '30 minutes', consumed_at=null;
     new.raw_user_meta_data := jsonb_build_object('registration_pending', true);
   END IF;
