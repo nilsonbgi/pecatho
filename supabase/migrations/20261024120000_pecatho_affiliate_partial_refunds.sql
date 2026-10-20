@@ -26,7 +26,7 @@ DECLARE
   v_reversal_delta numeric(12,2) := 0;
 BEGIN
   IF NEW.status NOT IN ('paid','partially_refunded','refunded','chargeback') OR
-     (TG_OP='UPDATE' AND NEW.status IS NOT DISTINCT FROM OLD.status) THEN
+     (TG_OP='UPDATE' AND NEW.status IS NOT DISTINCT FROM OLD.status AND NEW.refunded_amount IS NOT DISTINCT FROM OLD.refunded_amount) THEN
     RETURN NEW;
   END IF;
 
