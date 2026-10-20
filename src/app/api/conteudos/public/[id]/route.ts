@@ -104,7 +104,7 @@ export async function GET(
 
   const { data: items, error: itemsError } = await admin
     .from("digital_content_product_items")
-    .select("media_type,mime_type,size_bytes")
+    .select("media_type,mime_type,size_bytes,width,height,duration_seconds")
     .eq("product_id", product.id)
     .order("sort_order", { ascending: true });
 
@@ -119,6 +119,31 @@ export async function GET(
   const mediaTypes = Array.from(
     new Set((items ?? []).map((item) => item.media_type).filter(Boolean)),
   );
+  const mediaGroups = new Map<string, { key: string; media_type: string; title: string; count: number; total_bytes: number; total_duration_seconds: number }>();
+  for (const item of items ?? []) {
+    const mediaType = item.media_type || "document";
+    const width = Number(item.width);
+    const height = Number(item.height);
+    let aspect = "original";
+    if (width > 0 && height > 0) {
+      const ratio = width / height;
+      const candidates = [{ label: "9:16", ratio: 9 / 16 }, { label: "2:3", ratio: 2 / 3 }, { label: "1:1", ratio: 1 }, { label: "16:9", ratio: 16 / 9 }];
+      let closest = candidates[0];
+      for (const candidate of candidates) {
+        if (Math.abs(Math.log(ratio / candidate.ratio)) < Math.abs(Math.log(ratio / closest.ratio))) closest = candidate;
+      }
+      if (Math.abs(Math.log(ratio / closest.ratio)) <= Math.log(1.18)) aspect = closest.label;
+    }
+    const isGif = /image\/gif/i.test(item.mime_type || "");
+    const key = mediaType + ":" + (mediaType === "image" || mediaType === "video" ? (isGif ? "gif" : aspect) : "file");
+    const title = mediaType === "video" ? "Vídeos" : mediaType === "image" ? (isGif ? "GIFs animados" : "Fotos") : mediaType === "audio" ? "Áudios" : "Documentos";
+    const group = mediaGroups.get(key) ?? { key, media_type: mediaType, title: title + (mediaType === "image" || mediaType === "video" ? " · " + (isGif ? "GIF" : aspect) : ""), count: 0, total_bytes: 0, total_duration_seconds: 0 };
+    group.count += 1;
+    group.total_bytes += Math.max(0, Number(item.size_bytes) || 0);
+    group.total_duration_seconds += Math.max(0, Number(item.duration_seconds) || 0);
+    mediaGroups.set(key, group);
+  }
+  const media_groups = [...mediaGroups.values()].sort((a, b) => a.title.localeCompare(b.title, "pt-BR"));
 
   return NextResponse.json(
     {
@@ -136,6 +161,7 @@ export async function GET(
         cover_url,
         file_count: items?.length ?? 0,
         media_types: mediaTypes,
+        media_groups,
       },
     },
     {
