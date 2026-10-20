@@ -146,6 +146,7 @@ export default async function FansPublicationsPage() {
               </article>
             );
           })}</div> : <div><h2>Nenhuma publicação</h2><p>Crie sua primeira publicação e depois associe as mídias necessárias antes de enviá-la para análise.</p></div>}
+          {(boostLoadError || boostPlansLoadError) ? <p role="status" className="fp-muted" style={{ marginTop: 12 }}>Alguns dados de impulsionamento estão temporariamente indisponíveis. As publicações e os dados existentes não foram alterados.</p> : null}
         </section>
       </section>
     </main>
