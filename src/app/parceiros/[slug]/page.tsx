@@ -7,6 +7,7 @@ import LeadForm from "./LeadForm";
 import { createPartnerMediaSignedUrlMap } from "@/lib/supabase/partner-media";
 
 type PublicPartnerVenue={id:string;name:string;slug:string;venue_type:string;description:string|null;phone:string|null;website_url:string|null;instagram_url:string|null;state_id:number|null;city_id:number|null;tagline:string|null;highlights:string|null;recruitment_enabled:boolean;recruitment_title:string|null;recruitment_description:string|null;recruitment_contact_phone:string|null;recruitment_contact_email:string|null;recruitment_contact_whatsapp:string|null};
+type PublicStoreProduct={id:string;title:string;description:string|null;category:string;external_url:string;image_url:string|null;price_label:string|null;sort_order:number};
 type PublicPartnerVenueMedia={id:string;kind:string;preview_storage_bucket:string|null;preview_storage_path:string|null;original_filename:string|null;mime_type?:string|null;is_primary:boolean;sort_order:number;width:number|null;height:number|null}; type PublicPartnerVenueRoom={id:string;name:string;description:string|null;available_slots:number;daily_rate:number|null;weekly_rate:number|null;monthly_rate:number|null;minimum_period:string|null;notes:string|null};
 const types:Record<string,string>={nightclub:"Casa noturna",club:"Boate / clube",bar:"Bar",lounge:"Lounge",event_space:"Espaço para eventos",cabaret:"Cabaré",other:"Outro"};
 const dayNames=["Domingo","Segunda-feira","Terça-feira","Quarta-feira","Quinta-feira","Sexta-feira","Sábado"];
