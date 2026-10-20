@@ -27,7 +27,10 @@ export async function optimizeImage(file: File, maxDimension = 2560, quality = 0
   const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
   const width = Math.max(1, Math.round(bitmap.width * scale));
   const height = Math.max(1, Math.round(bitmap.height * scale));
-  const fullBlob = await canvasBlob(bitmap, width, height, quality);
+  // Canvas conversion keeps only the first frame of an animated GIF. Preserve
+  // the original animated file and optimize only its lightweight preview.
+  const isAnimatedGif = file.type.toLowerCase() === "image/gif" || /\.gif$/i.test(file.name);
+  const fullBlob = isAnimatedGif ? null : await canvasBlob(bitmap, width, height, quality);
   const previewScale = Math.min(1, 960 / Math.max(width, height));
   const previewWidth = Math.max(1, Math.round(width * previewScale));
   const previewHeight = Math.max(1, Math.round(height * previewScale));
@@ -35,7 +38,7 @@ export async function optimizeImage(file: File, maxDimension = 2560, quality = 0
   bitmap.close();
   const base = file.name.replace(/\.[^.]+$/, "") || "imagem";
   return {
-    file: new File([fullBlob], base + ".webp", { type: "image/webp", lastModified: Date.now() }),
+    file: fullBlob ? new File([fullBlob], base + ".webp", { type: "image/webp", lastModified: Date.now() }) : file,
     preview: new File([previewBlob], base + "-preview.webp", { type: "image/webp", lastModified: Date.now() }),
     width, height, aspect: classifyAspect(width, height)
   };
