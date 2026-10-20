@@ -237,7 +237,10 @@ export async function POST(request: Request) {
         currentStatus === (fullRefund ? "refunded" : "partially_refunded");
 
       if (!refundStateAlreadyMatches) {
-        if (fullRefund) {
+        if (fullRefund && status !== "refunded") {
+          // Se o próprio pagamento já chegou como "refunded", a liquidação inicial acima
+          // já processou esse estado. Só repetir a RPC quando o reembolso integral foi
+          // descoberto pela lista de reembolsos durante uma notificação ainda "paid".
           // A liquidação normal também precisa atualizar pedido/assinatura e executar
           // os estornos dos demais livros financeiros, não apenas o registro payments.
           const { error: fullRefundSettlementError } = await admin.rpc(settlementFunction, {
