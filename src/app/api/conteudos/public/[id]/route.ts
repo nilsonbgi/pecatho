@@ -104,7 +104,7 @@ export async function GET(
 
   const { data: items, error: itemsError } = await admin
     .from("digital_content_product_items")
-    .select("media_type,mime_type,size_bytes,width,height,duration_seconds")
+    .select("media_type,mime_type,size_bytes,width,height,duration_seconds,is_large_media,preview_storage_path,preview_mime_type,storage_bucket")
     .eq("product_id", product.id)
     .order("sort_order", { ascending: true });
 
@@ -119,6 +119,17 @@ export async function GET(
   const mediaTypes = Array.from(
     new Set((items ?? []).map((item) => item.media_type).filter(Boolean)),
   );
+  const media_previews: Array<{ url:string; mime_type:string; width:number|null; height:number|null; duration_seconds:number|null }> = [];
+  for (const item of items ?? []) {
+    if (item.media_type !== "video" || item.is_large_media !== true || !item.preview_storage_path) continue;
+    const bucket = item.storage_bucket || "pecatho-private";
+    const { data: signedPreview, error: previewError } = await admin.storage.from(bucket).createSignedUrl(item.preview_storage_path, 1800);
+    if (previewError || !signedPreview?.signedUrl) {
+      console.error("Falha ao assinar prévia de vídeo:", previewError);
+      continue;
+    }
+    media_previews.push({ url:signedPreview.signedUrl, mime_type:item.preview_mime_type || "video/webm", width:item.width ?? null, height:item.height ?? null, duration_seconds:3 });
+  }
   const mediaGroups = new Map<string, { key: string; media_type: string; title: string; count: number; total_bytes: number; total_duration_seconds: number }>();
   for (const item of items ?? []) {
     const mediaType = item.media_type || "document";
@@ -162,6 +173,7 @@ export async function GET(
         file_count: items?.length ?? 0,
         media_types: mediaTypes,
         media_groups,
+        media_previews,
       },
     },
     {
