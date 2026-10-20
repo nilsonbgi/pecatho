@@ -9,14 +9,20 @@ type Props = {
   className?: string;
   whatsappNumber?: string | null;
   creatorName?: string;
+  premiumRequired?: boolean;
+  premiumHref?: string;
 };
 
-export default function StartFansChatButton({ creatorId, className = "", whatsappNumber, creatorName = "criador" }: Props) {
+export default function StartFansChatButton({ creatorId, className = "", whatsappNumber, creatorName = "criador", premiumRequired = false, premiumHref = "/painel/cliente#premium" }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   async function start() {
+    if (premiumRequired) {
+      router.push(premiumHref);
+      return;
+    }
     if (whatsappNumber) {
       const digits = whatsappNumber.replace(/\D/g, "");
       if (digits.length >= 10 && digits.length <= 15) {
@@ -64,7 +70,7 @@ export default function StartFansChatButton({ creatorId, className = "", whatsap
         disabled={loading}
         className="primaryButton"
       >
-        {loading ? "Abrindo conversa..." : "Conversar com o criador"}
+        {loading ? "Abrindo conversa..." : premiumRequired ? "Seja Premium" : whatsappNumber ? "Conversar pelo WhatsApp" : "Conversar com o criador"}
       </button>
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
     </div>
