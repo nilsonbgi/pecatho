@@ -17,6 +17,7 @@ type BoostedDiscoveryPost = {
   ends_at: string;
 };
 
+type PublicPremiumFeature = { entity_id: string; featured_card: boolean; search_priority: boolean; premium_profile: boolean; profile_badge: boolean; card_style: string; badge_label: string | null };
 type PublicFansCreator = {
   id: string;
   slug: string;
@@ -81,7 +82,7 @@ export default async function FansPage() {
   const { data: premiumFeatureRows } = creatorIds.length
     ? await supabase.rpc("get_public_professional_plan_features", { p_entity_ids: creatorIds, p_audience: "content_creator" })
     : { data: [] };
-  const premiumFeatureMap = new Map((premiumFeatureRows ?? []).map((feature) => [feature.entity_id, {
+  const premiumFeatureMap = new Map(((premiumFeatureRows ?? []) as PublicPremiumFeature[]).map((feature) => [feature.entity_id, {
     premium_featured: feature.featured_card,
     premium_search_priority: feature.search_priority,
     premium_profile: feature.premium_profile,
