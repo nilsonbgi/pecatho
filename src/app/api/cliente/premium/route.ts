@@ -14,10 +14,10 @@ export async function GET() {
   const now = new Date().toISOString();
   const [{ data: plans, error: plansError }, { data: subscriptions, error: subscriptionsError }] = await Promise.all([
     admin.from("pecatho_customer_premium_plans")
-      .select("id,plan_key,name,description,price,currency,duration_days,benefits,sort_order")
-      .eq("active", true).order("sort_order", { ascending: true }).order("price", { ascending: true }),
+      .select("id,plan_key,name,description,price,currency,duration_days,benefits,sort_order,audience,feature_flags,card_style,badge_label")
+      .eq("audience", "customer").eq("active", true).order("sort_order", { ascending: true }).order("price", { ascending: true }),
     admin.from("pecatho_customer_premium_subscriptions")
-      .select("id,plan_id,order_id,status,starts_at,ends_at,paid_amount,currency,created_at")
+      .select("id,plan_id,order_id,status,starts_at,ends_at,paid_amount,currency,created_at,feature_flags,card_style,badge_label,plan_name,duration_days,benefits,plan_description")
       .eq("user_id", user.id).in("status", ["active", "pending"])
       .order("created_at", { ascending: false }).limit(10),
   ]);
@@ -30,11 +30,18 @@ export async function GET() {
     item.status === "active" && item.starts_at && item.ends_at &&
     new Date(item.starts_at).getTime() <= Date.now() && new Date(item.ends_at).getTime() > Date.now()
   ) ?? null;
+  let currentPlan = null;
+  if (current) {
+    const { data: plan } = await admin.from("pecatho_customer_premium_plans")
+      .select("id,plan_key,name,description,price,currency,duration_days,benefits,audience,feature_flags,card_style,badge_label")
+      .eq("id", current.plan_id).eq("audience", "customer").maybeSingle();
+    currentPlan = plan;
+  }
 
   return NextResponse.json({
     plans: plans ?? [],
     subscriptions: subscriptions ?? [],
-    current,
+    current: current ? { ...current, plan: currentPlan ? { ...currentPlan, price: current.paid_amount, duration_days: current.duration_days, benefits: current.benefits, description: current.plan_description, feature_flags: current.feature_flags, card_style: current.card_style, badge_label: current.badge_label, name: current.plan_name || currentPlan.name } : null } : null,
     server_time: now,
   });
 }

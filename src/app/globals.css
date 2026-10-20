@@ -1366,3 +1366,37 @@
 @media(max-width:850px){.premiumAdminDashboard .premiumAdminMetrics{grid-template-columns:repeat(3,minmax(0,1fr))}.premiumAdminDashboard .premiumAdminCatalog .financeHistory>article{grid-template-columns:minmax(0,1fr) auto}.premiumAdminDashboard .premiumAdminCatalog .financeHistory>article .financeStatus{grid-column:2;grid-row:1}.premiumAdminDashboard .premiumAdminCatalog .financeHistory>article .secondaryButton{grid-column:1/-1;width:100%}}
 @media(max-width:620px){.premiumAdminDashboard{width:calc(100% - 28px);padding:0 0 35px}.premiumAdminDashboard .topbar{padding:13px 0}.premiumAdminDashboard .navLinks{width:100%;overflow-x:auto;flex-wrap:nowrap}.premiumAdminDashboard .navLinks a{flex:0 0 auto;font-size:11px}.premiumAdminDashboard .premiumAdminHero{padding:35px 0 15px}.premiumAdminDashboard .premiumAdminHero h1{font-size:clamp(39px,12vw,52px)}.premiumAdminDashboard .premiumAdminHero .heroCopy{font-size:14px}.premiumAdminDashboard .premiumAdminMetrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.premiumAdminDashboard .premiumAdminMetrics>.card{padding:14px}.premiumAdminDashboard .premiumAdminMetrics h2{font-size:28px!important}.premiumAdminDashboard .premiumAdminMetrics p{font-size:10px}.premiumAdminDashboard .premiumAdminEditor,.premiumAdminDashboard .premiumAdminCatalog{padding:18px 13px;border-radius:16px}.premiumAdminDashboard .premiumAdminEditor form{grid-template-columns:minmax(0,1fr)!important}.premiumAdminDashboard .premiumAdminEditor form>label,.premiumAdminDashboard .premiumAdminEditor form>.pillars,.premiumAdminDashboard .premiumAdminEditor form>p,.premiumAdminDashboard .premiumAdminEditor form>div{grid-column:1}.premiumAdminDashboard .premiumAdminEditor form>.pillars{grid-template-columns:repeat(2,minmax(0,1fr))}.premiumAdminDashboard .premiumAdminEditor form>div[style*="display: flex"]{display:grid!important}.premiumAdminDashboard .premiumAdminEditor form>div[style*="display: flex"] button{width:100%}.premiumAdminDashboard .premiumAdminCatalog input[type=search]{font-size:14px}.premiumAdminDashboard .premiumAdminCatalog .financeHistory>article{padding:13px;gap:9px}.premiumAdminDashboard .premiumAdminCatalog .financeHistory>article>div>strong{font-size:13px}.premiumAdminDashboard .premiumAdminCatalog .financeHistory>article .financeStatus{font-size:9px;min-width:0}.premiumAdminDashboard .premiumAdminCatalog>div:first-child h2{font-size:22px}.premiumAdminDashboard .premiumAdminCatalog>div:first-child button{width:100%}}
 @media(prefers-reduced-motion:reduce){.premiumAdminDashboard *{scroll-behavior:auto!important;transition:none!important}}
+
+
+/* Paid professional Premium differentiators: applied only from an active subscription entitlement. */
+.premiumAudienceTabs{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+.premiumAudienceTabs button{min-height:42px;cursor:pointer}
+.premiumEntitlementEditor{display:grid;gap:12px;padding:18px;border:1px solid rgba(231,195,63,.22);border-radius:15px;background:rgba(231,195,63,.035)}
+.premiumEntitlementEditor>.eyebrow{color:#e7c33f}
+.premiumFeatureToggle{display:flex!important;align-items:flex-start!important;gap:12px!important;padding:13px;border:1px solid rgba(255,255,255,.1);border-radius:11px;background:rgba(255,255,255,.025)}
+.premiumFeatureToggle input{width:18px;height:18px;flex:0 0 18px;accent-color:#e7c33f;margin-top:2px}
+.premiumFeatureToggle span{display:grid;gap:4px}
+.premiumFeatureToggle strong{color:#f4f4f5;font-size:12px}
+.premiumFeatureToggle small{color:#a0a6b3;font-size:11px;line-height:1.6;font-weight:450}
+.premiumFeaturedCard{position:relative!important;border-color:rgba(231,195,63,.55)!important;box-shadow:0 16px 44px rgba(231,195,63,.09),0 0 0 1px rgba(231,195,63,.08)!important}
+.premiumFeaturedCard.premiumStyle-gold{background:linear-gradient(150deg,rgba(231,195,63,.12),transparent 50%),#111116!important}
+.premiumFeaturedCard.premiumStyle-obsidian{background:linear-gradient(150deg,rgba(148,163,184,.14),transparent 55%),#0a0c11!important;border-color:rgba(203,213,225,.38)!important}
+.premiumFeaturedCard.premiumStyle-signature{background:linear-gradient(150deg,rgba(192,132,252,.13),transparent 55%),#100b16!important;border-color:rgba(192,132,252,.42)!important}
+.premiumPlanBadge{display:inline-flex;align-items:center;justify-content:center;gap:4px;max-width:100%;padding:6px 9px;border:1px solid rgba(231,195,63,.55);border-radius:999px;background:rgba(8,9,12,.88);color:#f5d66f;font-size:9px;font-weight:950;letter-spacing:.04em;line-height:1.3;overflow-wrap:anywhere}
+.commercialVisualTop .premiumPlanBadge{box-shadow:0 6px 18px rgba(0,0,0,.22)}
+.premiumProfileEnabled .commercialAdvertiserBody{background:linear-gradient(180deg,rgba(231,195,63,.035),transparent 50%)}
+.fansHome .fansPremiumPlanTag{position:absolute;z-index:4;top:12px;left:12px;padding:7px 9px;border:1px solid rgba(231,195,63,.65);border-radius:999px;background:rgba(9,9,9,.88);color:#f6d76e;font-size:9px;font-weight:950;letter-spacing:.07em}
+.fansHome .fansPremiumProfileBadge{position:absolute;z-index:4;top:43px;left:12px;max-width:calc(100% - 24px);padding:6px 8px;border:1px solid rgba(231,195,63,.48);border-radius:999px;background:rgba(9,9,9,.86);color:#f7e5a0;font-size:9px;font-weight:850;overflow-wrap:anywhere}
+.fansHome .fansCreatorCard.premiumFeaturedCard{background:linear-gradient(110deg,rgba(231,195,63,.08),rgba(255,255,255,.02))!important}
+.fansHome .fansCreatorCard.premiumStyle-obsidian{border-color:rgba(203,213,225,.38)!important}
+.fansHome .fansCreatorCard.premiumStyle-signature{border-color:rgba(192,132,252,.42)!important}
+.fansHome .fansPremiumMiniTag{position:absolute;right:-5px;bottom:-5px;display:grid;place-items:center;width:22px;height:22px;border:1px solid rgba(231,195,63,.7);border-radius:50%;background:#111;color:#f6d76e;font-size:10px;font-weight:900}
+.fansHome .fansCreatorAvatar{position:relative}
+.fansHome .fansPremiumInlineBadge{display:inline-flex;vertical-align:middle;margin-left:5px;padding:3px 6px;border:1px solid rgba(231,195,63,.45);border-radius:999px;color:#e7c33f;font-size:8px;font-weight:900;letter-spacing:0}
+
+.publicProfile.premiumProfilePage .publicProfileHero{border:1px solid rgba(231,195,63,.46)!important;box-shadow:0 22px 65px rgba(0,0,0,.2),0 0 0 1px rgba(231,195,63,.06)}
+.publicProfile.premiumStyle-gold .publicProfileHero{background:radial-gradient(ellipse at 100% 0,rgba(231,195,63,.16),transparent 55%),linear-gradient(145deg,#0b0c11,#19160c)!important}
+.publicProfile.premiumStyle-obsidian .publicProfileHero{background:radial-gradient(ellipse at 100% 0,rgba(148,163,184,.14),transparent 55%),linear-gradient(145deg,#08090c,#191c22)!important}
+.publicProfile.premiumStyle-signature .publicProfileHero{background:radial-gradient(ellipse at 100% 0,rgba(192,132,252,.15),transparent 55%),linear-gradient(145deg,#0b0710,#201126)!important}
+.publicProfile.premiumProfileFeatured .publicProfileHero{outline:1px solid rgba(231,195,63,.16);outline-offset:3px}
+.publicProfile.premiumProfilePage .profileHeroMedia{box-shadow:inset 0 0 0 1px rgba(231,195,63,.12)}

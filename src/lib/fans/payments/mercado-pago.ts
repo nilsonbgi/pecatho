@@ -5,7 +5,7 @@ type MercadoPagoPreferenceInput = {
   amount: number;
   buyerEmail: string;
   creatorId?: string;
-  productType?: "digital_content" | "profile_media" | "gift" | "premium_subscription" | "fans_boost";
+  productType?: "digital_content" | "profile_media" | "gift" | "premium_subscription" | "professional_premium_subscription" | "fans_boost";
 };
 
 type MercadoPagoPreference = {
@@ -31,11 +31,15 @@ export async function createMercadoPagoPreference(input: MercadoPagoPreferenceIn
       ? "pecatho_gift"
       : productType === "premium_subscription"
         ? "pecatho_customer_premium"
-        : input.creatorId ? "pecatho_fans" : "pecatho_digital_content";
+        : productType === "professional_premium_subscription"
+          ? "pecatho_professional_premium"
+          : input.creatorId ? "pecatho_fans" : "pecatho_digital_content";
 
   const successUrl = productType === "premium_subscription"
     ? `${baseUrl}/painel/cliente?premium=aguardando&order=${encodeURIComponent(input.orderId)}`
-    : `${baseUrl}/fans/checkout/sucesso?order=${encodeURIComponent(input.orderId)}`;
+    : productType === "professional_premium_subscription"
+      ? `${baseUrl}/painel?premium=aguardando&order=${encodeURIComponent(input.orderId)}`
+      : `${baseUrl}/fans/checkout/sucesso?order=${encodeURIComponent(input.orderId)}`;
 
   const response = await fetch("https://api.mercadopago.com/checkout/preferences", {
     method: "POST",
