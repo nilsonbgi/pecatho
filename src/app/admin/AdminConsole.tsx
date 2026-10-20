@@ -129,7 +129,7 @@ export default function AdminConsole({ role }: { role: string }) {
   const nav: [Tab, string][] = [["visao", "Visão geral"], ["anunciantes", "Anunciantes"], ["categorias", "Categorias"], ["localidades", "Localidades"], ["planos", "Planos de publicação"], ["verificacoes", "Verificações"]];
 
   return <main className="shell adminConsoleShell">
-    <nav className="topbar"><div className="brand"><span className="brandMark">P</span><span>Pecatho</span></div><div className="navLinks"><Link href="/anunciantes">Anunciantes</Link><Link href="/painel" className="navCta">Painel</Link></div></nav>
+    <nav className="topbar"><div className="brand"><span className="brandMark">P</span><span>Pecatho</span></div><div className="navLinks"><Link href="/anunciantes">Anunciantes</Link><Link href="/admin/premium">Planos Premium</Link><Link href="/painel" className="navCta">Painel</Link></div></nav>
     <section className="hero" style={{ maxWidth: 1400 }}>
       <div className="eyebrow">ADMINISTRAÇÃO PECATHO</div>
       <h1>Centro de <em>gestão.</em></h1>
