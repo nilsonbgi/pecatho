@@ -141,46 +141,119 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Não foi possível conciliar o pagamento." }, { status: 500 });
   }
 
-  // Mercado Pago pode manter o pagamento como approved após um reembolso parcial.
-  // Primeiro conciliamos a venda normalmente; depois persistimos o total acumulado
-  // reembolsado para acionar a reversão proporcional da comissão de afiliado.
-  const refundedAmountRaw = Number(payment.transaction_amount_refunded ?? 0);
-  const transactionAmount = Number(payment.transaction_amount);
-  const refundedAmount = Number.isFinite(refundedAmountRaw)
-    ? Math.min(Math.max(refundedAmountRaw, 0), transactionAmount)
-    : 0;
-  if (status === "paid" && refundedAmount > 0 && refundedAmount < transactionAmount) {
-    const { data: storedPayment, error: storedPaymentError } = await admin
-      .from("payments")
-      .select("id,amount")
-      .eq("order_id", orderId)
-      .eq("provider", "mercadopago")
-      .eq("provider_payment_id", String(paymentId))
-      .maybeSingle();
+  // O endpoint de pagamento não garante um campo acumulado de reembolso em todas as respostas.
+  // Consultamos a lista oficial de reembolsos e somamos somente os efetivamente aprovados.
+  // Se a consulta falhar, devolvemos erro para que o webhook possa ser reenviado, sem
+  // marcar silenciosamente um reembolso como conciliado quando o total é desconhecido.
+  if (status === "paid") {
+    const refundsResponse = await fetch(
+      "https://api.mercadopago.com/v1/payments/" + encodeURIComponent(String(paymentId)) + "/refunds",
+      {
+        headers: { Authorization: "Bearer " + accessToken },
+        cache: "no-store",
+      },
+    );
 
-    if (storedPaymentError || !storedPayment) {
-      console.error("Pagamento conciliado, mas não foi possível localizar o registro para o reembolso parcial:", {
-        orderId, paymentId: String(paymentId), code: storedPaymentError?.code,
+    if (!refundsResponse.ok) {
+      console.error("Falha ao consultar reembolsos Mercado Pago:", {
+        orderId,
+        paymentId: String(paymentId),
+        status: refundsResponse.status,
       });
-      return NextResponse.json({ error: "Pagamento conciliado, mas o reembolso parcial precisa de nova conciliação." }, { status: 500 });
-    }
-    if (Math.abs(Number(storedPayment.amount) - transactionAmount) > 0.01) {
-      return NextResponse.json({ error: "O valor reembolsado não corresponde ao pagamento registrado." }, { status: 409 });
+      return NextResponse.json(
+        { error: "Pagamento conciliado, mas não foi possível confirmar os reembolsos. A notificação precisa ser reenviada." },
+        { status: 502 },
+      );
     }
 
-    const { error: refundUpdateError } = await admin
-      .from("payments")
-      .update({
-        status: "partially_refunded",
-        refunded_amount: refundedAmount,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", storedPayment.id);
-    if (refundUpdateError) {
-      console.error("Falha ao registrar reembolso parcial Mercado Pago:", {
-        orderId, paymentId: String(paymentId), code: refundUpdateError.code,
+    const refundsPayload: unknown = await refundsResponse.json().catch(() => null);
+    const refunds = Array.isArray(refundsPayload)
+      ? refundsPayload
+      : refundsPayload && typeof refundsPayload === "object" &&
+          Array.isArray((refundsPayload as Record<string, unknown>).results)
+        ? (refundsPayload as { results: unknown[] }).results
+        : null;
+
+    if (!refunds) {
+      console.error("Resposta inesperada ao consultar reembolsos Mercado Pago:", {
+        orderId,
+        paymentId: String(paymentId),
       });
-      return NextResponse.json({ error: "Pagamento conciliado, mas o reembolso parcial precisa de nova conciliação." }, { status: 500 });
+      return NextResponse.json(
+        { error: "Resposta de reembolsos inválida. A conciliação precisa ser repetida." },
+        { status: 502 },
+      );
+    }
+
+    const refundedAmount = refunds.reduce((sum: number, refund: unknown) => {
+      if (!refund || typeof refund !== "object" || Array.isArray(refund)) return sum;
+      const item = refund as Record<string, unknown>;
+      const refundStatus = typeof item.status === "string" ? item.status.toLowerCase() : "";
+      if (!["approved", "processed", "accredited"].includes(refundStatus)) return sum;
+      const amount = Number(item.amount);
+      return Number.isFinite(amount) && amount > 0 ? sum + amount : sum;
+    }, 0);
+
+    const transactionAmount = Number(payment.transaction_amount);
+    const normalizedRefundedAmount = Math.min(Math.max(Math.round(refundedAmount * 100) / 100, 0), transactionAmount);
+
+    if (normalizedRefundedAmount > 0) {
+      const { data: storedPayment, error: storedPaymentError } = await admin
+        .from("payments")
+        .select("id,amount,refunded_amount,status")
+        .eq("order_id", orderId)
+        .eq("provider", "mercadopago")
+        .eq("provider_payment_id", String(paymentId))
+        .maybeSingle();
+
+      if (storedPaymentError || !storedPayment) {
+        console.error("Pagamento conciliado, mas não foi possível localizar o registro para registrar o reembolso:", {
+          orderId,
+          paymentId: String(paymentId),
+          code: storedPaymentError?.code,
+        });
+        return NextResponse.json(
+          { error: "Pagamento conciliado, mas o reembolso precisa de nova conciliação." },
+          { status: 500 },
+        );
+      }
+
+      if (Math.abs(Number(storedPayment.amount) - transactionAmount) > 0.01) {
+        return NextResponse.json(
+          { error: "O valor reembolsado não corresponde ao pagamento registrado." },
+          { status: 409 },
+        );
+      }
+
+      const fullRefund = normalizedRefundedAmount >= transactionAmount;
+      const currentRefundedAmount = Number(storedPayment.refunded_amount ?? 0);
+      const currentStatus = storedPayment.status;
+      const refundStateAlreadyMatches =
+        Math.abs(currentRefundedAmount - normalizedRefundedAmount) < 0.005 &&
+        currentStatus === (fullRefund ? "refunded" : "partially_refunded");
+
+      if (!refundStateAlreadyMatches) {
+        const { error: refundUpdateError } = await admin
+          .from("payments")
+          .update({
+            status: fullRefund ? "refunded" : "partially_refunded",
+            refunded_amount: normalizedRefundedAmount,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", storedPayment.id);
+
+        if (refundUpdateError) {
+          console.error("Falha ao registrar reembolso Mercado Pago:", {
+            orderId,
+            paymentId: String(paymentId),
+            code: refundUpdateError.code,
+          });
+          return NextResponse.json(
+            { error: "Pagamento conciliado, mas o reembolso precisa de nova conciliação." },
+            { status: 500 },
+          );
+        }
+      }
     }
   }
 
