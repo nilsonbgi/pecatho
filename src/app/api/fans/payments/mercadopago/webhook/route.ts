@@ -233,6 +233,31 @@ export async function POST(request: Request) {
         currentStatus === (fullRefund ? "refunded" : "partially_refunded");
 
       if (!refundStateAlreadyMatches) {
+        if (fullRefund) {
+          // A liquidação normal também precisa atualizar pedido/assinatura e executar
+          // os estornos dos demais livros financeiros, não apenas o registro payments.
+          const { error: fullRefundSettlementError } = await admin.rpc(settlementFunction, {
+            p_order_id: orderId,
+            p_provider: "mercadopago",
+            p_provider_payment_id: String(paymentId),
+            p_payment_status: "refunded",
+            p_payment_method: paymentMethod,
+            p_provider_fee: providerFee,
+          });
+
+          if (fullRefundSettlementError) {
+            console.error("Falha na liquidação do reembolso integral Mercado Pago:", {
+              orderId,
+              paymentId: String(paymentId),
+              code: fullRefundSettlementError.code,
+            });
+            return NextResponse.json(
+              { error: "Reembolso integral identificado, mas a liquidação precisa ser repetida." },
+              { status: 500 },
+            );
+          }
+        }
+
         const { error: refundUpdateError } = await admin
           .from("payments")
           .update({
