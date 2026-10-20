@@ -113,9 +113,12 @@ export default function AdminCustomerPremiumPage() {
         : raw.includes("INVALID_PLAN_KEY") ? "A chave deve usar 2 a 50 caracteres: letras minúsculas, números, hífen ou sublinhado."
         : raw.includes("INVALID_PLAN_PRICE") ? "O preço deve ser maior que zero e não ultrapassar R$ 10.000,00."
         : raw.includes("INVALID_PLAN_DURATION") ? "A duração deve ficar entre 1 e 365 dias."
-        : raw.includes("INVALID_PLAN_BENEFIT") ? "Revise os benefícios: cada linha deve conter de 1 a 240 caracteres, com até 20 itens."
+        : raw.includes("INVALID_PLAN_BENEFITS") || raw.includes("INVALID_PLAN_BENEFIT_ITEM") || raw.includes("INVALID_PLAN_BENEFIT") ? "Revise os benefícios: cada linha deve conter de 1 a 240 caracteres, com até 20 itens."
+        : raw.includes("PREMIUM_PLAN_NOT_FOUND") ? "O plano selecionado não foi encontrado. Atualize a lista e tente novamente."
         : raw.includes("duplicate key") ? "Já existe um plano com essa chave."
-        : "Não foi possível salvar o plano. Confira os campos e se a migração administrativa foi aplicada.");
+        : raw.includes("admin_save_pecatho_customer_premium_plan") || raw.includes("schema cache") || raw.includes("Could not find the function") ? "A função administrativa do Premium não está disponível no banco. A migration supabase/migrations/20261014153000_customer_premium_admin_catalog.sql precisa estar aplicada no Supabase."
+        : raw.includes("permission denied") || raw.includes("insufficient_privilege") ? "O banco recusou a operação por permissão. Verifique a função administrativa e as permissões do papel autenticado."
+        : "Não foi possível salvar o plano. Confira os campos e a configuração administrativa do banco.");
     } finally {
       setBusy(false);
     }
