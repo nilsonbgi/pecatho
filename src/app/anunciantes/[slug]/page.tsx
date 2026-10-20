@@ -23,7 +23,7 @@ type AttributeValue = { attribute_id: string; value: unknown };
 type Service = { id: string; name: string; slug: string; description: string | null; sort_order: number };
 type ProfileService = { service_id: string; selected: boolean; notes: string | null };
 type FansCreator = { slug: string; display_name: string; bio: string | null; status: string };
-type PremiumFeatures = { featured_card: boolean; search_priority: boolean; premium_profile: boolean; profile_badge: boolean; card_style: string; badge_label: string | null; plan_name: string | null; ends_at: string };
+type PremiumFeatures = { featured_card: boolean; search_priority: boolean; premium_profile: boolean; profile_badge: boolean; card_style: string; badge_label: string | null };
 
 type GalleryItem = Media & { url: string | null; previewUrl: string | null; unlockedUrl?: string | null };
 
