@@ -36,7 +36,6 @@ type PublicFansCreator = {
   premium_profile_badge?: boolean;
   premium_card_style?: string | null;
   premium_badge_label?: string | null;
-  premium_plan_name?: string | null;
 };
 
 function summarizeCreatorBio(value: string | null, maxLength = 132): string {
