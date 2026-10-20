@@ -5,7 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/browser";
 
 type PricingPeriod = { minutes: number; price: number; period: string; starting_from?: boolean };
-type Advertiser = { id: string; slug: string | null; title: string | null; display_name: string | null; summary: string | null; city_id: number | null; state_id: number | null; category_id: number | null; verification_status: string | null; pricing: Record<string, unknown> | null; city_name: string | null; state_uf: string | null; total_count: number | null; premium_featured?: boolean; premium_search_priority?: boolean; premium_profile?: boolean; premium_profile_badge?: boolean; premium_card_style?: string | null; premium_badge_label?: string | null; premium_plan_name?: string | null };
+type Advertiser = { id: string; slug: string | null; title: string | null; display_name: string | null; summary: string | null; city_id: number | null; state_id: number | null; category_id: number | null; verification_status: string | null; pricing: Record<string, unknown> | null; city_name: string | null; state_uf: string | null; total_count: number | null; premium_featured?: boolean; premium_search_priority?: boolean; premium_profile?: boolean; premium_profile_badge?: boolean; premium_card_style?: string | null; premium_badge_label?: string | null };
 type Category = { id: number; name: string };
 type State = { id: number; uf: string; name: string };
 type City = { id: number; name: string; state_id: number };
