@@ -699,72 +699,79 @@ revoke all on function public.admin_save_pecatho_customer_premium_plan(uuid,text
 
 -- Use the period snapshot captured at checkout; later plan edits never change a paid order.
 create or replace function public.settle_pecatho_customer_premium_checkout(
-  p_order_id uuid, p_provider text, p_provider_payment_id text, p_payment_status payment_status,
-  p_payment_method text default null, p_provider_fee numeric default 0
-) returns jsonb
-language plpgsql security definer set search_path = pg_catalog, public
-as $function$
-declare
+  p_order_id uuid,
+  p_provider text,
+  p_provider_payment_id text,
+  p_payment_status public.payment_status,
+  p_payment_method text DEFAULT NULL,
+  p_provider_fee numeric DEFAULT 0
+) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public
+AS $function$
+DECLARE
   v_order public.orders%rowtype;
   v_payment public.payments%rowtype;
   v_subscription public.pecatho_customer_premium_subscriptions%rowtype;
   v_plan public.pecatho_customer_premium_plans%rowtype;
   v_start timestamptz;
   v_end timestamptz;
-begin
-  if p_order_id is null or nullif(trim(p_provider),'') is null or nullif(trim(p_provider_payment_id),'') is null then
-    raise exception 'INVALID_PREMIUM_SETTLEMENT_REQUEST';
-  end if;
-  if coalesce(p_provider_fee,0) < 0 then raise exception 'INVALID_PROVIDER_FEE'; end if;
+BEGIN
+  IF p_order_id IS NULL OR nullif(trim(p_provider),'') IS NULL OR nullif(trim(p_provider_payment_id),'') IS NULL THEN
+    RAISE EXCEPTION 'INVALID_PREMIUM_SETTLEMENT_REQUEST';
+  END IF;
+  IF coalesce(p_provider_fee,0) < 0 THEN RAISE EXCEPTION 'INVALID_PROVIDER_FEE'; END IF;
 
-  select * into v_order from public.orders where id=p_order_id for update;
-  if not found or v_order.metadata->>'product_type' <> 'premium_subscription' then raise exception 'PREMIUM_ORDER_NOT_FOUND'; end if;
-  select * into v_payment from public.payments where order_id=p_order_id order by created_at desc limit 1 for update;
-  if not found then raise exception 'PAYMENT_NOT_FOUND'; end if;
-  select * into v_subscription from public.pecatho_customer_premium_subscriptions where order_id=p_order_id for update;
-  if not found then raise exception 'PREMIUM_SUBSCRIPTION_NOT_FOUND'; end if;
-  select * into v_plan from public.pecatho_customer_premium_plans where id=v_subscription.plan_id;
-  if not found then raise exception 'PREMIUM_PLAN_NOT_FOUND'; end if;
+  SELECT * INTO v_order FROM public.orders WHERE id=p_order_id FOR UPDATE;
+  IF NOT FOUND OR v_order.metadata->>'product_type' <> 'premium_subscription' THEN RAISE EXCEPTION 'PREMIUM_ORDER_NOT_FOUND'; END IF;
+  SELECT * INTO v_payment FROM public.payments WHERE order_id=p_order_id ORDER BY created_at DESC LIMIT 1 FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'PAYMENT_NOT_FOUND'; END IF;
+  SELECT * INTO v_subscription FROM public.pecatho_customer_premium_subscriptions WHERE order_id=p_order_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'PREMIUM_SUBSCRIPTION_NOT_FOUND'; END IF;
+  SELECT * INTO v_plan FROM public.pecatho_customer_premium_plans WHERE id=v_subscription.plan_id;
+  IF NOT FOUND THEN RAISE EXCEPTION 'PREMIUM_PLAN_NOT_FOUND'; END IF;
 
-  if v_payment.status in ('refunded','chargeback') and p_payment_status not in ('refunded','chargeback') then
-    raise exception 'INVALID_PAYMENT_STATE_TRANSITION';
-  end if;
-  if v_payment.status='paid' and p_payment_status not in ('refunded','chargeback') then
-    return jsonb_build_object('ok',true,'idempotent',true,'status','paid','order_id',p_order_id,
+  IF v_payment.status IN ('refunded','chargeback') AND p_payment_status <> v_payment.status THEN
+    RAISE EXCEPTION 'INVALID_PAYMENT_STATE_TRANSITION';
+  END IF;
+  IF v_payment.status='paid' AND p_payment_status NOT IN ('refunded','chargeback') THEN
+    RETURN jsonb_build_object('ok',true,'idempotent',true,'status','paid','order_id',p_order_id,
       'subscription_id',v_subscription.id,'ends_at',v_subscription.ends_at);
-  end if;
+  END IF;
 
-  if p_payment_status='paid' then
-    select greatest(now(),coalesce(max(ends_at),now())) into v_start
-      from public.pecatho_customer_premium_subscriptions
-      where user_id=v_subscription.user_id and status='active' and ends_at > now();
+  IF p_payment_status='paid' THEN
+    SELECT greatest(now(),coalesce(max(ends_at),now())) INTO v_start
+      FROM public.pecatho_customer_premium_subscriptions
+      WHERE user_id=v_subscription.user_id AND status='active' AND ends_at > now();
     v_end := v_start + make_interval(days => v_subscription.duration_days);
-    update public.payments set provider=p_provider,provider_payment_id=p_provider_payment_id,status='paid',
-      payment_method=p_payment_method,paid_at=coalesce(paid_at,now()),updated_at=now() where id=v_payment.id;
-    update public.orders set status='paid',updated_at=now() where id=v_order.id;
-    update public.pecatho_customer_premium_subscriptions set status='active',starts_at=v_start,ends_at=v_end,
-      updated_at=now() where id=v_subscription.id;
-    return jsonb_build_object('ok',true,'idempotent',false,'status','paid','order_id',p_order_id,
+    UPDATE public.payments SET provider=p_provider,provider_payment_id=p_provider_payment_id,status='paid',
+      payment_method=p_payment_method,provider_fee=round(coalesce(p_provider_fee,0),2),
+      paid_at=coalesce(paid_at,now()),updated_at=now() WHERE id=v_payment.id;
+    UPDATE public.orders SET status='paid',updated_at=now() WHERE id=v_order.id;
+    UPDATE public.pecatho_customer_premium_subscriptions SET status='active',starts_at=v_start,ends_at=v_end,
+      updated_at=now() WHERE id=v_subscription.id;
+    RETURN jsonb_build_object('ok',true,'idempotent',false,'status','paid','order_id',p_order_id,
       'subscription_id',v_subscription.id,'starts_at',v_start,'ends_at',v_end);
-  end if;
+  END IF;
 
-  if p_payment_status in ('refunded','chargeback') then
-    update public.payments set provider=p_provider,provider_payment_id=p_provider_payment_id,status=p_payment_status,
-      payment_method=p_payment_method,updated_at=now() where id=v_payment.id;
-    update public.orders set status='refunded',updated_at=now() where id=v_order.id;
-    update public.pecatho_customer_premium_subscriptions set status=p_payment_status,updated_at=now()
-      where id=v_subscription.id;
-  else
-    update public.payments set provider=p_provider,provider_payment_id=p_provider_payment_id,status=p_payment_status,
-      payment_method=p_payment_method,updated_at=now() where id=v_payment.id;
-    update public.orders set status=case when p_payment_status='failed' then 'failed' when p_payment_status='cancelled' then 'cancelled' else 'awaiting_payment' end,
-      updated_at=now() where id=v_order.id;
-    update public.pecatho_customer_premium_subscriptions set status=case when p_payment_status='failed' then 'cancelled' when p_payment_status='cancelled' then 'cancelled' else 'pending' end,
-      updated_at=now() where id=v_subscription.id;
-  end if;
-  return jsonb_build_object('ok',true,'idempotent',false,'status',p_payment_status,'order_id',p_order_id,
+  IF p_payment_status IN ('refunded','chargeback') THEN
+    UPDATE public.payments SET provider=p_provider,provider_payment_id=p_provider_payment_id,status=p_payment_status,
+      payment_method=p_payment_method,provider_fee=round(coalesce(p_provider_fee,provider_fee,0),2),updated_at=now()
+      WHERE id=v_payment.id;
+    UPDATE public.orders SET status='refunded',updated_at=now() WHERE id=v_order.id;
+    UPDATE public.pecatho_customer_premium_subscriptions SET status=p_payment_status,updated_at=now()
+      WHERE id=v_subscription.id;
+  ELSE
+    UPDATE public.payments SET provider=p_provider,provider_payment_id=p_provider_payment_id,status=p_payment_status,
+      payment_method=p_payment_method,provider_fee=round(coalesce(p_provider_fee,provider_fee,0),2),updated_at=now()
+      WHERE id=v_payment.id;
+    UPDATE public.orders SET status=CASE WHEN p_payment_status='failed' THEN 'failed' WHEN p_payment_status='cancelled' THEN 'cancelled' ELSE 'awaiting_payment' END,
+      updated_at=now() WHERE id=v_order.id;
+    UPDATE public.pecatho_customer_premium_subscriptions SET status=CASE WHEN p_payment_status IN ('failed','cancelled') THEN 'cancelled' ELSE 'pending' END,
+      updated_at=now() WHERE id=v_subscription.id;
+  END IF;
+  RETURN jsonb_build_object('ok',true,'idempotent',false,'status',p_payment_status,'order_id',p_order_id,
     'subscription_id',v_subscription.id);
-end;
+END;
 $function$;
 
 revoke all on function public.settle_pecatho_customer_premium_checkout(uuid,text,text,payment_status,text,numeric) from public, anon, authenticated;
