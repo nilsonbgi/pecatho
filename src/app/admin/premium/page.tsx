@@ -47,13 +47,16 @@ export default function AdminCustomerPremiumPage() {
 
   async function load() {
     setLoadingPlans(true);
-    const { data, error: loadError } = await supabase
-      .from("pecatho_customer_premium_plans")
-      .select("id,plan_key,name,description,price,currency,duration_days,benefits,active,sort_order,updated_at")
-      .order("sort_order", { ascending: true }).order("price", { ascending: true });
-    setLoadingPlans(false);
-    if (loadError) throw loadError;
-    setPlans((data ?? []) as PremiumPlan[]);
+    try {
+      const { data, error: loadError } = await supabase
+        .from("pecatho_customer_premium_plans")
+        .select("id,plan_key,name,description,price,currency,duration_days,benefits,active,sort_order,updated_at")
+        .order("sort_order", { ascending: true }).order("price", { ascending: true });
+      if (loadError) throw loadError;
+      setPlans((data ?? []) as PremiumPlan[]);
+    } finally {
+      setLoadingPlans(false);
+    }
   }
 
   useEffect(() => {
@@ -95,6 +98,8 @@ export default function AdminCustomerPremiumPage() {
     setDurationDays("30");
     setBenefitsText("");
     setActive(false);
+    setError("");
+    setMessage("");
   }
 
   async function save(event: React.FormEvent<HTMLFormElement>) {
