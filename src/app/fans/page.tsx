@@ -70,7 +70,7 @@ export default async function FansPage() {
     { data: creatorPlans },
     { data: creatorOffers },
   ] = await Promise.all([
-    supabase.rpc("get_public_fans_creator_leaderboard", { p_limit: 24 }),
+    supabase.rpc("get_public_fans_creator_leaderboard", { p_limit: 100 }),
     supabase.rpc("get_public_fans_creators_count"),
     supabase.from("fans_plans").select("creator_id").eq("status", "active"),
     supabase.from("fans_live_offers").select("creator_id").eq("status", "active"),
@@ -174,7 +174,7 @@ export default async function FansPage() {
     boostedDiscoveryPosts = [];
   }
 
-  const featuredCreators = creatorsWithFeatures.slice(0, 6);
+  const featuredCreators = [...creatorsWithFeatures.filter((item) => item.premium_featured), ...creatorsWithFeatures.filter((item) => !item.premium_featured)].slice(0, 6);
   const discoveryCreators = creatorsWithFeatures.slice(0, 12);
   const heroCreator = featuredCreators[0] || null;
   const creatorCountLabel = creatorsTotal && creatorsTotal > 0 ? creatorsTotal.toLocaleString("pt-BR") : "0";
