@@ -88,7 +88,6 @@ export default async function FansPage() {
     premium_profile_badge: feature.profile_badge,
     premium_card_style: feature.card_style,
     premium_badge_label: feature.badge_label,
-    premium_plan_name: feature.plan_name,
   }]));
   const creatorsWithFeatures = publicCreators.map((item) => ({ ...item, ...(premiumFeatureMap.get(item.id) ?? {}) }));
   const planMap = new Map<string, number>();
