@@ -46,12 +46,26 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => null);
   const planId = body?.plan_id;
+  const creatorId = body?.creator_id;
   if (typeof planId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(planId)) {
     return NextResponse.json({ error: "Selecione um plano Premium válido." }, { status: 400 });
   }
+  if (creatorId !== undefined && (typeof creatorId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(creatorId))) {
+    return NextResponse.json({ error: "Origem do perfil inválida. Abra novamente o perfil do vendedor." }, { status: 400 });
+  }
 
   const admin = createAdminClient();
-  const { data: intent, error: intentError } = await client.rpc("create_pecatho_customer_premium_checkout", { p_plan_id: planId });
+  if (typeof creatorId === "string") {
+    const { data: creator, error: creatorError } = await admin.from("fans_creators")
+      .select("id,status,user_id").eq("id", creatorId).eq("status", "active").maybeSingle();
+    if (creatorError || !creator || creator.user_id === user.id) {
+      return NextResponse.json({ error: "Não foi possível validar a origem desta contratação Premium." }, { status: 409 });
+    }
+  }
+  const { data: intent, error: intentError } = await client.rpc("create_pecatho_customer_premium_checkout", {
+    p_plan_id: planId,
+    p_creator_id: typeof creatorId === "string" ? creatorId : null,
+  });
   if (intentError || !intent || typeof intent.order_id !== "string") {
     const message = intentError?.message ?? "";
     const customerRequired = message.includes("CUSTOMER_ACCOUNT_REQUIRED");
