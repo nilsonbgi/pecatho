@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/browser";
+import { optimizeImage } from "@/lib/media/optimize-image";
 
-type Media = { id: string; kind: "image" | "video"; storage_bucket: string; storage_path: string; original_filename: string | null; access_type: "public" | "paid"; price: number; currency: string; is_public: boolean; is_primary: boolean; is_featured: boolean; show_in_cards: boolean; show_in_gallery: boolean; moderation_status: string; sort_order: number; previewUrl?: string | null };
+type Media = { id: string; kind: "image" | "video"; storage_bucket: string; storage_path: string; preview_storage_bucket?: string | null; preview_storage_path?: string | null; width?: number | null; height?: number | null; mime_type?: string | null; original_filename: string | null; access_type: "public" | "paid"; price: number; currency: string; is_public: boolean; is_primary: boolean; is_featured: boolean; show_in_cards: boolean; show_in_gallery: boolean; moderation_status: string; sort_order: number; previewUrl?: string | null };
 
 function money(value: string) { const clean = value.replace(/[^0-9,.-]/g, "").replace(/\./g, "").replace(",", "."); const n = Number(clean); return Number.isFinite(n) ? n : 0; }
 
@@ -24,13 +25,15 @@ export default function AdvertiserMediaManager() {
     const { data: profile, error: profileError } = await supabase.from("advertiser_profiles").select("id").eq("user_id", user.id).maybeSingle();
     if (profileError || !profile) { setError("Crie ou salve seu anúncio antes de gerenciar as mídias."); return; }
     setProfileId(profile.id);
-    const { data, error: mediaError } = await supabase.from("profile_media").select("id,kind,storage_bucket,storage_path,original_filename,access_type,price,currency,is_public,is_primary,is_featured,show_in_cards,show_in_gallery,moderation_status,sort_order").eq("profile_id", profile.id).order("sort_order");
+    const { data, error: mediaError } = await supabase.from("profile_media").select("id,kind,storage_bucket,storage_path,preview_storage_bucket,preview_storage_path,width,height,mime_type,original_filename,access_type,price,currency,is_public,is_primary,is_featured,show_in_cards,show_in_gallery,moderation_status,sort_order").eq("profile_id", profile.id).order("sort_order");
     if (mediaError) {
       setError(mediaError.message);
     } else {
       const rows = (data || []) as Media[];
       const withPreviews = await Promise.all(rows.map(async (item) => {
-        const { data: signed } = await supabase.storage.from(item.storage_bucket).createSignedUrl(item.storage_path, 600);
+        const previewBucket = item.preview_storage_bucket || item.storage_bucket;
+        const previewPath = item.preview_storage_path || item.storage_path;
+        const { data: signed } = await supabase.storage.from(previewBucket).createSignedUrl(previewPath, 600);
         return { ...item, previewUrl: signed?.signedUrl || null };
       }));
       setMedia(withPreviews);
@@ -47,16 +50,39 @@ export default function AdvertiserMediaManager() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Sessão expirada.");
       let order = media.length;
-      for (const file of files) {
-        if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) throw new Error("Envie apenas imagens ou vídeos.");
-        if (file.size > 50 * 1024 * 1024) throw new Error("Cada arquivo deve ter no máximo 50 MB.");
-        const kind = file.type.startsWith("video/") ? "video" : "image";
-        const ext = (file.name.split(".").pop() || "bin").toLowerCase();
+      for (const original of files) {
+        if (!original.type.startsWith("image/") && !original.type.startsWith("video/")) throw new Error("Envie apenas imagens ou vídeos.");
+        if (original.size > 50 * 1024 * 1024) throw new Error("Cada arquivo deve ter no máximo 50 MB.");
+        let file = original;
+        let previewFile: File | null = null;
+        let width: number | null = null;
+        let height: number | null = null;
+        if (original.type.startsWith("image/")) {
+          const optimized = await optimizeImage(original, 2200, 0.86);
+          file = optimized.file;
+          previewFile = optimized.preview;
+          width = optimized.width;
+          height = optimized.height;
+        }
+        const kind = original.type.startsWith("video/") ? "video" : "image";
         const bucket = access === "paid" ? "pecatho-profile-paid" : "pecatho-media";
-        const path = `${user.id}/${profileId}/${crypto.randomUUID()}.${ext}`;
+        const path = `${user.id}/${profileId}/${crypto.randomUUID()}.${(file.name.split(".").pop() || "bin").toLowerCase()}`;
         const uploadResult = await supabase.storage.from(bucket).upload(path, file, { contentType: file.type, upsert: false });
         if (uploadResult.error) throw uploadResult.error;
-        const insertResult = await supabase.from("profile_media").insert({ profile_id: profileId, kind, storage_bucket: bucket, storage_path: path, original_filename: file.name, mime_type: file.type, size_bytes: file.size, sort_order: order, access_type: access, price: access === "paid" ? money(price) : 0, currency: "BRL" }).select("id,kind,storage_bucket,storage_path,original_filename,access_type,price,currency,is_public,is_primary,moderation_status,sort_order").single();
+        let previewStorageBucket: string | null = null;
+        let previewStoragePath: string | null = null;
+        if (previewFile) {
+          previewStorageBucket = bucket;
+          previewStoragePath = `${user.id}/${profileId}/${crypto.randomUUID()}.webp`;
+          const previewUpload = await supabase.storage.from(previewStorageBucket).upload(previewStoragePath, previewFile, { contentType: "image/webp", upsert: false });
+          if (previewUpload.error) throw previewUpload.error;
+        }
+        const insertResult = await supabase.from("profile_media").insert({
+          profile_id: profileId, kind, storage_bucket: bucket, storage_path: path,
+          preview_storage_bucket: previewStorageBucket, preview_storage_path: previewStoragePath,
+          original_filename: original.name, mime_type: file.type, size_bytes: file.size,
+          width, height, sort_order: order, access_type: access, price: access === "paid" ? money(price) : 0, currency: "BRL"
+        }).select("id,kind,storage_bucket,storage_path,preview_storage_bucket,preview_storage_path,width,height,mime_type,original_filename,access_type,price,currency,is_public,is_primary,moderation_status,sort_order").single();
         if (insertResult.error) throw insertResult.error;
         order += 1;
       }

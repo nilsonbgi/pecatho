@@ -137,6 +137,11 @@ export default function DigitalContentShowcase({
   }
 
   const visible = compact ? products.slice(0, 3) : products;
+  const productGroups = ([
+    { key: "single_image", title: "Imagens exclusivas", description: "Conteúdos individuais em formato de imagem.", products: visible.filter((product) => product.product_type === "single_image") },
+    { key: "single_video", title: "Vídeos exclusivos", description: "Conteúdos individuais em vídeo.", products: visible.filter((product) => product.product_type === "single_video") },
+    { key: "package", title: "Pacotes de conteúdo", description: "Seleções com mais de um conteúdo.", products: visible.filter((product) => product.product_type === "package") },
+  ]).filter((group) => group.products.length > 0);
   const sellerLabel = ownerType === "creator" ? "criador" : "acompanhante";
   const packageCount = products.filter((product) => product.product_type === "package").length;
   const videoCount = products.filter((product) => product.product_type === "single_video").length;
@@ -244,7 +249,7 @@ export default function DigitalContentShowcase({
           </div>
         </div>
 
-        <div className="mt-5 grid gap-4 md:grid-cols-3">
+        <div className="mt-5 grid gap-7">
           {loading
             ? [1, 2, 3].map((item) => (
                 <div
@@ -252,7 +257,13 @@ export default function DigitalContentShowcase({
                   className="h-72 animate-pulse rounded-2xl border border-white/10 bg-white/5"
                 />
               ))
-            : visible.map((product) => (
+            : productGroups.map((group) => (
+              <section key={group.key} aria-label={group.title}>
+                <header className="mb-3 flex flex-wrap items-end justify-between gap-3 border-b border-amber-200/15 pb-3">
+                  <div><h3 className="text-lg font-black tracking-[-.03em] text-amber-100">{group.title}</h3><p className="mt-1 text-xs leading-5 text-white/50">{group.description}</p></div>
+                  <span className="text-[10px] font-bold text-white/40">{group.products.length} {group.products.length === 1 ? "item" : "itens"}</span>
+                </header>
+                <div className="grid gap-4 md:grid-cols-3">{group.products.map((product) => (
                 <Link
                   key={product.id}
                   href={`/conteudos/${product.id}`}
@@ -323,6 +334,8 @@ export default function DigitalContentShowcase({
                     </div>
                   </div>
                 </Link>
+              ))}</div>
+              </section>
               ))}
         </div>
 

@@ -20,14 +20,14 @@ export default function ParceiroMidias(){
    for(const original of files){
     if(!original.type.startsWith("image/")&&!original.type.startsWith("video/"))throw new Error("Envie apenas imagens ou vídeos.");
     if(original.size>50*1024*1024)throw new Error("Cada arquivo deve ter no máximo 50 MB.");
-    let file=original;let previewFile:File|null=null;
-    if(original.type.startsWith("image/")){const optimized=await optimizeImage(original,2200,0.86);file=optimized.file;previewFile=optimized.preview;}
-    const kind=file.type.startsWith("video/")?"video":"image";
+    let file=original;let previewFile:File|null=null;let width:number|null=null;let height:number|null=null;
+    if(original.type.startsWith("image/")){const optimized=await optimizeImage(original,2200,0.86);file=optimized.file;previewFile=optimized.preview;width=optimized.width;height=optimized.height;}
+    const kind=original.type.startsWith("video/")?"video":"image";
     const path=user.id+"/partners/"+venueId+"/"+crypto.randomUUID()+"."+(file.name.split(".").pop()||"bin").toLowerCase();
     const up=await s.storage.from("pecatho-partner-media").upload(path,file,{contentType:file.type,upsert:false});if(up.error)throw up.error;
     let preview_storage_bucket:string|null=null;let preview_storage_path:string|null=null;
     if(previewFile){preview_storage_bucket="pecatho-partner-media";preview_storage_path=user.id+"/partners/"+venueId+"/"+crypto.randomUUID()+".webp";const pu=await s.storage.from(preview_storage_bucket).upload(preview_storage_path,previewFile,{contentType:"image/webp",upsert:false});if(pu.error)throw pu.error;}
-    const ins=await s.from("partner_venue_media").insert({venue_id:venueId,owner_user_id:user.id,kind,storage_bucket:"pecatho-partner-media",storage_path:path,preview_storage_bucket,preview_storage_path,original_filename:original.name,mime_type:file.type,size_bytes:file.size,sort_order:order,is_public:false}).select("id").single();if(ins.error)throw ins.error;order++;
+    const ins=await s.from("partner_venue_media").insert({venue_id:venueId,owner_user_id:user.id,kind,storage_bucket:"pecatho-partner-media",storage_path:path,preview_storage_bucket,preview_storage_path,original_filename:original.name,mime_type:file.type,size_bytes:file.size,width,height,sort_order:order,is_public:false}).select("id").single();if(ins.error)throw ins.error;order++;
    }
    setMessage("Mídia otimizada e enviada para moderação.");await load();
   }catch(e){setError(e instanceof Error?e.message:"Não foi possível enviar a mídia.")}finally{setBusy(false);e.target.value=""}
