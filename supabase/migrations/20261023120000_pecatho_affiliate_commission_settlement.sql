@@ -223,8 +223,9 @@ END;
 $function$;
 
 DROP TRIGGER IF EXISTS pecatho_affiliate_commission_payment_trigger ON public.payments;
-CREATE TRIGGER pecatho_affiliate_commission_payment_trigger
-AFTER INSERT OR UPDATE OF status ON public.payments
+CREATE CONSTRAINT TRIGGER pecatho_affiliate_commission_payment_trigger
+AFTER INSERT OR UPDATE ON public.payments
+DEFERRABLE INITIALLY DEFERRED
 FOR EACH ROW EXECUTE FUNCTION public.post_pecatho_affiliate_commission();
 
 REVOKE ALL ON FUNCTION public.post_pecatho_affiliate_commission() FROM PUBLIC, anon, authenticated;
