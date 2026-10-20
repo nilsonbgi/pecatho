@@ -92,6 +92,7 @@ export default function PublicAdvertiserPage() {
   useEffect(() => {
     let active = true;
     const supabase = createClient();
+    setPremiumFeatures(null);
     (async () => {
       const { data: p, error: profileError } = await supabase
         .rpc("get_public_advertiser_profile", { p_slug: params.slug })
