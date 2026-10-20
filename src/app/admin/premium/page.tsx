@@ -141,20 +141,20 @@ export default function AdminCustomerPremiumPage() {
   if (!authorized) return <main className="shell"><section className="card"><h1>Acesso restrito</h1><p>Esta área é exclusiva para administradores do Pecatho.</p><Link href="/login" className="primaryButton">Entrar</Link></section></main>;
 
   return (
-    <main className="shell advertiserDashboard">
+    <main className="shell advertiserDashboard premiumAdminDashboard">
       <nav className="topbar"><div className="brand"><span className="brandMark">P</span><span>Pecatho</span></div><div className="navLinks"><Link href="/admin">Administração</Link><Link href="/painel/cliente">Painel do cliente</Link></div></nav>
-      <section className="hero">
+      <section className="hero premiumAdminHero">
         <div className="eyebrow">SUPERADMIN · GESTÃO COMERCIAL</div>
         <h1>Planos <em>Premium</em></h1>
         <p className="heroCopy">Configure preço, duração e benefícios antes de publicar. Planos inativos não são exibidos aos clientes. A ativação da assinatura depende exclusivamente da confirmação de pagamento recebida e validada pelo webhook do Mercado Pago.</p>
         {error && <p role="alert" className="fieldNote" style={{ border: "1px solid rgba(239,68,68,.35)", padding: 12, borderRadius: 12 }}>{error}</p>}
         {message && <p role="status" className="fieldNote" style={{ border: "1px solid rgba(34,197,94,.35)", padding: 12, borderRadius: 12 }}>{message}</p>}
-        <section className="pillars" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", margin: "26px 0 18px" }} aria-label="Resumo do catálogo">
+        <section className="pillars premiumAdminMetrics" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", margin: "26px 0 18px" }} aria-label="Resumo do catálogo">
           <article className="card" style={{ minHeight: 0 }}><div className="eyebrow">CATÁLOGO</div><h2 style={{ marginTop: 0, fontSize: 30 }}>{plans.length}</h2><p>Planos cadastrados</p></article>
           <article className="card" style={{ minHeight: 0 }}><div className="eyebrow">PUBLICADOS</div><h2 style={{ marginTop: 0, fontSize: 30, color: "#86efac" }}>{activeCount}</h2><p>Disponíveis no catálogo, conforme as regras da plataforma</p></article>
           <article className="card" style={{ minHeight: 0 }}><div className="eyebrow">INATIVOS</div><h2 style={{ marginTop: 0, fontSize: 30 }}>{inactiveCount}</h2><p>Preservados para edição ou republicação</p></article>
         </section>
-        <section className="card" id="editor">
+        <section className="card premiumAdminEditor" id="editor">
           <h2>{editingId ? "Editar plano" : "Cadastrar novo plano"}</h2>
           <form onSubmit={(event) => void save(event)} style={{ display: "grid", gap: 14 }}>
             <label>Chave única do plano<input required minLength={2} maxLength={50} pattern="[a-z0-9][a-z0-9_-]{1,49}" value={planKey} onChange={(event) => setPlanKey(event.target.value)} placeholder="premium-mensal" /></label>
@@ -173,7 +173,7 @@ export default function AdminCustomerPremiumPage() {
             </div>
           </form>
         </section>
-        <section className="card" id="catalogo">
+        <section className="card premiumAdminCatalog" id="catalogo">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}><h2>Planos cadastrados</h2><button type="button" className="secondaryButton" disabled={loadingPlans} onClick={() => void load()}>{loadingPlans ? "Atualizando…" : "Atualizar catálogo"}</button></div>
           <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(130px, 180px)", gap: 10, margin: "16px 0" }}>
             <input aria-label="Buscar planos" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome, chave ou benefício" style={{ minWidth: 0, width: "100%", background: "#0b0d12", color: "#f6f7fb", border: "1px solid rgba(255,255,255,.14)", borderRadius: 10, padding: "12px 14px" }} />
