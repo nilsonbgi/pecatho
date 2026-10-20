@@ -145,7 +145,7 @@ export async function POST(request: Request) {
   // Consultamos a lista oficial de reembolsos e somamos somente os efetivamente aprovados.
   // Se a consulta falhar, devolvemos erro para que o webhook possa ser reenviado, sem
   // marcar silenciosamente um reembolso como conciliado quando o total é desconhecido.
-  if (status === "paid") {
+  if (status === "paid" || status === "refunded") {
     const refundsResponse = await fetch(
       "https://api.mercadopago.com/v1/payments/" + encodeURIComponent(String(paymentId)) + "/refunds",
       {
@@ -195,7 +195,7 @@ export async function POST(request: Request) {
     }, 0);
 
     const transactionAmount = Number(payment.transaction_amount);
-    const normalizedRefundedAmount = Math.min(Math.max(Math.round(refundedAmount * 100) / 100, 0), transactionAmount);
+    // O estado terminal "refunded" do pagamento é confirmação do reembolso integral,\n    // mesmo se a lista de reembolsos ainda estiver temporariamente vazia/incompleta.\n    const normalizedRefundedAmount = status === "refunded"\n      ? transactionAmount\n      : Math.min(Math.max(Math.round(refundedAmount * 100) / 100, 0), transactionAmount);
 
     if (normalizedRefundedAmount > 0) {
       const { data: storedPayment, error: storedPaymentError } = await admin
