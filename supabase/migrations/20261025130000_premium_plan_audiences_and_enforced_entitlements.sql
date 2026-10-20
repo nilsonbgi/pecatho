@@ -719,6 +719,13 @@ declare
   v_badge_label text;
   v_sort_order integer;
 begin
+  if not exists (
+    select 1 from public.user_roles
+    where user_id=auth.uid() and role in ('super_admin','admin')
+  ) then
+    raise exception 'ADMIN_REQUIRED';
+  end if;
+
   if p_plan_id is not null then
     select * into v_existing
     from public.pecatho_customer_premium_plans
