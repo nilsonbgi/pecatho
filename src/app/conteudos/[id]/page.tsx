@@ -29,6 +29,7 @@ type Product = {
   cover_url: string | null;
   file_count: number;
   media_types: string[];
+  media_groups: Array<{ key:string; media_type:string; title:string; count:number; total_bytes:number; total_duration_seconds:number }>;
   owner_name: string;
   owner_slug: string;
 };
@@ -395,6 +396,24 @@ export default function DigitalContentProductPage() {
                   </span>
                 ))}
               </div>
+            )}
+
+            {product.media_groups?.length > 0 && (
+              <section className="mt-6 rounded-2xl border border-amber-200/15 bg-amber-300/[.035] p-4">
+                <div className="text-[10px] font-black uppercase tracking-[.16em] text-amber-200/75">Conteúdo organizado por formato</div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {product.media_groups.map((group) => (
+                    <div key={group.key} className="flex items-center justify-between gap-3 rounded-xl border border-white/[.07] bg-black/20 px-3 py-3">
+                      <div className="min-w-0">
+                        <p className="text-xs font-black text-white">{group.title}</p>
+                        <p className="mt-1 text-[10px] text-white/45">{group.total_duration_seconds > 0 ? Math.round(group.total_duration_seconds / 60) + " min aprox. de vídeo" : "Formato original preservado"}</p>
+                      </div>
+                      <span className="shrink-0 rounded-full border border-amber-200/15 bg-amber-300/[.08] px-2.5 py-1 text-[10px] font-black text-amber-100">{group.count} {group.count === 1 ? "arquivo" : "arquivos"}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-3 text-[10px] leading-5 text-white/40">As dimensões e os arquivos originais permanecem privados até a confirmação da compra.</p>
+              </section>
             )}
 
             <section className="mt-7">
