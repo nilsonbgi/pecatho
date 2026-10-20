@@ -311,21 +311,19 @@ returns table (
   premium_profile boolean,
   profile_badge boolean,
   card_style text,
-  badge_label text,
-  plan_name text,
-  ends_at timestamptz
+  badge_label text
 )
 language sql stable security definer set search_path = pg_catalog, public
 as $function$
   with candidates as (
-    select ap.id as entity_id, s.feature_flags, s.card_style, s.badge_label, s.plan_name, s.ends_at
+    select ap.id as entity_id, s.feature_flags, s.card_style, s.badge_label, s.ends_at
     from public.advertiser_profiles ap
     join public.pecatho_professional_premium_subscriptions s on s.user_id=ap.user_id
       and s.audience='companion' and s.status='active' and s.starts_at<=now() and s.ends_at>now()
     join public.pecatho_customer_premium_plans pl on pl.id=s.plan_id and pl.audience='companion'
     where p_audience='companion' and ap.id=any(coalesce(p_entity_ids,'{}'::uuid[])) and ap.status::text='published'
     union all
-    select c.id as entity_id, s.feature_flags, s.card_style, s.badge_label, s.plan_name, s.ends_at
+    select c.id as entity_id, s.feature_flags, s.card_style, s.badge_label, s.ends_at
     from public.fans_creators c
     join public.pecatho_professional_premium_subscriptions s on s.user_id=c.user_id
       and s.audience='content_creator' and s.status='active' and s.starts_at<=now() and s.ends_at>now()
@@ -339,7 +337,7 @@ as $function$
     coalesce((l.feature_flags->>'search_priority')::boolean,false),
     coalesce((l.feature_flags->>'premium_profile')::boolean,false),
     coalesce((l.feature_flags->>'profile_badge')::boolean,false),
-    l.card_style, l.badge_label, l.plan_name, l.ends_at
+    l.card_style, l.badge_label
   from latest l;
 $function$;
 
