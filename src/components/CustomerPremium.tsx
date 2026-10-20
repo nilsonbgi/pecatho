@@ -62,10 +62,12 @@ export default function CustomerPremium() {
     setBuying(plan.id);
     setError("");
     try {
+      const params = new URLSearchParams(window.location.search);
+      const creatorId = params.get("creator_id");
       const response = await fetch("/api/cliente/premium", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan_id: plan.id }),
+        body: JSON.stringify({ plan_id: plan.id, ...(creatorId ? { creator_id: creatorId } : {}) }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || "Não foi possível iniciar o pagamento.");
