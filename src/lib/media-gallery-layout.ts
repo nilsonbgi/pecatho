@@ -30,7 +30,7 @@ const ASPECT_BUCKETS: AspectBucket[] = [
   { key: "landscape-16-9", title: "Horizontal · 16:9", ratio: 16 / 9 },
 ];
 
-function isGif(item: GalleryMediaShape): boolean {
+export function isGifMedia(item: GalleryMediaShape): boolean {
   return /image\/gif/i.test(item.mime_type || "") || /\.gif$/i.test(item.original_filename || "");
 }
 
@@ -59,7 +59,7 @@ export function groupGalleryMedia<T extends GalleryMediaShape>(items: T[]): Gall
 
   for (const item of items) {
     const kind: "image" | "video" = item.kind === "video" ? "video" : "image";
-    const gif = kind === "image" && isGif(item);
+    const gif = kind === "image" && isGifMedia(item);
     const aspect = aspectBucket(item);
     const key = gif ? "gif" : `${kind}:${aspect?.key || "original"}`;
     const title = gif
