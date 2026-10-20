@@ -13,8 +13,6 @@ create table if not exists public.partner_store_products (
   sort_order integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  constraint partner_store_products_owner_venue_fk foreign key (venue_id, owner_user_id)
-    references public.partner_venues(id, owner_user_id) on delete cascade
 );
 
 create index if not exists partner_store_products_public_idx
