@@ -45,7 +45,7 @@ export default async function FansCreatorPublicPage({params}:Props){
   const customerFeatures=premiumSubscription?.feature_flags as Record<string,unknown>|null;
   hasActiveCustomerPremium=customerFeatures?.private_seller_contact===true;
  }
- let professionalFeatures: {featured_card:boolean;search_priority:boolean;premium_profile:boolean;profile_badge:boolean;card_style:string;badge_label:string|null;plan_name:string|null;ends_at:string}|null=null;
+ let professionalFeatures: {featured_card:boolean;search_priority:boolean;premium_profile:boolean;profile_badge:boolean;card_style:string;badge_label:string|null}|null=null;
  if(admin){
   const {data:featureRows}=await admin.rpc("get_public_professional_plan_features",{p_entity_ids:[creator.id],p_audience:"content_creator"});
   professionalFeatures=Array.isArray(featureRows)&&featureRows.length?featureRows[0]:null;
