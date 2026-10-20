@@ -7,6 +7,7 @@ export type GalleryMediaShape = {
   height?: number | null;
   mime_type?: string | null;
   original_filename?: string | null;
+  storage_path?: string | null;
 };
 
 export type GalleryMediaGroup<T extends GalleryMediaShape> = {
@@ -31,7 +32,7 @@ const ASPECT_BUCKETS: AspectBucket[] = [
 ];
 
 export function isGifMedia(item: GalleryMediaShape): boolean {
-  return /image\/gif/i.test(item.mime_type || "") || /\.gif$/i.test(item.original_filename || "");
+  return /image\/gif/i.test(item.mime_type || "") || /\.gif$/i.test(item.original_filename || "") || /\.gif(?:$|[?#])/i.test(item.storage_path || "");
 }
 
 function aspectBucket(item: GalleryMediaShape): AspectBucket | null {
