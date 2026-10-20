@@ -195,7 +195,11 @@ export async function POST(request: Request) {
     }, 0);
 
     const transactionAmount = Number(payment.transaction_amount);
-    // O estado terminal "refunded" do pagamento é confirmação do reembolso integral,\n    // mesmo se a lista de reembolsos ainda estiver temporariamente vazia/incompleta.\n    const normalizedRefundedAmount = status === "refunded"\n      ? transactionAmount\n      : Math.min(Math.max(Math.round(refundedAmount * 100) / 100, 0), transactionAmount);
+    // O estado terminal "refunded" do pagamento é confirmação do reembolso integral,
+    // mesmo se a lista de reembolsos ainda estiver temporariamente vazia/incompleta.
+    const normalizedRefundedAmount = status === "refunded"
+      ? transactionAmount
+      : Math.min(Math.max(Math.round(refundedAmount * 100) / 100, 0), transactionAmount);
 
     if (normalizedRefundedAmount > 0) {
       const { data: storedPayment, error: storedPaymentError } = await admin
