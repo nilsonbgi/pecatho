@@ -126,7 +126,7 @@ export default function AcompanhantesPage() {
         s.from("advertiser_profiles").select("id,availability").in("id", ids),
         s.rpc("get_public_professional_plan_features", { p_entity_ids: ids, p_audience: "companion" })
       ]);
-      const premiumById = new Map((premiumRows ?? []).map((feature) => [feature.entity_id, { premium_featured: feature.featured_card, premium_search_priority: feature.search_priority, premium_profile: feature.premium_profile, premium_profile_badge: feature.profile_badge, premium_card_style: feature.card_style, premium_badge_label: feature.badge_label, premium_plan_name: feature.plan_name }]));
+      const premiumById = new Map(((premiumRows ?? []) as PublicPremiumFeature[]).map((feature) => [feature.entity_id, { premium_featured: feature.featured_card, premium_search_priority: feature.search_priority, premium_profile: feature.premium_profile, premium_profile_badge: feature.profile_badge, premium_card_style: feature.card_style, premium_badge_label: feature.badge_label, premium_plan_name: feature.plan_name }]));
       const byProfile = new Map<string, Media>();
       const mediaCounts = new Map<string, number>();
       const videoCounts = new Map<string, number>();
