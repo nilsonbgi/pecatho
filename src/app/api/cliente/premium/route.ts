@@ -70,13 +70,16 @@ export async function POST(request: Request) {
     const message = intentError?.message ?? "";
     const customerRequired = message.includes("CUSTOMER_ACCOUNT_REQUIRED");
     const unavailable = message.includes("PREMIUM_PLAN_UNAVAILABLE");
+    const invalidAttribution = message.includes("PREMIUM_ATTRIBUTION_CREATOR_INVALID");
     return NextResponse.json({
       error: customerRequired
         ? "O Premium está disponível para contas de cliente."
         : unavailable
           ? "Este plano não está mais disponível."
-          : "Não foi possível iniciar a contratação. Confirme se a migração do Premium foi aplicada.",
-    }, { status: customerRequired ? 403 : unavailable ? 409 : 503 });
+          : invalidAttribution
+            ? "O perfil de origem não está mais disponível para atribuição."
+            : "Não foi possível iniciar a contratação. Confirme se a migration de atribuição Premium foi aplicada.",
+    }, { status: customerRequired ? 403 : unavailable || invalidAttribution ? 409 : 503 });
   }
 
   const { data: order, error: orderError } = await admin
