@@ -1318,3 +1318,51 @@
 .profileGalleryGroup .profileMediaVisual{height:auto;min-height:0;max-height:min(72vh,760px)}
 .profileGalleryGroup .profileMediaVisual>img,.profileGalleryGroup .profileMediaVisual>video{height:100%;max-height:min(72vh,760px);object-fit:contain;background:#050506}
 @media(max-width:640px){.profileGalleryGroups{gap:20px}.profileGalleryGroup .profileGallery{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.profileGalleryGroup .profileMediaCard{border-radius:12px}.profileGalleryGroupHeading h3{font-size:14px}.profileGalleryGroupHeading p{font-size:10px}.profileGalleryGroup .paidOverlay{padding:9px}.profileGalleryGroup .paidOverlay strong{font-size:17px}.profileGalleryGroup .paidOverlay button{font-size:10px}}
+
+
+/* Premium admin console: scoped visual hierarchy and responsive management workspace. */
+.premiumAdminDashboard{--premium-admin-gold:#e7c33f;max-width:1360px;padding-bottom:56px}
+.premiumAdminDashboard .topbar{min-height:76px;height:auto;gap:14px;flex-wrap:wrap}
+.premiumAdminDashboard .brandMark{background:var(--premium-admin-gold);color:#111;box-shadow:0 0 0 1px rgba(231,195,63,.2)}
+.premiumAdminDashboard .navLinks{gap:9px;flex-wrap:wrap}
+.premiumAdminDashboard .navLinks a{padding:9px 12px;border:1px solid rgba(255,255,255,.09);border-radius:10px}
+.premiumAdminDashboard .premiumAdminHero{max-width:none;width:100%;padding:clamp(32px,5vw,58px) 0 30px}
+.premiumAdminDashboard .premiumAdminHero .eyebrow,.premiumAdminDashboard .premiumAdminEditor>.premiumAdminSectionTitle{color:var(--premium-admin-gold)}
+.premiumAdminDashboard .premiumAdminHero h1{font-size:clamp(42px,6vw,70px);letter-spacing:-.06em}
+.premiumAdminDashboard .premiumAdminHero h1 em{color:var(--premium-admin-gold)}
+.premiumAdminDashboard .premiumAdminHero .heroCopy{max-width:900px;font-size:clamp(15px,1.6vw,18px);line-height:1.8}
+.premiumAdminDashboard .premiumAdminMetrics{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:20px 0 22px!important}
+.premiumAdminDashboard .premiumAdminMetrics>.card{min-width:0;min-height:0;padding:21px;border-color:rgba(231,195,63,.14);background:radial-gradient(ellipse at 100% 0,rgba(231,195,63,.06),transparent 55%),linear-gradient(145deg,#171820,#101116)}
+.premiumAdminDashboard .premiumAdminMetrics .eyebrow{margin-bottom:11px;color:#a9a18a;font-size:10px}
+.premiumAdminDashboard .premiumAdminMetrics h2{margin:0 0 7px!important;color:#f8f4e6;font-size:clamp(29px,3vw,38px)!important;letter-spacing:-.05em}
+.premiumAdminDashboard .premiumAdminMetrics p{font-size:12px;line-height:1.6;color:#9299a8}
+.premiumAdminDashboard .premiumAdminEditor,.premiumAdminDashboard .premiumAdminCatalog{max-width:none;min-width:0;min-height:0;margin-top:18px;padding:clamp(19px,3vw,30px);border-color:rgba(255,255,255,.1);border-radius:19px;background:linear-gradient(150deg,#171820,#101116 76%);box-shadow:0 16px 44px rgba(0,0,0,.14)}
+.premiumAdminDashboard .premiumAdminEditor h2,.premiumAdminDashboard .premiumAdminCatalog h2{color:#f7f5ef;font-size:clamp(22px,2.5vw,29px);letter-spacing:-.04em}
+.premiumAdminDashboard .premiumAdminEditor form{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:15px!important;margin-top:20px}
+.premiumAdminDashboard .premiumAdminEditor form>label,.premiumAdminDashboard .premiumAdminEditor form>.pillars,.premiumAdminDashboard .premiumAdminEditor form>p,.premiumAdminDashboard .premiumAdminEditor form>div{min-width:0}
+.premiumAdminDashboard .premiumAdminEditor form>label{display:grid;gap:8px;color:#d4d7df;font-size:12px;font-weight:700}
+.premiumAdminDashboard .premiumAdminEditor form>label:has(textarea),.premiumAdminDashboard .premiumAdminEditor form>.pillars,.premiumAdminDashboard .premiumAdminEditor form>p,.premiumAdminDashboard .premiumAdminEditor form>div{grid-column:1/-1}
+.premiumAdminDashboard .premiumAdminEditor form input:not([type=checkbox]),.premiumAdminDashboard .premiumAdminEditor form textarea,.premiumAdminDashboard .premiumAdminCatalog input[type=search],.premiumAdminDashboard .premiumAdminCatalog select{box-sizing:border-box;min-width:0;max-width:100%;width:100%;border:1px solid rgba(255,255,255,.14);border-radius:10px;background:#0b0d12;color:#f6f7fb;padding:12px 13px;font:inherit;font-weight:450;outline:none}
+.premiumAdminDashboard .premiumAdminEditor form input:not([type=checkbox]){min-height:46px}
+.premiumAdminDashboard .premiumAdminEditor form textarea{line-height:1.6;resize:vertical}
+.premiumAdminDashboard .premiumAdminEditor form input:focus,.premiumAdminDashboard .premiumAdminEditor form textarea:focus,.premiumAdminDashboard .premiumAdminCatalog input:focus,.premiumAdminDashboard .premiumAdminCatalog select:focus{border-color:rgba(231,195,63,.62);box-shadow:0 0 0 3px rgba(231,195,63,.08)}
+.premiumAdminDashboard .premiumAdminEditor form>.pillars{grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.premiumAdminDashboard .premiumAdminEditor form>label:has(input[type=checkbox]){display:flex;align-items:center;gap:11px;padding:14px;border:1px solid rgba(231,195,63,.22);border-radius:12px;background:rgba(231,195,63,.045)}
+.premiumAdminDashboard .premiumAdminEditor input[type=checkbox]{width:18px;height:18px;flex:0 0 18px;accent-color:var(--premium-admin-gold)}
+.premiumAdminDashboard .premiumAdminEditor .fieldNote{grid-column:1/-1;color:#969eac;line-height:1.7}
+.premiumAdminDashboard .premiumAdminEditor .primaryButton,.premiumAdminDashboard .premiumAdminEditor .secondaryButton,.premiumAdminDashboard .premiumAdminCatalog .secondaryButton{min-height:44px;align-items:center;justify-content:center;border-radius:11px;font-size:12px;font-weight:800;cursor:pointer}
+.premiumAdminDashboard .premiumAdminEditor .primaryButton{background:var(--premium-admin-gold);border:1px solid var(--premium-admin-gold);color:#111}
+.premiumAdminDashboard .premiumAdminEditor .secondaryButton,.premiumAdminDashboard .premiumAdminCatalog .secondaryButton{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.14);color:#f4f4f5}
+.premiumAdminDashboard .premiumAdminCatalog>div:first-child{gap:12px}
+.premiumAdminDashboard .premiumAdminCatalog>div:first-child h2{margin:0}
+.premiumAdminDashboard .premiumAdminCatalog .financeHistory{display:grid;gap:11px;margin-top:12px}
+.premiumAdminDashboard .premiumAdminCatalog .financeHistory>article{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:14px;padding:17px;border:1px solid rgba(255,255,255,.09);border-radius:14px;background:rgba(255,255,255,.022)}
+.premiumAdminDashboard .premiumAdminCatalog .financeHistory>article>div{min-width:0}
+.premiumAdminDashboard .premiumAdminCatalog .financeHistory>article>div>strong{display:block;color:#f5f2e9;font-size:15px;overflow-wrap:anywhere}
+.premiumAdminDashboard .premiumAdminCatalog .financeHistory>article small{display:block;margin-top:5px;color:#939baa;font-size:11px;line-height:1.6;overflow-wrap:anywhere}
+.premiumAdminDashboard .premiumAdminCatalog .financeHistory>article .financeStatus{display:inline-flex;align-items:center;justify-content:center;min-width:72px;padding:7px 9px;border:1px solid rgba(231,195,63,.18);border-radius:999px;background:rgba(231,195,63,.06);color:#efdc91;font-size:10px;white-space:nowrap}
+.premiumAdminDashboard .premiumAdminCatalog .financeHistory>article .secondaryButton{white-space:nowrap}
+.premiumAdminDashboard :is(a,button,input,textarea,select):focus-visible{outline:2px solid var(--premium-admin-gold);outline-offset:3px}
+@media(max-width:850px){.premiumAdminDashboard .premiumAdminMetrics{grid-template-columns:repeat(3,minmax(0,1fr))}.premiumAdminDashboard .premiumAdminCatalog .financeHistory>article{grid-template-columns:minmax(0,1fr) auto}.premiumAdminDashboard .premiumAdminCatalog .financeHistory>article .financeStatus{grid-column:2;grid-row:1}.premiumAdminDashboard .premiumAdminCatalog .financeHistory>article .secondaryButton{grid-column:1/-1;width:100%}}
+@media(max-width:620px){.premiumAdminDashboard{width:calc(100% - 28px);padding:0 0 35px}.premiumAdminDashboard .topbar{padding:13px 0}.premiumAdminDashboard .navLinks{width:100%;overflow-x:auto;flex-wrap:nowrap}.premiumAdminDashboard .navLinks a{flex:0 0 auto;font-size:11px}.premiumAdminDashboard .premiumAdminHero{padding:35px 0 15px}.premiumAdminDashboard .premiumAdminHero h1{font-size:clamp(39px,12vw,52px)}.premiumAdminDashboard .premiumAdminHero .heroCopy{font-size:14px}.premiumAdminDashboard .premiumAdminMetrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.premiumAdminDashboard .premiumAdminMetrics>.card{padding:14px}.premiumAdminDashboard .premiumAdminMetrics h2{font-size:28px!important}.premiumAdminDashboard .premiumAdminMetrics p{font-size:10px}.premiumAdminDashboard .premiumAdminEditor,.premiumAdminDashboard .premiumAdminCatalog{padding:18px 13px;border-radius:16px}.premiumAdminDashboard .premiumAdminEditor form{grid-template-columns:minmax(0,1fr)!important}.premiumAdminDashboard .premiumAdminEditor form>label,.premiumAdminDashboard .premiumAdminEditor form>.pillars,.premiumAdminDashboard .premiumAdminEditor form>p,.premiumAdminDashboard .premiumAdminEditor form>div{grid-column:1}.premiumAdminDashboard .premiumAdminEditor form>.pillars{grid-template-columns:repeat(2,minmax(0,1fr))}.premiumAdminDashboard .premiumAdminEditor form>div[style*="display: flex"]{display:grid!important}.premiumAdminDashboard .premiumAdminEditor form>div[style*="display: flex"] button{width:100%}.premiumAdminDashboard .premiumAdminCatalog input[type=search]{font-size:14px}.premiumAdminDashboard .premiumAdminCatalog .financeHistory>article{padding:13px;gap:9px}.premiumAdminDashboard .premiumAdminCatalog .financeHistory>article>div>strong{font-size:13px}.premiumAdminDashboard .premiumAdminCatalog .financeHistory>article .financeStatus{font-size:9px;min-width:0}.premiumAdminDashboard .premiumAdminCatalog>div:first-child h2{font-size:22px}.premiumAdminDashboard .premiumAdminCatalog>div:first-child button{width:100%}}
+@media(prefers-reduced-motion:reduce){.premiumAdminDashboard *{scroll-behavior:auto!important;transition:none!important}}
