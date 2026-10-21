@@ -28,14 +28,14 @@ revoke all on function public.snapshot_publication_gallery_limit() from public, 
 
 drop trigger if exists profile_publications_gallery_limit_snapshot on public.profile_publications;
 create trigger profile_publications_gallery_limit_snapshot
-before insert or update of plan_id, plan_features_snapshot
+before insert or update of plan_id
 on public.profile_publications
 for each row
 execute function public.snapshot_publication_gallery_limit();
 
 drop trigger if exists creator_publications_gallery_limit_snapshot on public.pecatho_creator_publications;
 create trigger creator_publications_gallery_limit_snapshot
-before insert or update of plan_id, plan_features_snapshot
+before insert or update of plan_id
 on public.pecatho_creator_publications
 for each row
 execute function public.snapshot_publication_gallery_limit();
