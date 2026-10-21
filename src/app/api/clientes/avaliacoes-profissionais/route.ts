@@ -86,6 +86,9 @@ export async function POST(request: Request) {
     .single();
 
   if (error) {
+    if (error.message.includes("REVIEWS_NOT_INCLUDED_IN_PUBLICATION_PLAN")) {
+      return NextResponse.json({ error: "O plano de publicação vigente não inclui o recebimento de avaliações." }, { status: 403 });
+    }
     return NextResponse.json({ error: error.code === "23505" ? "Esta experiência já possui uma avaliação." : error.message }, { status: error.code === "23505" ? 409 : 500 });
   }
 
