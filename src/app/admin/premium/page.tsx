@@ -130,7 +130,8 @@ export default function AdminCustomerPremiumPage() {
           .select("id,name,description,duration_days,price,currency,active,free,has_video,features,audience,featured_card,search_priority,show_premium_badge,profile_theme,max_gallery_items,updated_at")
           .order("audience", { ascending: true }).order("price", { ascending: true }),
       ]);
-      let premiumPlansData = data;
+      type PremiumPlanRows = NonNullable<typeof data>;
+      let premiumPlansData: PremiumPlanRows = data ?? [];
       if (loadError) {
         const missingDiscountColumn = /discount_percent|column .* does not exist|schema cache/i.test(loadError.message ?? "");
         if (!missingDiscountColumn) throw loadError;
@@ -138,7 +139,7 @@ export default function AdminCustomerPremiumPage() {
           .select("id,plan_key,name,description,price,currency,duration_days,benefits,active,sort_order,updated_at,audience,feature_flags,card_style,badge_label")
           .order("sort_order", { ascending: true }).order("price", { ascending: true });
         if (fallback.error) throw fallback.error;
-        premiumPlansData = (fallback.data ?? []).map((plan) => ({ ...plan, discount_percent: 0 })) as typeof data;
+        premiumPlansData = (fallback.data ?? []).map((plan) => ({ ...plan, discount_percent: 0 })) as unknown as PremiumPlanRows;
       }
       if (publicationError) throw publicationError;
       setPlans((premiumPlansData ?? []) as PremiumPlan[]);
