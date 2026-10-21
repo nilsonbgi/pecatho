@@ -122,6 +122,42 @@ $function$;
 revoke all on function public.get_public_profile_plan_features(uuid[]) from public;
 grant execute on function public.get_public_profile_plan_features(uuid[]) to anon,authenticated;
 
+create or replace function public.protect_profile_publication_entitlements()
+returns trigger
+language plpgsql security definer set search_path=pg_catalog,public
+as $function$
+begin
+  if auth.uid() is null or current_setting('pecatho.plan_assignment_verified',true)='true' then
+    return new;
+  end if;
+  if tg_op='INSERT' then
+    if new.plan_id is not null or new.paid or new.order_id is not null
+      or new.plan_features_snapshot<>'{}'::jsonb or new.paid_amount is not null then
+      raise exception 'PUBLICATION_PLAN_ASSIGNMENT_REQUIRES_VERIFIED_CHECKOUT';
+    end if;
+  else
+    if new.plan_id is distinct from old.plan_id or new.paid is distinct from old.paid
+      or new.order_id is distinct from old.order_id
+      or new.plan_features_snapshot is distinct from old.plan_features_snapshot
+      or new.paid_amount is distinct from old.paid_amount then
+      raise exception 'PUBLICATION_PLAN_ASSIGNMENT_REQUIRES_VERIFIED_CHECKOUT';
+    end if;
+    if old.plan_id is not null and (
+      new.status is distinct from old.status or new.starts_at is distinct from old.starts_at
+      or new.ends_at is distinct from old.ends_at
+    ) then
+      raise exception 'PUBLICATION_PLAN_TERM_REQUIRES_VERIFIED_CHECKOUT';
+    end if;
+  end if;
+  return new;
+end;
+$function$;
+revoke all on function public.protect_profile_publication_entitlements() from public,anon,authenticated;
+drop trigger if exists profile_publication_entitlement_protection on public.profile_publications;
+create trigger profile_publication_entitlement_protection
+before insert or update on public.profile_publications
+for each row execute function public.protect_profile_publication_entitlements();
+
 create or replace function public.enforce_publication_video_entitlement()
 returns trigger
 language plpgsql security definer set search_path = pg_catalog, public
@@ -360,6 +396,7 @@ begin
     'search_priority',v_plan.search_priority,'show_premium_badge',v_plan.show_premium_badge,
     'profile_theme',v_plan.profile_theme,'has_video',v_plan.has_video,
     'duration_days',v_plan.duration_days,'plan_name',v_plan.name);
+  perform set_config('pecatho.plan_assignment_verified','true',true);
   insert into public.profile_publications(profile_id,plan_id,status,starts_at,ends_at,paid,bonus_used,plan_features_snapshot,paid_amount)
   values(p_profile_id,v_plan.id,'published',v_start,v_end,false,false,v_snapshot,0)
   returning id into v_publication;
