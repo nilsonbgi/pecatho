@@ -10,6 +10,7 @@ type PremiumPlan = {
   price: number | string;
   currency: string;
   duration_days: number;
+  discount_percent: number;
   benefits: string[] | null;
   feature_flags?: { private_seller_contact?: boolean } | null;
 };
@@ -107,6 +108,8 @@ export default function CustomerPremium() {
               <article className="card" key={plan.id} style={{ border: "1px solid rgba(231,195,63,.28)" }}>
                 <div className="eyebrow">ASSINATURA {plan.duration_days === 30 ? "MENSAL" : plan.duration_days === 90 ? "TRIMESTRAL" : plan.duration_days === 180 ? "SEMESTRAL" : plan.duration_days === 365 ? "ANUAL" : "POR " + plan.duration_days + " DIAS"}</div>
                 <h3>{plan.name}</h3>
+                {Number(plan.discount_percent ?? 0) > 0 && <p className="fieldNote" style={{ color: "#86efac", fontWeight: 800 }}>Economize {Number(plan.discount_percent).toLocaleString("pt-BR")}% em relação ao preço proporcional mensal.</p>}
+                {Number(plan.discount_percent ?? 0) > 0 && <p style={{ color: "#a6aab5", textDecoration: "line-through" }}>De {money(Number(plan.price) / (1 - Number(plan.discount_percent) / 100), plan.currency)}</p>}
                 <p className="financeBig">{money(plan.price, plan.currency)}</p>
                 {plan.description && <p>{plan.description}</p>}
                 {plan.feature_flags?.private_seller_contact && <p>✓ Contato privado com vendedores de conteúdo durante a vigência.</p>}
