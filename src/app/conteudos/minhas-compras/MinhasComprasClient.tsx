@@ -272,18 +272,20 @@ export default function MinhasComprasClient() {
   }
 
   function toggleSelectedItem(item: {id:string;media_type:"image"|"video"}, checked: boolean) {
-    setSelectedItemIds(current => {
-      if (!checked) return current.filter(id => id !== item.id);
-      if (current.includes(item.id)) return current;
-      const sameTypeCount = selectionItems.filter(candidate => current.includes(candidate.id) && candidate.media_type === item.media_type).length;
-      const limit = item.media_type === "image" ? selectionLimits.images : selectionLimits.videos;
-      if (sameTypeCount >= limit) {
-        setDownloadError(`Este pacote permite selecionar até ${limit} ${item.media_type === "image" ? "imagem(ns)" : "vídeo(s)"}.`);
-        return current;
-      }
+    if (!checked) {
+      setSelectedItemIds(current => current.filter(id => id !== item.id));
       setDownloadError("");
-      return [...current, item.id];
-    });
+      return;
+    }
+    if (selectedItemIds.includes(item.id)) return;
+    const sameTypeCount = selectionItems.filter(candidate => selectedItemIds.includes(candidate.id) && candidate.media_type === item.media_type).length;
+    const limit = item.media_type === "image" ? selectionLimits.images : selectionLimits.videos;
+    if (sameTypeCount >= limit) {
+      setDownloadError(`Este pacote permite selecionar até ${limit} ${item.media_type === "image" ? "imagem(ns)" : "vídeo(s)"}.`);
+      return;
+    }
+    setDownloadError("");
+    setSelectedItemIds(current => [...current, item.id]);
   }
 
   useEffect(() => {
