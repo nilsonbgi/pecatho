@@ -12,7 +12,7 @@ declare
   v_snapshot jsonb;
 begin
   if v_user is null then raise exception 'AUTHENTICATION_REQUIRED'; end if;
-  select * into v_creator from public.fans_creators where id=p_creator_id and user_id=v_user for share;
+  select * into v_creator from public.fans_creators where id=p_creator_id and user_id=v_user and status='active' for share;
   if not found then raise exception 'CREATOR_PROFILE_NOT_OWNED'; end if;
   select * into v_plan from public.publication_plans where id=p_plan_id and active=true for share;
   if not found then raise exception 'PUBLICATION_PLAN_UNAVAILABLE'; end if;
@@ -53,7 +53,7 @@ declare
   v_publication uuid;
 begin
   if v_user is null then raise exception 'AUTHENTICATION_REQUIRED'; end if;
-  if not exists(select 1 from public.fans_creators where id=p_creator_id and user_id=v_user) then raise exception 'CREATOR_PROFILE_NOT_OWNED'; end if;
+  if not exists(select 1 from public.fans_creators where id=p_creator_id and user_id=v_user and status='active') then raise exception 'CREATOR_PROFILE_NOT_OWNED'; end if;
   select * into v_plan from public.publication_plans where id=p_plan_id and active=true and free=true and price=0 for share;
   if not found then raise exception 'FREE_PUBLICATION_PLAN_UNAVAILABLE'; end if;
   if v_plan.audience not in ('content_seller','both') then raise exception 'PUBLICATION_PLAN_AUDIENCE_MISMATCH'; end if;
