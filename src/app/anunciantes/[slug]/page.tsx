@@ -82,10 +82,32 @@ export default function PublicAdvertiserPage() {
   const [conversationBusy, setConversationBusy] = useState(false);
   const [conversationNotice, setConversationNotice] = useState("");
   const [ageVerified, setAgeVerified] = useState(false);
+  const [profilePlanPresentation, setProfilePlanPresentation] = useState<{ badge: boolean; theme: "standard" | "highlighted" | "premium" }>({ badge: false, theme: "standard" });
 
   useEffect(() => {
     setAgeVerified(window.localStorage.getItem("pecatho_age_verified") === "true");
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    if (!profile?.id) return;
+    (async () => {
+      try {
+        const supabase = createClient();
+        const { data, error: planError } = await supabase.rpc("get_public_profile_plan_features", { p_profile_ids: [profile.id] });
+        if (planError) throw planError;
+        const item = (data ?? [])[0] as { show_premium_badge?: boolean; profile_theme?: "standard" | "highlighted" | "premium" } | undefined;
+        if (active) setProfilePlanPresentation({
+          badge: item?.show_premium_badge === true,
+          theme: item?.profile_theme === "premium" || item?.profile_theme === "highlighted" ? item.profile_theme : "standard",
+        });
+      } catch (error) {
+        console.error("Falha ao carregar diferenciais do perfil", error);
+        if (active) setProfilePlanPresentation({ badge: false, theme: "standard" });
+      }
+    })();
+    return () => { active = false; };
+  }, [profile?.id]);
 
   useEffect(() => {
     let active = true;
@@ -286,7 +308,7 @@ export default function PublicAdvertiserPage() {
   if (error || !profile) return <main className="shell"><section className="hero"><div className="eyebrow">PECATHO</div><h1>Anúncio <em>indisponível.</em></h1><p className="heroCopy">{error || "Este anúncio não está disponível."}</p><Link href="/anunciantes" className="primaryButton">Voltar aos acompanhantes</Link></section></main>;
 
   return (
-    <main className="shell publicProfile">
+    <main className={`shell publicProfile ${profilePlanPresentation.theme === "premium" ? "profilePlanThemePremium" : profilePlanPresentation.theme === "highlighted" ? "profilePlanThemeHighlighted" : ""}`}>
       {ageVerified === false && (
         <div className="pAgeGate" role="dialog" aria-modal="true" aria-labelledby="advertiser-age-title">
           <div className="pAgeCard">
@@ -334,6 +356,7 @@ export default function PublicAdvertiserPage() {
           <div className="profileHeroCopy">
             <div className="eyebrow" style={{color:"#c4b5fd"}}>{category?.name || "ANUNCIANTE"}</div>
             <h1 style={{fontSize:"clamp(2rem,4vw,3.5rem)",lineHeight:1,margin:"10px 0",letterSpacing:"-.05em"}}>{profile.title || profile.display_name || "Perfil Pecatho"}</h1>
+            {profilePlanPresentation.badge && <span className="publicProfilePlanBadge">✦ PERFIL PREMIUM</span>}
             {age && <div style={{fontSize:14,fontWeight:800,color:"#ddd6fe"}}>{age} anos{city?.name ? ` · ${city.name}` : ""}{state?.uf ? ` · ${state.uf}` : ""}</div>}
             <p className="heroCopy" style={{marginTop:16}}>{profile.summary || "Conheça este perfil no Pecatho."}</p>
             <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:16}}>

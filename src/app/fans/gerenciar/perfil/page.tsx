@@ -92,6 +92,7 @@ export default async function FansProfileManagePage({
         <div className="brand"><span className="brandMark">P</span><span>Pecatho <small>Fans</small></span></div>
         <div className="navLinks">
           <Link href="/fans/gerenciar">Central</Link>
+          <Link href="/fans/gerenciar/visibilidade">Planos e visibilidade</Link>
           <Link href={`/fans/${creator.slug}`}>Ver perfil</Link>
         </div>
       </nav>

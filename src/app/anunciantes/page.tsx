@@ -13,12 +13,15 @@ type CatalogAttribute = { id: string; name: string; slug: string; field_type: st
 type CatalogService = { id: string; name: string; slug: string; display_public: boolean; sort_order: number };
 type Media = { profile_id: string; preview_storage_bucket: string | null; preview_storage_path: string | null; storage_bucket: string; storage_path: string; kind: string; access_type?: string; price?: number | null; is_primary: boolean; is_featured: boolean; is_public: boolean; show_in_cards: boolean; };
 type PublicProfileMeta = { id: string; availability: string | null };
+type PublicationPlanPresentation = { id: string; audience: "companion" | "content_seller" | "both"; featured_card: boolean; show_premium_badge: boolean; profile_theme: "standard" | "highlighted" | "premium"; search_priority: number };
+type ProfilePublicationAssignment = { profile_id: string; plan_id: string; starts_at: string | null; ends_at: string | null; status: string };
 
 type Option = { label: string; value: string };
 function options(value: unknown): Option[] { if (!Array.isArray(value)) return []; return value.flatMap((x) => typeof x === "string" ? [{ label: x, value: x }] : x && typeof x === "object" && typeof (x as { value?: unknown }).value === "string" ? [{ label: typeof (x as { label?: unknown }).label === "string" ? String((x as { label?: unknown }).label) : String((x as { value: string }).value), value: String((x as { value: string }).value) }] : []); }
 
 export default function AcompanhantesPage() {
   const [advertisers, setAdvertisers] = useState<(Advertiser & { imageUrl: string | null; mediaCount: number; videoCount: number; paidMediaCount: number; availability: string | null })[]>([]); const [totalCount, setTotalCount] = useState(0);
+  const [planPresentation, setPlanPresentation] = useState<Record<string, { featured: boolean; badge: boolean; theme: "standard" | "highlighted" | "premium" }>>({});
   const [categories, setCategories] = useState<Category[]>([]); const [states, setStates] = useState<State[]>([]); const [cities, setCities] = useState<City[]>([]);
   const [attributes, setAttributes] = useState<CatalogAttribute[]>([]); const [services, setServices] = useState<CatalogService[]>([]);
   const [categoryId, setCategoryId] = useState(""); const [stateId, setStateId] = useState(""); const [cityId, setCityId] = useState(""); const [query, setQuery] = useState(""); const [searchQuery, setSearchQuery] = useState("");
@@ -158,6 +161,28 @@ export default function AcompanhantesPage() {
     }
   }
 
+  useEffect(() => {
+    let active = true;
+    const ids = advertisers.map((item) => item.id);
+    if (!ids.length) { setPlanPresentation({}); return; }
+    (async () => {
+      try {
+        const s = createClient();
+        const { data, error: planError } = await s.rpc("get_public_profile_plan_features", { p_profile_ids: ids });
+        if (planError) throw planError;
+        const next: Record<string, { featured: boolean; badge: boolean; theme: "standard" | "highlighted" | "premium" }> = {};
+        for (const item of (data ?? []) as Array<{ profile_id: string; featured_card: boolean; show_premium_badge: boolean; profile_theme: "standard" | "highlighted" | "premium" }>) {
+          next[item.profile_id] = { featured: item.featured_card, badge: item.show_premium_badge, theme: item.profile_theme };
+        }
+        if (active) setPlanPresentation(next);
+      } catch (error) {
+        console.error("Falha ao carregar diferenciais de publicação", error);
+        if (active) setPlanPresentation({});
+      }
+    })();
+    return () => { active = false; };
+  }, [advertisers]);
+
   const categoryName = useMemo(() => new Map(categories.map((x) => [x.id, x.name])), [categories]); const stateName = useMemo(() => new Map(states.map((x) => [x.id, x.uf])), [states]); const cityName = useMemo(() => new Map(cities.map((x) => [x.id, x.name])), [cities]);
   const activeFilterCount = Object.keys(attributeFilters).length + serviceFilters.length + [ageMin, ageMax, priceMin, priceMax, durationMinutes].filter(Boolean).length;
   function clearAll() { setCategoryId(""); setStateId(""); setCityId(""); setQuery(""); setAttributeFilters({}); setServiceFilters([]); setAgeMin(""); setAgeMax(""); setPriceMin(""); setPriceMax(""); setDurationMinutes(""); setSort("recent"); }
@@ -183,10 +208,11 @@ export default function AcompanhantesPage() {
   const valid = periods.filter((row) => Number.isFinite(Number(row.price)) && Number(row.price) > 0 && Number.isFinite(Number(row.minutes)));
   const oneHour = valid.find((row) => Number(row.minutes) === 60);
   const display = oneHour || valid[0];
-  return <article className="advertiserCard commercialAdvertiserCard" key={item.id}>
+  const presentation = planPresentation[item.id];
+  return <article className={`advertiserCard commercialAdvertiserCard ${presentation?.featured ? "planFeaturedCard" : ""} ${presentation?.theme === "highlighted" ? "planThemeHighlighted" : presentation?.theme === "premium" ? "planThemePremium" : ""}`} key={item.id}>
     <div className="advertiserVisual commercialAdvertiserVisual">
       {item.imageUrl ? <img src={item.imageUrl} alt={item.display_name || item.title || "Perfil Pecatho"} /> : <div className="visualPlaceholder"><span>✦</span><div>Pecatho</div><small>Mídia de apresentação</small></div>}
-      <div className="commercialVisualTop"><span className="commercialCategory">{item.category_id != null ? categoryName.get(item.category_id) || "ACOMPANHANTE" : "ACOMPANHANTE"}</span>{item.verification_status === "verified" && <span className="verifiedMark">✓ VERIFICADO</span>}</div>
+      <div className="commercialVisualTop"><span className="commercialCategory">{item.category_id != null ? categoryName.get(item.category_id) || "ACOMPANHANTE" : "ACOMPANHANTE"}</span><span className="commercialTrustBadges">{presentation?.badge && <span className="publicationPremiumBadge">✦ PREMIUM</span>}{item.verification_status === "verified" && <span className="verifiedMark">✓ VERIFICADO</span>}</span></div>
       <div className="commercialVisualBottom"><span>▣ {item.mediaCount} mídia(s)</span>{item.videoCount > 0 && <span>▶ {item.videoCount} vídeo(s)</span>}{item.paidMediaCount > 0 && <span className="paidContentBadge">✦ Conteúdo exclusivo</span>}</div>
     </div>
     <div className="advertiserBody commercialAdvertiserBody">

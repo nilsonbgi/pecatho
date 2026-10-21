@@ -5,7 +5,7 @@ type MercadoPagoPreferenceInput = {
   amount: number;
   buyerEmail: string;
   creatorId?: string;
-  productType?: "digital_content" | "profile_media" | "gift" | "premium_subscription" | "fans_boost";
+  productType?: "digital_content" | "profile_media" | "gift" | "premium_subscription" | "fans_boost" | "publication_plan" | "creator_publication_plan";
 };
 
 type MercadoPagoPreference = {
@@ -26,16 +26,24 @@ export async function createMercadoPagoPreference(input: MercadoPagoPreferenceIn
   const channel = productType === "fans_boost"
     ? "pecatho_fans_boost"
     : productType === "profile_media"
-    ? "pecatho_profile_media"
-    : productType === "gift"
-      ? "pecatho_gift"
-      : productType === "premium_subscription"
-        ? "pecatho_customer_premium"
-        : input.creatorId ? "pecatho_fans" : "pecatho_digital_content";
+      ? "pecatho_profile_media"
+      : productType === "gift"
+        ? "pecatho_gift"
+        : productType === "premium_subscription"
+          ? "pecatho_customer_premium"
+          : productType === "publication_plan"
+            ? "pecatho_publication_plan"
+            : productType === "creator_publication_plan"
+              ? "pecatho_creator_publication_plan"
+              : input.creatorId ? "pecatho_fans" : "pecatho_digital_content";
 
   const successUrl = productType === "premium_subscription"
     ? `${baseUrl}/painel/cliente?premium=aguardando&order=${encodeURIComponent(input.orderId)}`
-    : `${baseUrl}/fans/checkout/sucesso?order=${encodeURIComponent(input.orderId)}`;
+    : productType === "publication_plan"
+      ? `${baseUrl}/painel/anuncio/planos?status=aguardando&order=${encodeURIComponent(input.orderId)}`
+      : productType === "creator_publication_plan"
+        ? `${baseUrl}/fans/gerenciar/visibilidade?status=aguardando&order=${encodeURIComponent(input.orderId)}`
+        : `${baseUrl}/fans/checkout/sucesso?order=${encodeURIComponent(input.orderId)}`;
 
   const response = await fetch("https://api.mercadopago.com/checkout/preferences", {
     method: "POST",

@@ -29,6 +29,10 @@ type PublicFansCreator = {
   positive_likes?: number;
   visible_comments?: number;
   positive_reactions?: number;
+  plan_featured_card?: boolean;
+  plan_premium_badge?: boolean;
+  plan_profile_theme?: "standard" | "highlighted" | "premium";
+  plan_search_priority?: number;
 };
 
 function summarizeCreatorBio(value: string | null, maxLength = 132): string {
@@ -71,6 +75,31 @@ export default async function FansPage() {
 
   const publicCreators = (creators ?? []) as PublicFansCreator[];
   const creatorIds = publicCreators.map((item) => item.id);
+  let creatorPresentationRows: Array<{ creator_id: string; featured_card: boolean; show_premium_badge: boolean; profile_theme: "standard" | "highlighted" | "premium"; search_priority: number }> = [];
+  if (creatorIds.length) {
+    try {
+      const { data } = await createAdminClient().rpc("get_public_fans_creator_plan_features", { p_creator_ids: creatorIds });
+      creatorPresentationRows = (data ?? []) as typeof creatorPresentationRows;
+    } catch {
+      creatorPresentationRows = [];
+    }
+  }
+  const creatorPresentationMap = new Map(creatorPresentationRows.map((item) => [item.creator_id, item]));
+  for (let index = 0; index < publicCreators.length; index++) {
+    const item = publicCreators[index];
+    const presentation = creatorPresentationMap.get(item.id);
+    publicCreators[index] = {
+      ...item,
+      plan_featured_card: presentation?.featured_card === true,
+      plan_premium_badge: presentation?.show_premium_badge === true,
+      plan_profile_theme: presentation?.profile_theme ?? "standard",
+      plan_search_priority: presentation?.search_priority ?? 0,
+    };
+  }
+  publicCreators.sort((a, b) =>
+    Number(Boolean(b.plan_featured_card)) - Number(Boolean(a.plan_featured_card)) ||
+    Number(b.plan_search_priority || 0) - Number(a.plan_search_priority || 0)
+  );
   const planMap = new Map<string, number>();
   const offerMap = new Map<string, number>();
 
@@ -265,6 +294,11 @@ export default async function FansPage() {
         @media(max-width:1100px){.fansBoostDiscoveryGrid{grid-template-columns:repeat(2,1fr)}.fansPageWrap{padding:0 24px}.fansMainNav{gap:18px}.fansSearch{width:170px}.fansFeaturedGrid{grid-template-columns:repeat(3,1fr)}.fansFeaturedCard{height:300px}.fansHero{grid-template-columns:1fr .82fr}.fansHeroImage{width:360px;height:450px}.fansHeroCreatorTag{left:-10px}.fansHeroBadge{right:-2px}.fansCreatorGrid{grid-template-columns:repeat(2,1fr)}}
         @media(max-width:800px){.fansBoostDiscoveryGrid{grid-template-columns:1fr}.fansPageWrap{padding:0 16px}.fansTopbar{height:72px}.fansMainNav{display:none}.fansTopActions{gap:7px}.fansSearch{display:none}.fansIconBtn{display:none}.fansLogoText{font-size:19px}.fansLogoMark{width:37px;height:37px}.fansHero{grid-template-columns:1fr;padding:52px 0 44px;min-height:auto}.fansHeroCopy{padding:0}.fansHero h1{font-size:51px}.fansLead{font-size:15px}.fansBenefits{grid-template-columns:1fr;gap:12px;margin-top:34px}.fansHeroVisual{min-height:430px;margin-top:18px}.fansHeroImage{width:300px;height:385px}.fansHeroCreatorTag{left:0;bottom:18px}.fansHeroBadge{right:0;top:28px}.fansStatsBar{grid-template-columns:repeat(2,1fr);padding:13px}.fansStat{padding:12px 8px;border-right:0}.fansStat:nth-child(1),.fansStat:nth-child(2){border-bottom:1px solid rgba(255,255,255,.08)}.fansStat strong{font-size:18px}.fansStatIcon{width:36px;height:36px}.fansSection{padding-top:50px}.fansSectionHead{align-items:start;flex-direction:column}.fansFeaturedGrid{grid-template-columns:repeat(2,1fr);gap:10px}.fansFeaturedCard{height:270px}.fansCreatorGrid{grid-template-columns:1fr}.fansOwnerPanel{align-items:flex-start;flex-direction:column;margin-top:50px}.fansArchitecture{grid-template-columns:1fr;gap:30px;margin-top:55px}.fansArchitecture h2{font-size:34px}.fansFooter{flex-direction:column}}
         @media(max-width:430px){.fansCreatorCard{gap:11px;padding:14px}.fansCreatorAvatar{width:54px;height:54px;border-radius:14px}.fansCreatorArrow{width:24px;height:24px;font-size:19px}.fansHero h1{font-size:44px}.fansFeaturedGrid{grid-template-columns:1fr 1fr}.fansFeaturedCard{height:235px}.fansHeroCreatorTag{min-width:205px}.fansHeroBadge{padding:11px 13px}.fansStat{gap:8px}.fansStat span{font-size:9px}}
+        .fansCreatorCard.fansPlanFeatured{border-color:rgba(231,195,63,.72);box-shadow:0 14px 38px rgba(231,195,63,.09),0 0 0 1px rgba(231,195,63,.12);background:linear-gradient(145deg,rgba(231,195,63,.14),rgba(255,255,255,.018) 65%)}
+        .fansCreatorCard.fansPlanHighlighted{border-color:rgba(231,195,63,.42)}
+        .fansCreatorCard.fansPlanPremium{border-color:rgba(231,195,63,.75);box-shadow:0 18px 46px rgba(231,195,63,.12);background:linear-gradient(145deg,rgba(231,195,63,.16),rgba(255,255,255,.018) 70%)}
+        .fansCreatorCard.fansPlanPremium>div:nth-child(2)>strong{color:#f5d96c}
+        .fansPublicationPremiumBadge{display:table;width:max-content;max-width:100%;margin-top:7px;padding:5px 8px;border:1px solid rgba(231,195,63,.5);border-radius:999px;background:rgba(8,8,8,.85);color:#f5d96c;font-size:9px;font-weight:900;letter-spacing:.06em}
       `}</style>
 
       <div className="fansPageWrap">
@@ -361,9 +395,9 @@ export default async function FansPage() {
           </div>
 
           {discoveryCreators.length === 0 ? <div className="fansEmpty">Ainda não há criadores ativos publicados no Fans.</div> : <div className="fansCreatorGrid">
-            {discoveryCreators.map((item) => <Link key={item.id} href={"/fans/" + item.slug} className="fansCreatorCard">
+            {discoveryCreators.map((item) => <Link key={item.id} href={"/fans/" + item.slug} className={`fansCreatorCard ${item.plan_featured_card ? "fansPlanFeatured" : ""} ${item.plan_profile_theme === "premium" ? "fansPlanPremium" : item.plan_profile_theme === "highlighted" ? "fansPlanHighlighted" : ""}`}>
               <div className="fansCreatorAvatar">{item.avatar_url ? <img src={item.avatar_url} alt={item.display_name} /> : item.display_name.slice(0, 1).toUpperCase()}</div>
-              <div style={{minWidth:0,flex:1}}><strong>{item.display_name}</strong><div className="fansCreatorMeta"><span className="fansOnline" />{planMap.get(item.id) || 0} plano(s) · {offerMap.get(item.id) || 0} experiência(s) privada(s)</div><div className="fansReputationBadge" style={{marginTop:8}}>🏆 {item.reputation_level || "Iniciante"} · {Number(item.reputation_score || 0).toLocaleString("pt-BR")} pontos</div><div className="fansCreatorBio">{summarizeCreatorBio(item.bio)}</div></div>
+              <div style={{minWidth:0,flex:1}}><strong>{item.display_name}</strong>{item.plan_premium_badge && <span className="fansPublicationPremiumBadge">✦ PERFIL PREMIUM</span>}<div className="fansCreatorMeta"><span className="fansOnline" />{planMap.get(item.id) || 0} plano(s) · {offerMap.get(item.id) || 0} experiência(s) privada(s)</div><div className="fansReputationBadge" style={{marginTop:8}}>🏆 {item.reputation_level || "Iniciante"} · {Number(item.reputation_score || 0).toLocaleString("pt-BR")} pontos</div><div className="fansCreatorBio">{summarizeCreatorBio(item.bio)}</div></div>
               <span className="fansCreatorArrow">›</span>
             </Link>)}
           </div>}
