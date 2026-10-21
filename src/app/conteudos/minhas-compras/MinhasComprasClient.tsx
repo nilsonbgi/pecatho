@@ -98,7 +98,7 @@ export default function MinhasComprasClient() {
   const [downloads, setDownloads] = useState<Download[]>([]);
   const [selectionItems, setSelectionItems] = useState<Array<{id:string;filename:string;media_type:"image"|"video"}>>([]);
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
-  const [selectionLimits, setSelectionLimits] = useState({images:1,videos:1});
+  const [selectionLimits, setSelectionLimits] = useState({images:1,videos:1});\n  const [selectionLocked, setSelectionLocked] = useState(false);
   const [savingSelection, setSavingSelection] = useState(false);
   const [selectedSale, setSelectedSale] = useState(sale ?? "");
   const [loading, setLoading] = useState(true);
@@ -221,7 +221,7 @@ export default function MinhasComprasClient() {
       const selectionBody = await selectionResponse.json();
       if (!selectionResponse.ok) throw new Error(selectionBody.error || "Não foi possível carregar os arquivos do pacote.");
       setSelectionItems(Array.isArray(selectionBody.items) ? selectionBody.items : []);
-      setSelectedItemIds(Array.isArray(selectionBody.selected_ids) ? selectionBody.selected_ids : []);
+      setSelectedItemIds(Array.isArray(selectionBody.selected_ids) ? selectionBody.selected_ids : []);\n      setSelectionLocked(Array.isArray(selectionBody.selected_ids) && selectionBody.selected_ids.length > 0);
       setSelectionLimits(selectionBody.limits ?? { images: 1, videos: 1 });
       if (!Array.isArray(selectionBody.selected_ids) || selectionBody.selected_ids.length === 0) return;
       const response = await fetch(
@@ -759,7 +759,7 @@ export default function MinhasComprasClient() {
                             const limit = item.media_type === "image" ? selectionLimits.images : selectionLimits.videos;
                             return (
                               <label key={item.id} className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white/80">
-                                <input type="checkbox" checked={checked} onChange={event => toggleSelectedItem(item, event.target.checked)} disabled={savingSelection || (!checked && typeCount >= limit)} className="h-4 w-4 accent-violet-400" />
+                                <input type="checkbox" checked={checked} onChange={event => toggleSelectedItem(item, event.target.checked)} disabled={savingSelection || selectionLocked || (!checked && typeCount >= limit)} className="h-4 w-4 accent-violet-400" />
                                 <span className="min-w-0 flex-1">
                                   <strong className="block truncate text-xs">{item.filename}</strong>
                                   <small className="text-[10px] uppercase text-white/40">{item.media_type === "image" ? "Imagem" : "Vídeo"}</small>
@@ -768,7 +768,7 @@ export default function MinhasComprasClient() {
                             );
                           })}
                         </div>
-                        <button type="button" onClick={() => void saveSelection()} disabled={savingSelection || selectedItemIds.length === 0} className="mt-4 rounded-xl bg-violet-300 px-4 py-3 text-xs font-black text-slate-950 disabled:opacity-50">{savingSelection ? "Salvando seleção…" : "Salvar seleção e liberar downloads"}</button>
+                        {selectionLocked ? <p className="mt-4 rounded-xl border border-emerald-300/15 bg-emerald-400/[.05] p-3 text-xs font-bold text-emerald-200">Seleção confirmada. Para acessar outros arquivos, compre outro pacote.</p> : <button type="button" onClick={() => void saveSelection()} disabled={savingSelection || selectedItemIds.length === 0} className="mt-4 rounded-xl bg-violet-300 px-4 py-3 text-xs font-black text-slate-950 disabled:opacity-50">{savingSelection ? "Salvando seleção…" : "Confirmar seleção e liberar downloads"}</button>}
                       </div>
                     )}
 
