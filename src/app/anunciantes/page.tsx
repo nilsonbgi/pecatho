@@ -126,8 +126,10 @@ export default function AcompanhantesPage() {
       const ids = rows.map((x) => x.id);
       const [{ data: mr }, { data: pm }, { data: premiumRows }] = await Promise.all([
         s.from("profile_media").select("profile_id,preview_storage_bucket,preview_storage_path,storage_bucket,storage_path,kind,access_type,price,is_primary,is_public,show_in_cards").in("profile_id", ids).eq("is_public", true).eq("moderation_status", "approved").order("is_primary", { ascending: false }).order("sort_order"),
-        s.from("advertiser_profiles").select("id,availability").in("id", ids)
+        s.from("advertiser_profiles").select("id,availability").in("id", ids),
+        s.rpc("get_public_professional_plan_features", { p_entity_ids: ids, p_audience: "companion" })
       ]);
+      const premiumById = new Map(((premiumRows ?? []) as PublicPremiumFeature[]).map((feature) => [feature.entity_id, { premium_featured: feature.featured_card, premium_search_priority: feature.search_priority, premium_profile: feature.premium_profile, premium_profile_badge: feature.profile_badge, premium_card_style: feature.card_style, premium_badge_label: feature.badge_label }]));
       const byProfile = new Map<string, Media>();
       const mediaCounts = new Map<string, number>();
       const videoCounts = new Map<string, number>();
