@@ -40,7 +40,7 @@ export default async function FansCreatorPublicPage({params}:Props){
  if(user&&admin){
   const now=new Date().toISOString();
   const {data:premiumSubscription}=await admin.from("pecatho_customer_premium_subscriptions")
-   .select("id").eq("user_id",user.id).eq("status","active")
+   .select("id,feature_flags").eq("user_id",user.id).eq("status","active")
    .lte("starts_at",now).gt("ends_at",now).order("ends_at",{ascending:false}).limit(1).maybeSingle();
   hasActiveCustomerPremium=!!premiumSubscription;
  }
