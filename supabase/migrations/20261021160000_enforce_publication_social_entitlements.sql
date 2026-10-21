@@ -124,7 +124,7 @@ begin
     raise exception 'UNSUPPORTED_PUBLICATION_ENTITLEMENT_TARGET';
   end if;
 
-  if v_entity_type not in ('advertiser','creator') or v_entity_id is null then
+  if v_entity_type is null or v_entity_type not in ('advertiser','creator') or v_entity_id is null then
     raise exception 'INVALID_PUBLICATION_ENTITLEMENT_TARGET';
   end if;
 
