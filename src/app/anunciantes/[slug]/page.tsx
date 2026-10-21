@@ -94,22 +94,13 @@ export default function PublicAdvertiserPage() {
     (async () => {
       try {
         const supabase = createClient();
-        const now = new Date().toISOString();
-        const [{ data: assignments, error: assignmentError }, { data: creator }] = await Promise.all([
-          supabase.from("profile_publications").select("plan_id,starts_at,ends_at")
-            .eq("profile_id", profile.id).eq("status", "published").lte("starts_at", now).gt("ends_at", now),
-          supabase.from("fans_creators").select("id").eq("advertiser_profile_id", profile.id).eq("status", "active").maybeSingle(),
-        ]);
-        if (assignmentError) throw assignmentError;
-        const planIds = [...new Set((assignments ?? []).map((item) => item.plan_id))];
-        if (!planIds.length) { if (active) setProfilePlanPresentation({ badge: false, theme: "standard" }); return; }
-        const { data: plans, error: plansError } = await supabase.from("publication_plans")
-          .select("id,audience,show_premium_badge,profile_theme").in("id", planIds).eq("active", true);
-        if (plansError) throw plansError;
-        const eligible = (plans ?? []).filter((plan) => plan.audience === "both" || plan.audience === (creator ? "content_seller" : "companion"));
-        const theme = eligible.some((plan) => plan.profile_theme === "premium") ? "premium"
-          : eligible.some((plan) => plan.profile_theme === "highlighted") ? "highlighted" : "standard";
-        if (active) setProfilePlanPresentation({ badge: eligible.some((plan) => plan.show_premium_badge), theme });
+        const { data, error: planError } = await supabase.rpc("get_public_profile_plan_features", { p_profile_ids: [profile.id] });
+        if (planError) throw planError;
+        const item = (data ?? [])[0] as { show_premium_badge?: boolean; profile_theme?: "standard" | "highlighted" | "premium" } | undefined;
+        if (active) setProfilePlanPresentation({
+          badge: item?.show_premium_badge === true,
+          theme: item?.profile_theme === "premium" || item?.profile_theme === "highlighted" ? item.profile_theme : "standard",
+        });
       } catch (error) {
         console.error("Falha ao carregar diferenciais do perfil", error);
         if (active) setProfilePlanPresentation({ badge: false, theme: "standard" });
