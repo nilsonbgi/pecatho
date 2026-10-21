@@ -30,7 +30,10 @@ export default function FansVisibilityPlansPage() {
       if (!creator) { setError("Ative seu espaço Fans antes de contratar um plano de visibilidade."); return; }
       setCreatorId(creator.id);
       setCreatorName(creator.display_name || "Seu perfil Fans");
-      setPlans(((data ?? []) as Plan[]).filter((plan) => plan.audience === "both" || plan.audience === "content_seller"));
+      setPlans(((data ?? []) as Plan[]).filter((plan) =>
+        (plan.free ? Number(plan.price) === 0 : Number(plan.price) > 0) &&
+        (plan.audience === "both" || plan.audience === "content_seller)
+      ));
     } catch (cause) {
       console.error(cause);
       setError("Não foi possível carregar os planos. Confirme se as migrations de diferenciais estão aplicadas.");
