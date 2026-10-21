@@ -34,7 +34,7 @@ export async function GET() {
   return NextResponse.json({
     plans: plans ?? [],
     subscriptions: subscriptions ?? [],
-    current,
+    current: current ? { ...current, plan: currentPlan } : null,
     server_time: now,
   });
 }
