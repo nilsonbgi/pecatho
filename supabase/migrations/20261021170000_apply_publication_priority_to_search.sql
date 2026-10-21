@@ -1,19 +1,7 @@
 -- Honor active publication-plan priority in the public companion search results.
 -- Keep all existing search filters, sorting modes, pagination and total-count behavior.
 -- Existing plans, assignments, prices and commercial records are not modified.
--- Align the public advertiser search RPC with the current catalog UI.
--- Preserve the existing overload for compatibility; the frontend calls this exact
--- 14-argument signature and needs location, pricing and total-count fields.
-drop function if exists public.search_public_advertisers(
-  bigint, bigint, bigint, text, jsonb, text[],
-  integer, integer, numeric, numeric, integer, integer
-);
-
-drop function if exists public.search_public_advertisers(
-  bigint, bigint, bigint, text, jsonb, text[],
-  integer, integer, numeric, numeric, integer, text, integer, integer
-);
-
+-- Replace only the exact current 14-argument search RPC; do not drop overloads.
 create or replace function public.search_public_advertisers(
   p_category_id bigint default null,
   p_state_id bigint default null,
