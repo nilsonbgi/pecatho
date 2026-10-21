@@ -93,6 +93,58 @@ $function$;
 revoke all on function public.admin_save_pecatho_publication_plan(uuid,text,text,integer,numeric,boolean,boolean,text,boolean,boolean,integer,boolean,text,integer,jsonb) from public,anon;
 grant execute on function public.admin_save_pecatho_publication_plan(uuid,text,text,integer,numeric,boolean,boolean,text,boolean,boolean,integer,boolean,text,integer,jsonb) to authenticated;
 
+create or replace function public.get_public_profile_plan_features(p_profile_ids uuid[])
+returns table(profile_id uuid,featured_card boolean,show_premium_badge boolean,profile_theme text,search_priority integer)
+language sql stable security definer set search_path = 'pg_catalog'
+as $function$
+  select ap.id,
+    coalesce(bool_or(pp.featured_card),false),
+    coalesce(bool_or(pp.show_premium_badge),false),
+    case when coalesce(bool_or(pp.profile_theme='premium'),false) then 'premium'
+         when coalesce(bool_or(pp.profile_theme='highlighted'),false) then 'highlighted'
+         else 'standard' end,
+    coalesce(max(pp.search_priority),0)
+  from public.advertiser_profiles ap
+  join public.profile_publications pub on pub.profile_id=ap.id
+  join public.publication_plans pp on pp.id=pub.plan_id
+  where ap.id=any(coalesce(p_profile_ids,'{}'::uuid[]))
+    and ap.status::text='published'
+    and pub.status::text='published' and pub.starts_at<=now() and pub.ends_at>now()
+    and pp.active=true
+    and (pp.audience='both' or pp.audience=case
+      when exists(select 1 from public.fans_creators fc where fc.advertiser_profile_id=ap.id and fc.status='active') then 'content_seller'
+      else 'companion' end)
+  group by ap.id;
+$function$;
+revoke all on function public.get_public_profile_plan_features(uuid[]) from public;
+grant execute on function public.get_public_profile_plan_features(uuid[]) to anon,authenticated;
+
+create or replace function public.enforce_publication_video_entitlement()
+returns trigger
+language plpgsql security definer set search_path = pg_catalog, public
+as $function$
+begin
+  if new.kind='video' and not exists (
+    select 1
+    from public.profile_publications pub
+    join public.publication_plans pp on pp.id=pub.plan_id
+    where pub.profile_id=new.profile_id and pub.status::text='published'
+      and pub.starts_at<=now() and pub.ends_at>now()
+      and pp.active=true and pp.has_video=true
+      and (pp.audience='both' or pp.audience=case
+        when exists(select 1 from public.fans_creators fc where fc.advertiser_profile_id=new.profile_id and fc.status='active') then 'content_seller'
+        else 'companion' end)
+  ) then
+    raise exception 'VIDEO_REQUIRES_ELIGIBLE_PUBLICATION_PLAN';
+  end if;
+  return new;
+end;
+$function$;
+drop trigger if exists profile_media_video_plan_entitlement on public.profile_media;
+create trigger profile_media_video_plan_entitlement
+before insert or update of kind,profile_id on public.profile_media
+for each row execute function public.enforce_publication_video_entitlement();
+
 create or replace function public.search_public_advertisers(
   p_category_id bigint DEFAULT NULL, p_state_id bigint DEFAULT NULL, p_city_id bigint DEFAULT NULL,
   p_query text DEFAULT NULL, p_attribute_filters jsonb DEFAULT '{}'::jsonb, p_service_slugs text[] DEFAULT '{}'::text[],
