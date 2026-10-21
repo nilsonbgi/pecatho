@@ -33,6 +33,8 @@ declare
   v_result jsonb;
   v_base_price numeric;
   v_expected_price numeric;
+  v_lower_discount numeric;
+  v_upper_discount numeric;
   v_existing public.pecatho_customer_premium_plans%rowtype;
 begin
   if v_user is null or not exists (
@@ -53,6 +55,26 @@ begin
   end if;
 
   if p_audience = 'customer' and p_duration_days in (90,180,365) then
+    if p_discount_percent <= 0 then
+      raise exception 'PROGRESSIVE_DISCOUNT_REQUIRED';
+    end if;
+
+    select max(discount_percent) into v_lower_discount
+    from public.pecatho_customer_premium_plans
+    where audience='customer' and duration_days < p_duration_days
+      and (p_plan_id is null or id<>p_plan_id);
+    select min(discount_percent) into v_upper_discount
+    from public.pecatho_customer_premium_plans
+    where audience='customer' and duration_days > p_duration_days
+      and (p_plan_id is null or id<>p_plan_id);
+
+    if v_lower_discount is not null and p_discount_percent <= v_lower_discount then
+      raise exception 'PROGRESSIVE_DISCOUNT_MUST_INCREASE';
+    end if;
+    if v_upper_discount is not null and p_discount_percent >= v_upper_discount then
+      raise exception 'PROGRESSIVE_DISCOUNT_MUST_INCREASE';
+    end if;
+
     select min(price) into v_base_price
     from public.pecatho_customer_premium_plans
     where audience='customer' and duration_days=30 and (p_plan_id is null or id<>p_plan_id);
