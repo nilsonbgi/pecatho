@@ -1368,6 +1368,40 @@
 @media(prefers-reduced-motion:reduce){.premiumAdminDashboard *{scroll-behavior:auto!important;transition:none!important}}
 
 
+/* Paid professional Premium differentiators: applied only from an active subscription entitlement. */
+.premiumAudienceTabs{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+.premiumAudienceTabs button{min-height:42px;cursor:pointer}
+.premiumEntitlementEditor{display:grid;gap:12px;padding:18px;border:1px solid rgba(231,195,63,.22);border-radius:15px;background:rgba(231,195,63,.035)}
+.premiumEntitlementEditor>.eyebrow{color:#e7c33f}
+.premiumFeatureToggle{display:flex!important;align-items:flex-start!important;gap:12px!important;padding:13px;border:1px solid rgba(255,255,255,.1);border-radius:11px;background:rgba(255,255,255,.025)}
+.premiumFeatureToggle input{width:18px;height:18px;flex:0 0 18px;accent-color:#e7c33f;margin-top:2px}
+.premiumFeatureToggle span{display:grid;gap:4px}
+.premiumFeatureToggle strong{color:#f4f4f5;font-size:12px}
+.premiumFeatureToggle small{color:#a0a6b3;font-size:11px;line-height:1.6;font-weight:450}
+.premiumFeaturedCard{position:relative!important;border-color:rgba(231,195,63,.55)!important;box-shadow:0 16px 44px rgba(231,195,63,.09),0 0 0 1px rgba(231,195,63,.08)!important}
+.premiumFeaturedCard.premiumStyle-gold{background:linear-gradient(150deg,rgba(231,195,63,.12),transparent 50%),#111116!important}
+.premiumFeaturedCard.premiumStyle-obsidian{background:linear-gradient(150deg,rgba(148,163,184,.14),transparent 55%),#0a0c11!important;border-color:rgba(203,213,225,.38)!important}
+.premiumFeaturedCard.premiumStyle-signature{background:linear-gradient(150deg,rgba(192,132,252,.13),transparent 55%),#100b16!important;border-color:rgba(192,132,252,.42)!important}
+.premiumPlanBadge{display:inline-flex;align-items:center;justify-content:center;gap:4px;max-width:100%;padding:6px 9px;border:1px solid rgba(231,195,63,.55);border-radius:999px;background:rgba(8,9,12,.88);color:#f5d66f;font-size:9px;font-weight:950;letter-spacing:.04em;line-height:1.3;overflow-wrap:anywhere}
+.commercialVisualTop .premiumPlanBadge{box-shadow:0 6px 18px rgba(0,0,0,.22)}
+.premiumProfileEnabled .commercialAdvertiserBody{background:linear-gradient(180deg,rgba(231,195,63,.035),transparent 50%)}
+.fansHome .fansPremiumPlanTag{position:absolute;z-index:4;top:12px;left:12px;padding:7px 9px;border:1px solid rgba(231,195,63,.65);border-radius:999px;background:rgba(9,9,9,.88);color:#f6d76e;font-size:9px;font-weight:950;letter-spacing:.07em}
+.fansHome .fansPremiumProfileBadge{position:absolute;z-index:4;top:43px;left:12px;max-width:calc(100% - 24px);padding:6px 8px;border:1px solid rgba(231,195,63,.48);border-radius:999px;background:rgba(9,9,9,.86);color:#f7e5a0;font-size:9px;font-weight:850;overflow-wrap:anywhere}
+.fansHome .fansCreatorCard.premiumFeaturedCard{background:linear-gradient(110deg,rgba(231,195,63,.08),rgba(255,255,255,.02))!important}
+.fansHome .fansCreatorCard.premiumStyle-obsidian{border-color:rgba(203,213,225,.38)!important}
+.fansHome .fansCreatorCard.premiumStyle-signature{border-color:rgba(192,132,252,.42)!important}
+.fansHome .fansPremiumMiniTag{position:absolute;right:-5px;bottom:-5px;display:grid;place-items:center;width:22px;height:22px;border:1px solid rgba(231,195,63,.7);border-radius:50%;background:#111;color:#f6d76e;font-size:10px;font-weight:900}
+.fansHome .fansCreatorAvatar{position:relative}
+.fansHome .fansPremiumInlineBadge{display:inline-flex;vertical-align:middle;margin-left:5px;padding:3px 6px;border:1px solid rgba(231,195,63,.45);border-radius:999px;color:#e7c33f;font-size:8px;font-weight:900;letter-spacing:0}
+
+.publicProfile.premiumProfilePage .publicProfileHero{border:1px solid rgba(231,195,63,.46)!important;box-shadow:0 22px 65px rgba(0,0,0,.2),0 0 0 1px rgba(231,195,63,.06)}
+.publicProfile.premiumStyle-gold .publicProfileHero{background:radial-gradient(ellipse at 100% 0,rgba(231,195,63,.16),transparent 55%),linear-gradient(145deg,#0b0c11,#19160c)!important}
+.publicProfile.premiumStyle-obsidian .publicProfileHero{background:radial-gradient(ellipse at 100% 0,rgba(148,163,184,.14),transparent 55%),linear-gradient(145deg,#08090c,#191c22)!important}
+.publicProfile.premiumStyle-signature .publicProfileHero{background:radial-gradient(ellipse at 100% 0,rgba(192,132,252,.15),transparent 55%),linear-gradient(145deg,#0b0710,#201126)!important}
+.publicProfile.premiumProfileFeatured .publicProfileHero{outline:1px solid rgba(231,195,63,.16);outline-offset:3px}
+.publicProfile.premiumProfilePage .profileHeroMedia{box-shadow:inset 0 0 0 1px rgba(231,195,63,.12)}
+
+
 /* Premium plans: clear separation of the two commercial catalogs. */
 .premiumAdminTabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:20px 0 24px}
 .premiumAdminTabs button{display:flex;flex-direction:column;align-items:flex-start;gap:7px;min-width:0;padding:17px 19px;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:#111219;color:#f3f4f6;text-align:left;font:inherit;font-weight:800;cursor:pointer}
