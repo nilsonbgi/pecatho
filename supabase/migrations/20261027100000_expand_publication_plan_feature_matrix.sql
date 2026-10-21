@@ -32,6 +32,10 @@ declare
   v_plan public.publication_plans%rowtype;
   v_snapshot jsonb;
 begin
+  if new.plan_id is null then
+    return new;
+  end if;
+
   select * into v_plan from public.publication_plans where id = new.plan_id;
   if not found then
     raise exception 'PUBLICATION_PLAN_NOT_FOUND';
