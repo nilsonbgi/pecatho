@@ -150,7 +150,7 @@ export default function AdvertiserMediaManager() {
   return <main className="shell">
     <nav className="topbar">
       <Link href="/painel" className="brand"><span className="brandMark">P</span><span>Pecatho</span></Link>
-      <Link href="/painel/anuncio" className="navCta">Voltar ao anúncio</Link>
+      <div className="navLinks"><Link href="/painel/anuncio/planos" className="navCta">Planos e destaques</Link><Link href="/painel/anuncio" className="secondaryButton">Voltar ao anúncio</Link></div>
     </nav>
     <section className="hero authHero">
       <div className="eyebrow">MEU ANÚNCIO · MÍDIAS</div>
