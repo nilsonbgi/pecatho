@@ -25,6 +25,11 @@ begin
 end
 $migration$;
 
+alter table public.profile_publications
+  add column if not exists order_id uuid unique references public.orders(id) on delete restrict,
+  add column if not exists plan_features_snapshot jsonb not null default '{}'::jsonb,
+  add column if not exists paid_amount numeric(12,2);
+
 create index if not exists profile_publications_active_plan_idx on public.profile_publications(profile_id,status,ends_at desc);
 
 grant select on public.publication_plans to authenticated;
