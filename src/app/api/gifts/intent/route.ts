@@ -39,7 +39,7 @@ export async function POST(request: Request) {
   if (error) {
     const code = error.message || "";
     const status =
-      code.includes("CUSTOMER_ACCOUNT_REQUIRED") ? 403 :
+      code.includes("CUSTOMER_ACCOUNT_REQUIRED") || code.includes("GIFTS_NOT_INCLUDED_IN_PUBLICATION_PLAN") ? 403 :
       code.includes("SELF_GIFT_NOT_ALLOWED") ? 409 :
       code.includes("RECIPIENT_NOT_FOUND") ? 404 :
       code.includes("INVALID_GIFT_AMOUNT") || code.includes("GIFT_AMOUNT_BELOW_BOOST_PLAN") || code.includes("BOOST_PLAN_NOT_AVAILABLE") || code.includes("NO_ELIGIBLE_PUBLISHED_POST") || code.includes("BOOST_GIFT_REQUIRES_CREATOR") ? 400 : 400;
