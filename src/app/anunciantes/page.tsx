@@ -124,15 +124,18 @@ export default function AcompanhantesPage() {
       }
 
       const ids = rows.map((x) => x.id);
-      const [{ data: mr }, { data: pm }] = await Promise.all([
-        s.from("profile_media").select("profile_id,preview_storage_bucket,preview_storage_path,storage_bucket,storage_path,kind,access_type,price,is_primary,is_public,show_in_cards").in("profile_id", ids).eq("is_public", true).eq("moderation_status", "approved").order("is_primary", { ascending: false }).order("sort_order"),
+      const [{ data: mr, error: mediaError }, { data: pm, error: profileError }] = await Promise.all([
+        s.rpc("get_public_profile_media", { p_profile_ids: ids }),
         s.from("advertiser_profiles").select("id,availability").in("id", ids)
       ]);
+      if (mediaError) throw mediaError;
+      if (profileError) throw profileError;
       const byProfile = new Map<string, Media>();
       const mediaCounts = new Map<string, number>();
       const videoCounts = new Map<string, number>();
       const paidMediaCounts = new Map<string, number>();
       for (const m of (mr ?? []) as Media[]) {
+        if (!m.is_public || !m.show_in_cards) continue;
         mediaCounts.set(m.profile_id, (mediaCounts.get(m.profile_id) || 0) + 1);
         if (m.kind === "video") videoCounts.set(m.profile_id, (videoCounts.get(m.profile_id) || 0) + 1);
         if (m.access_type === "paid" && Number(m.price || 0) > 0) paidMediaCounts.set(m.profile_id, (paidMediaCounts.get(m.profile_id) || 0) + 1);
