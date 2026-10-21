@@ -77,8 +77,10 @@ export default function PublicationPlansPage() {
 
   function planFeatures(plan: Plan): string[] {
     const features = plan.features ?? {};
-    const hasBoolean = (key: string, fallback: boolean) => typeof features[key] === "boolean" ? features[key] as boolean : fallback;
-    const hasLimit = (key: string) => typeof features[key] === "number" && Number.isFinite(features[key] as number) && (features[key] as number) > 0;
+    const hasBoolean = (key: string, fallback: boolean) =>
+      typeof features[key] === "boolean" ? features[key] as boolean : fallback;
+    const hasLimit = (key: string) =>
+      typeof features[key] === "number" && Number.isFinite(features[key] as number) && (features[key] as number) > 0;
     const result: string[] = [];
 
     if (plan.featured_card) result.push("Card especial com destaque visual");
@@ -89,9 +91,18 @@ export default function PublicationPlansPage() {
     if (hasBoolean("photo_gallery", true)) result.push("Galeria de fotos incluída");
     else result.push("Galeria de fotos não incluída");
 
-    const videoEnabled = hasBoolean("video_gallery", plan.has_video);
-    if (videoEnabled) result.push("Galeria de vídeos incluída");
+    if (hasBoolean("video_gallery", plan.has_video)) result.push("Galeria de vídeos incluída");
     else result.push("Galeria de vídeos não incluída");
+
+    if (hasBoolean("advertiser_gallery", true)) result.push("Mídias autorizadas podem aparecer na galeria pública");
+    else result.push("Galeria pública do anúncio não incluída");
+    if (hasBoolean("featured_photo", false)) result.push("Foto de destaque no perfil");
+    if (hasBoolean("featured_video", false)) result.push("Vídeo de destaque no perfil");
+    if (hasBoolean("highlight_card_photo", false)) result.push("Foto diferenciada no card do anúncio");
+    if (hasBoolean("profile_audio", false)) result.push("Áudio de apresentação no perfil");
+    if (hasBoolean("allow_reviews", true)) result.push("Recebimento de avaliações habilitado");
+    else result.push("Recebimento de avaliações não incluído");
+    if (hasBoolean("allow_gifts", false)) result.push("Recebimento de presentes virtuais habilitado");
 
     if (hasLimit("max_photos")) result.push(`Até ${features.max_photos} fotos`);
     if (hasLimit("max_videos")) result.push(`Até ${features.max_videos} vídeos`);
