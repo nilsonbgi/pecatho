@@ -370,6 +370,8 @@ export default function AdminCustomerPremiumPage() {
         : raw.includes("PROFESSIONAL_PLAN_DISCOUNT_NOT_SUPPORTED") ? "Descontos por período são configurados apenas para assinaturas de clientes."
         : raw.includes("CUSTOMER_MONTHLY_BASE_PLAN_REQUIRED") ? "Cadastre ou mantenha um plano mensal de cliente para calcular os períodos maiores."
         : raw.includes("CUSTOMER_DISCOUNT_PRICE_MISMATCH") ? "O preço final não corresponde ao valor mensal proporcional com o desconto configurado. Atualize o preço-base mensal ou o desconto."
+        : raw.includes("PROGRESSIVE_DISCOUNT_REQUIRED") ? "Planos trimestrais, semestrais e anuais precisam ter desconto maior que zero."
+        : raw.includes("PROGRESSIVE_DISCOUNT_MUST_INCREASE") ? "O desconto deve aumentar progressivamente: trimestral menor que semestral, e semestral menor que anual."
         : raw.includes("PLAN_AUDIENCE_LOCKED") ? "O público deste plano não pode ser alterado porque já existem assinaturas vinculadas."
         : raw.includes("PREMIUM_PLAN_NEEDS_OPERATIONAL_FEATURE") ? "Um plano publicado precisa ter ao menos um diferencial operacional habilitado para esse público."
         : raw.includes("PREMIUM_BADGE_LABEL_REQUIRED") ? "Informe o texto do selo Premium."
