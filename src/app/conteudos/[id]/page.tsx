@@ -22,6 +22,8 @@ type Product = {
   title: string;
   description: string | null;
   product_type: string;
+  package_image_limit: number | null;
+  package_video_limit: number | null;
   price: number | string;
   currency: string;
   owner_type: "advertiser" | "creator";
@@ -325,6 +327,15 @@ export default function DigitalContentProductPage() {
                 {product.file_count} arquivo{product.file_count === 1 ? "" : "s"}
               </span>
             </div>
+
+            {product.product_type === "package" && (
+              <div className="mt-4 rounded-2xl border border-violet-300/15 bg-violet-400/[.05] p-4">
+                <p className="text-xs font-black text-white">O que está incluído na compra</p>
+                <p className="mt-2 text-xs leading-5 text-slate-300">
+                  Escolha até {product.package_image_limit ?? 0} imagem(ns) e {product.package_video_limit ?? 0} vídeo(s) entre os arquivos deste pacote. Depois de salvar a seleção, os downloads ficam vinculados a esta compra.
+                </p>
+              </div>
+            )}
 
             {!reputationLoading && reputation?.trust_badge ? (
               <div className="mt-5 rounded-2xl border border-emerald-300/20 bg-emerald-400/[.06] p-4">
