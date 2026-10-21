@@ -60,6 +60,13 @@ export async function POST(request: Request) {
   if (!["draft", "rejected"].includes(post.status)) {
     return NextResponse.json({ error: "Só é possível adicionar mídias a rascunhos ou publicações rejeitadas." }, { status: 409 });
   }
+  if (file.type.startsWith("video/")) {
+    const { data: planFeatures, error: planFeatureError } = await admin.rpc("get_public_fans_creator_plan_features", { p_creator_ids: [creator.id] });
+    if (planFeatureError) return NextResponse.json({ error: "Não foi possível validar a permissão de vídeo do seu plano." }, { status: 503 });
+    if (!(planFeatures ?? []).some((item: { has_video?: boolean }) => item.has_video === true)) {
+      return NextResponse.json({ error: "O envio de vídeos exige um plano de visibilidade vigente que inclua esse diferencial.", code: "VIDEO_REQUIRES_PUBLICATION_PLAN" }, { status: 403 });
+    }
+  }
 
   const bytes = Buffer.from(await file.arrayBuffer());
   const contentSha256 = createHash("sha256").update(bytes).digest("hex");
