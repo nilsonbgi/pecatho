@@ -96,6 +96,10 @@ export default function MinhasComprasClient() {
     spent: 0,
   });
   const [downloads, setDownloads] = useState<Download[]>([]);
+  const [selectionItems, setSelectionItems] = useState<Array<{id:string;filename:string;media_type:"image"|"video"}>>([]);
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  const [selectionLimits, setSelectionLimits] = useState({images:1,videos:1});
+  const [savingSelection, setSavingSelection] = useState(false);
   const [selectedSale, setSelectedSale] = useState(sale ?? "");
   const [loading, setLoading] = useState(true);
   const [loadingDownloads, setLoadingDownloads] = useState(false);
@@ -210,6 +214,16 @@ export default function MinhasComprasClient() {
     setLoadingDownloads(true);
 
     try {
+      const selectionResponse = await fetch(
+        `/api/conteudos/selection?sale_id=${encodeURIComponent(saleId)}`,
+        { cache: "no-store" },
+      );
+      const selectionBody = await selectionResponse.json();
+      if (!selectionResponse.ok) throw new Error(selectionBody.error || "Não foi possível carregar os arquivos do pacote.");
+      setSelectionItems(Array.isArray(selectionBody.items) ? selectionBody.items : []);
+      setSelectedItemIds(Array.isArray(selectionBody.selected_ids) ? selectionBody.selected_ids : []);
+      setSelectionLimits(selectionBody.limits ?? { images: 1, videos: 1 });
+      if (!Array.isArray(selectionBody.selected_ids) || selectionBody.selected_ids.length === 0) return;
       const response = await fetch(
         `/api/conteudos/download?sale_id=${encodeURIComponent(saleId)}`,
         { cache: "no-store" },
@@ -226,6 +240,50 @@ export default function MinhasComprasClient() {
     } finally {
       setLoadingDownloads(false);
     }
+  }
+
+  async function saveSelection() {
+    if (!selectedSale || !selectedItemIds.length) {
+      setDownloadError("Selecione ao menos um arquivo antes de salvar.");
+      return;
+    }
+    const images = selectionItems.filter(item => selectedItemIds.includes(item.id) && item.media_type === "image").length;
+    const videos = selectionItems.filter(item => selectedItemIds.includes(item.id) && item.media_type === "video").length;
+    if (images > selectionLimits.images || videos > selectionLimits.videos) {
+      setDownloadError(`Seu pacote permite até ${selectionLimits.images} imagem(ns) e ${selectionLimits.videos} vídeo(s). Ajuste a seleção.`);
+      return;
+    }
+    setSavingSelection(true);
+    setDownloadError("");
+    try {
+      const response = await fetch("/api/conteudos/selection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sale_id: selectedSale, item_ids: selectedItemIds }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Não foi possível salvar a seleção.");
+      await loadDownloads(selectedSale);
+    } catch (failure) {
+      setDownloadError(failure instanceof Error ? failure.message : "Não foi possível salvar a seleção.");
+    } finally {
+      setSavingSelection(false);
+    }
+  }
+
+  function toggleSelectedItem(item: {id:string;media_type:"image"|"video"}, checked: boolean) {
+    setSelectedItemIds(current => {
+      if (!checked) return current.filter(id => id !== item.id);
+      if (current.includes(item.id)) return current;
+      const sameTypeCount = selectionItems.filter(candidate => current.includes(candidate.id) && candidate.media_type === item.media_type).length;
+      const limit = item.media_type === "image" ? selectionLimits.images : selectionLimits.videos;
+      if (sameTypeCount >= limit) {
+        setDownloadError(`Este pacote permite selecionar até ${limit} ${item.media_type === "image" ? "imagem(ns)" : "vídeo(s)"}.`);
+        return current;
+      }
+      setDownloadError("");
+      return [...current, item.id];
+    });
   }
 
   useEffect(() => {
@@ -683,6 +741,35 @@ export default function MinhasComprasClient() {
                         : "O acesso aos arquivos está bloqueado para esta transação."}
                     </p>
 
+                    {selectedPurchase.status === "paid" && !loadingDownloads && selectionItems.length > 0 && (
+                      <div className="mt-5 rounded-2xl border border-violet-300/20 bg-violet-400/[.05] p-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <h3 className="text-sm font-black text-white">Escolha os arquivos da sua compra</h3>
+                            <p className="mt-1 text-xs leading-5 text-white/55">Selecione apenas o que está incluído no pacote. A seleção fica vinculada a esta compra.</p>
+                          </div>
+                          <span className="text-[11px] font-bold text-violet-200">{selectionItems.filter(item => selectedItemIds.includes(item.id) && item.media_type === "image").length}/{selectionLimits.images} imagens · {selectionItems.filter(item => selectedItemIds.includes(item.id) && item.media_type === "video").length}/{selectionLimits.videos} vídeos</span>
+                        </div>
+                        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                          {selectionItems.map(item => {
+                            const checked = selectedItemIds.includes(item.id);
+                            const typeCount = selectionItems.filter(candidate => selectedItemIds.includes(candidate.id) && candidate.media_type === item.media_type).length;
+                            const limit = item.media_type === "image" ? selectionLimits.images : selectionLimits.videos;
+                            return (
+                              <label key={item.id} className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white/80">
+                                <input type="checkbox" checked={checked} onChange={event => toggleSelectedItem(item, event.target.checked)} disabled={savingSelection || (!checked && typeCount >= limit)} className="h-4 w-4 accent-violet-400" />
+                                <span className="min-w-0 flex-1">
+                                  <strong className="block truncate text-xs">{item.filename}</strong>
+                                  <small className="text-[10px] uppercase text-white/40">{item.media_type === "image" ? "Imagem" : "Vídeo"}</small>
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                        <button type="button" onClick={() => void saveSelection()} disabled={savingSelection || selectedItemIds.length === 0} className="mt-4 rounded-xl bg-violet-300 px-4 py-3 text-xs font-black text-slate-950 disabled:opacity-50">{savingSelection ? "Salvando seleção…" : "Salvar seleção e liberar downloads"}</button>
+                      </div>
+                    )}
+
                     {selectedPurchase.status !== "paid" ? (
                       <div className="mt-5 rounded-2xl border border-amber-400/15 bg-amber-500/[0.06] p-4 text-sm text-amber-100/75">
                         {selectedPurchase.status === "refunded"
@@ -701,7 +788,7 @@ export default function MinhasComprasClient() {
                       </div>
                     ) : downloads.length === 0 ? (
                       <div className="mt-5 rounded-2xl border border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">
-                        O pagamento foi confirmado, mas não há arquivos disponíveis nesta compra.
+                        {selectionItems.length > 0 ? "Escolha os arquivos acima e salve sua seleção para liberar os downloads." : "O pagamento foi confirmado, mas não há arquivos disponíveis nesta compra."}
                       </div>
                     ) : (
                       <div className="mt-4 space-y-2">
