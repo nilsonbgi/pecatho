@@ -170,6 +170,9 @@ export async function POST(request: Request) {
     .single();
 
   if (insertError) {
+    if (insertError.message.includes("REVIEWS_NOT_INCLUDED_IN_PUBLICATION_PLAN")) {
+      return NextResponse.json({ error: "O plano de publicação vigente não inclui o recebimento de avaliações." }, { status: 403 });
+    }
     if (insertError.code === "23505") {
       return NextResponse.json({ error: "Esta compra já possui uma avaliação." }, { status: 409 });
     }
