@@ -201,7 +201,7 @@ export default function AdminCustomerPremiumPage() {
         p_search_priority: Number(publicationSearchPriority),
         p_show_premium_badge: publicationBadge,
         p_profile_theme: publicationTheme,
-        p_max_gallery_items: null,
+        p_max_gallery_items: editingPublicationId ? publicationPlans.find((plan) => plan.id === editingPublicationId)?.max_gallery_items ?? null : null,
         p_features: editingPublicationId ? publicationPlans.find((plan) => plan.id === editingPublicationId)?.features ?? {} : {},
       });
       if (saveError) throw saveError;
