@@ -98,7 +98,8 @@ export default function MinhasComprasClient() {
   const [downloads, setDownloads] = useState<Download[]>([]);
   const [selectionItems, setSelectionItems] = useState<Array<{id:string;filename:string;media_type:"image"|"video"}>>([]);
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
-  const [selectionLimits, setSelectionLimits] = useState({images:1,videos:1});\n  const [selectionLocked, setSelectionLocked] = useState(false);
+  const [selectionLimits, setSelectionLimits] = useState({images:1,videos:1});
+  const [selectionLocked, setSelectionLocked] = useState(false);
   const [savingSelection, setSavingSelection] = useState(false);
   const [selectedSale, setSelectedSale] = useState(sale ?? "");
   const [loading, setLoading] = useState(true);
