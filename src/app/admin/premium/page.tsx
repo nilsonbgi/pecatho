@@ -12,6 +12,7 @@ type PremiumPlan = {
   price: number | string;
   currency: string;
   duration_days: number;
+  discount_percent: number;
   benefits: string[] | null;
   active: boolean;
   sort_order: number;
@@ -74,6 +75,7 @@ export default function AdminCustomerPremiumPage() {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [durationDays, setDurationDays] = useState("30");
+  const [discountPercent, setDiscountPercent] = useState("0");
   const [benefitsText, setBenefitsText] = useState("");
   const [active, setActive] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -122,7 +124,7 @@ export default function AdminCustomerPremiumPage() {
     try {
       const [{ data, error: loadError }, { data: publicationData, error: publicationError }] = await Promise.all([
         supabase.from("pecatho_customer_premium_plans")
-          .select("id,plan_key,name,description,price,currency,duration_days,benefits,active,sort_order,updated_at,audience,feature_flags,card_style,badge_label")
+          .select("id,plan_key,name,description,price,currency,duration_days,discount_percent,benefits,active,sort_order,updated_at,audience,feature_flags,card_style,badge_label")
           .order("sort_order", { ascending: true }).order("price", { ascending: true }),
         supabase.from("publication_plans")
           .select("id,name,description,duration_days,price,currency,active,free,has_video,features,audience,featured_card,search_priority,show_premium_badge,profile_theme,max_gallery_items,updated_at")
@@ -161,6 +163,7 @@ export default function AdminCustomerPremiumPage() {
     setDescription(plan.description ?? "");
     setPrice(String(plan.price).replace(".", ","));
     setDurationDays(String(plan.duration_days));
+    setDiscountPercent(String(plan.discount_percent ?? 0));
     setBenefitsText((plan.benefits ?? []).join("\n"));
     setActive(plan.active);
     setAudience(plan.audience ?? "customer");
@@ -179,6 +182,7 @@ export default function AdminCustomerPremiumPage() {
     setDescription("");
     setPrice("");
     setDurationDays("30");
+    setDiscountPercent("0");
     setBenefitsText("");
     setActive(false);
     setAudience("customer");
@@ -290,6 +294,31 @@ export default function AdminCustomerPremiumPage() {
     }
   }
 
+  function suggestedCustomerPrice(days: number, discount: number): string | null {
+    if (days === 30) return null;
+    const monthlyPlan = plans.find((item) => item.audience === "customer" && item.duration_days === 30 && item.id !== editingId);
+    const base = monthlyPlan ? Number(monthlyPlan.price) : null;
+    if (base == null || !Number.isFinite(base) || base <= 0) return null;
+    return (base * (days / 30) * (1 - discount / 100)).toFixed(2).replace(".", ",");
+  }
+
+  function changeCustomerDuration(nextDays: string) {
+    setDurationDays(nextDays);
+    if (audience === "customer") {
+      const suggested = suggestedCustomerPrice(Number(nextDays), Number(discountPercent));
+      if (suggested !== null) setPrice(suggested);
+      if (Number(nextDays) === 30) setDiscountPercent("0");
+    }
+  }
+
+  function changeCustomerDiscount(nextDiscount: string) {
+    setDiscountPercent(nextDiscount);
+    if (audience === "customer") {
+      const suggested = suggestedCustomerPrice(Number(durationDays), Number(nextDiscount));
+      if (suggested !== null) setPrice(suggested);
+    }
+  }
+
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
@@ -306,6 +335,7 @@ export default function AdminCustomerPremiumPage() {
         p_description: description.trim() || null,
         p_price: parsedPrice,
         p_duration_days: Number(durationDays),
+        p_discount_percent: audience === "customer" ? Number(discountPercent) : 0,
         p_benefits: benefits,
         p_active: active,
         p_audience: audience,
@@ -418,8 +448,9 @@ export default function AdminCustomerPremiumPage() {
             <label>Nome comercial<input required minLength={3} maxLength={100} value={name} onChange={(event) => setName(event.target.value)} placeholder={audience === "customer" ? "Premium mensal" : audience === "companion" ? "Destaque para acompanhante" : "Perfil Creator Premium"} /></label>
             <label>Descrição<textarea rows={2} maxLength={500} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Explique a proposta do plano." /></label>
             <div className="pillars">
-              <label>Preço em reais<input required inputMode="decimal" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="19,90" /></label>
-              <label>Periodicidade da assinatura<select required value={durationDays} onChange={(event) => setDurationDays(event.target.value)}><option value="30">Mensal · 30 dias</option><option value="90">Trimestral · 90 dias</option><option value="180">Semestral · 180 dias</option><option value="365">Anual · 365 dias</option></select></label>
+              <label>Preço final em reais<input required inputMode="decimal" value={price} disabled={audience === "customer" && Number(durationDays) !== 30 && suggestedCustomerPrice(Number(durationDays), Number(discountPercent)) !== null} onChange={(event) => setPrice(event.target.value)} placeholder="19,90" /><small>{audience === "customer" && Number(durationDays) !== 30 ? "Calculado sobre o plano mensal cadastrado, aplicando o desconto selecionado." : "Para clientes, este é o preço-base mensal. Os períodos maiores usam esse valor proporcional com desconto."}</small></label>
+              <label>Periodicidade da assinatura<select required value={durationDays} onChange={(event) => changeCustomerDuration(event.target.value)}><option value="30">Mensal · 30 dias</option><option value="90">Trimestral · 90 dias</option><option value="180">Semestral · 180 dias</option><option value="365">Anual · 365 dias</option></select></label>
+              {audience === "customer" && <label>Desconto sobre o preço proporcional mensal (%)<input required type="number" min={0} max={80} step={0.5} value={discountPercent} disabled={Number(durationDays) === 30} onChange={(event) => changeCustomerDiscount(event.target.value)} /><small>Mensal = 0%. Trimestral, semestral e anual devem usar descontos progressivos. O preço final é recalculado a partir do plano mensal existente.</small></label>}
             </div>
             <label>Detalhamento comercial dos diferenciais (um por linha)<textarea rows={4} maxLength={5000} value={benefitsText} onChange={(event) => setBenefitsText(event.target.value)} placeholder={audience === "customer" ? "Contato privado com vendedores de conteúdo\nAcesso durante o período contratado" : "Card com destaque visual\nPrioridade no catálogo de descoberta"} /></label>
             <p className="fieldNote">Texto livre é apenas descritivo. Somente os diferenciais operacionais habilitados abaixo são concedidos pela plataforma.</p>
@@ -448,7 +479,7 @@ export default function AdminCustomerPremiumPage() {
             <select aria-label="Filtrar por status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "all" | "active" | "inactive")} style={{ minWidth: 0, background: "#0b0d12", color: "#f6f7fb", border: "1px solid rgba(255,255,255,.14)", borderRadius: 10, padding: "12px" }}><option value="all">Todos os status</option><option value="active">Publicados</option><option value="inactive">Inativos</option></select>
           </div>
           {filteredPlans.length === 0 ? <div className="fieldNote" style={{ padding: "20px 0" }}><strong>{plans.length ? "Nenhum plano corresponde aos filtros." : "Nenhum plano configurado."}</strong><p>{plans.length ? "Altere a busca ou o status selecionado." : "Cadastre preço, duração e benefícios antes de disponibilizar a contratação."}</p>{(search || statusFilter !== "all") && <button type="button" className="secondaryButton" onClick={() => { setSearch(""); setStatusFilter("all"); }}>Limpar filtros</button>}</div> : <div className="financeHistory">{filteredPlans.map((plan) => <article key={plan.id}>
-            <div><strong>{plan.name}</strong><small>{plan.plan_key} · {plan.duration_days === 30 ? "Mensal" : plan.duration_days === 90 ? "Trimestral" : plan.duration_days === 180 ? "Semestral" : plan.duration_days === 365 ? "Anual" : `${plan.duration_days} dias`} · {Number(plan.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</small><small>{plan.description || "Sem descrição"}</small>{plan.benefits?.length ? <small style={{ display: "block", marginTop: 8, lineHeight: 1.6 }}>Benefícios: {plan.benefits.slice(0, 3).join(" · ")}{plan.benefits.length > 3 ? " · +" + (plan.benefits.length - 3) : ""}</small> : <small style={{ display: "block", marginTop: 8 }}>Sem benefícios cadastrados</small>}</div>
+            <div><strong>{plan.name}</strong><small>{plan.plan_key} · {plan.duration_days === 30 ? "Mensal" : plan.duration_days === 90 ? "Trimestral" : plan.duration_days === 180 ? "Semestral" : plan.duration_days === 365 ? "Anual" : `${plan.duration_days} dias`} · {Number(plan.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}{plan.audience === "customer" ? ` · desconto ${Number(plan.discount_percent ?? 0).toLocaleString("pt-BR")}%` : ""}</small><small>{plan.description || "Sem descrição"}</small>{plan.benefits?.length ? <small style={{ display: "block", marginTop: 8, lineHeight: 1.6 }}>Benefícios: {plan.benefits.slice(0, 3).join(" · ")}{plan.benefits.length > 3 ? " · +" + (plan.benefits.length - 3) : ""}</small> : <small style={{ display: "block", marginTop: 8 }}>Sem benefícios cadastrados</small>}</div>
             <span className="financeStatus">{plan.active ? "Publicado" : "Inativo"}</span>
             <button className="secondaryButton" type="button" onClick={() => edit(plan)}>Editar</button>
           </article>)}</div>}
