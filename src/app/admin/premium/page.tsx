@@ -273,7 +273,7 @@ export default function AdminCustomerPremiumPage() {
 
   return (
     <main className="shell advertiserDashboard premiumAdminDashboard">
-      <nav className="topbar"><div className="brand"><span className="brandMark">P</span><span>Pecatho</span></div><div className="navLinks"><Link href="/admin">Administração</Link><Link href="/painel/cliente">Painel do cliente</Link></div></nav>
+      <nav className="topbar"><div className="brand"><span className="brandMark">P</span><span>Pecatho</span></div><div className="navLinks"><Link href="/admin">Administração</Link><Link href="/admin/premium/profissionais">Planos profissionais</Link><Link href="/painel/cliente">Painel do cliente</Link></div></nav>
       <section className="hero premiumAdminHero">
         <div className="eyebrow">SUPERADMIN · GESTÃO COMERCIAL</div>
         <h1>Planos <em>Premium</em></h1>
