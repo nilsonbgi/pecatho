@@ -82,10 +82,41 @@ export default function PublicAdvertiserPage() {
   const [conversationBusy, setConversationBusy] = useState(false);
   const [conversationNotice, setConversationNotice] = useState("");
   const [ageVerified, setAgeVerified] = useState(false);
+  const [profilePlanPresentation, setProfilePlanPresentation] = useState<{ badge: boolean; theme: "standard" | "highlighted" | "premium" }>({ badge: false, theme: "standard" });
 
   useEffect(() => {
     setAgeVerified(window.localStorage.getItem("pecatho_age_verified") === "true");
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    if (!profile?.id) return;
+    (async () => {
+      try {
+        const supabase = createClient();
+        const now = new Date().toISOString();
+        const [{ data: assignments, error: assignmentError }, { data: creator }] = await Promise.all([
+          supabase.from("profile_publications").select("plan_id,starts_at,ends_at")
+            .eq("profile_id", profile.id).eq("status", "published").lte("starts_at", now).gt("ends_at", now),
+          supabase.from("fans_creators").select("id").eq("advertiser_profile_id", profile.id).eq("status", "active").maybeSingle(),
+        ]);
+        if (assignmentError) throw assignmentError;
+        const planIds = [...new Set((assignments ?? []).map((item) => item.plan_id))];
+        if (!planIds.length) { if (active) setProfilePlanPresentation({ badge: false, theme: "standard" }); return; }
+        const { data: plans, error: plansError } = await supabase.from("publication_plans")
+          .select("id,audience,show_premium_badge,profile_theme").in("id", planIds).eq("active", true);
+        if (plansError) throw plansError;
+        const eligible = (plans ?? []).filter((plan) => plan.audience === "both" || plan.audience === (creator ? "content_seller" : "companion"));
+        const theme = eligible.some((plan) => plan.profile_theme === "premium") ? "premium"
+          : eligible.some((plan) => plan.profile_theme === "highlighted") ? "highlighted" : "standard";
+        if (active) setProfilePlanPresentation({ badge: eligible.some((plan) => plan.show_premium_badge), theme });
+      } catch (error) {
+        console.error("Falha ao carregar diferenciais do perfil", error);
+        if (active) setProfilePlanPresentation({ badge: false, theme: "standard" });
+      }
+    })();
+    return () => { active = false; };
+  }, [profile?.id]);
 
   useEffect(() => {
     let active = true;
@@ -286,7 +317,7 @@ export default function PublicAdvertiserPage() {
   if (error || !profile) return <main className="shell"><section className="hero"><div className="eyebrow">PECATHO</div><h1>Anúncio <em>indisponível.</em></h1><p className="heroCopy">{error || "Este anúncio não está disponível."}</p><Link href="/anunciantes" className="primaryButton">Voltar aos acompanhantes</Link></section></main>;
 
   return (
-    <main className="shell publicProfile">
+    <main className={`shell publicProfile ${profilePlanPresentation.theme === "premium" ? "profilePlanThemePremium" : profilePlanPresentation.theme === "highlighted" ? "profilePlanThemeHighlighted" : ""}`}>
       {ageVerified === false && (
         <div className="pAgeGate" role="dialog" aria-modal="true" aria-labelledby="advertiser-age-title">
           <div className="pAgeCard">
@@ -334,6 +365,7 @@ export default function PublicAdvertiserPage() {
           <div className="profileHeroCopy">
             <div className="eyebrow" style={{color:"#c4b5fd"}}>{category?.name || "ANUNCIANTE"}</div>
             <h1 style={{fontSize:"clamp(2rem,4vw,3.5rem)",lineHeight:1,margin:"10px 0",letterSpacing:"-.05em"}}>{profile.title || profile.display_name || "Perfil Pecatho"}</h1>
+            {profilePlanPresentation.badge && <span className="publicProfilePlanBadge">✦ PERFIL PREMIUM</span>}
             {age && <div style={{fontSize:14,fontWeight:800,color:"#ddd6fe"}}>{age} anos{city?.name ? ` · ${city.name}` : ""}{state?.uf ? ` · ${state.uf}` : ""}</div>}
             <p className="heroCopy" style={{marginTop:16}}>{profile.summary || "Conheça este perfil no Pecatho."}</p>
             <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:16}}>
