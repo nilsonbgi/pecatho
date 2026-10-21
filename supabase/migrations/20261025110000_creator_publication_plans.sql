@@ -18,7 +18,7 @@ revoke all on public.pecatho_creator_publications from anon,authenticated;
 create index if not exists pecatho_creator_publications_active_idx on public.pecatho_creator_publications(creator_id,status,ends_at desc);
 
 create or replace function public.get_public_fans_creator_plan_features(p_creator_ids uuid[])
-returns table(creator_id uuid,featured_card boolean,show_premium_badge boolean,profile_theme text,search_priority integer)
+returns table(creator_id uuid,featured_card boolean,show_premium_badge boolean,profile_theme text,search_priority integer,has_video boolean)
 language sql stable security definer set search_path='pg_catalog'
 as $function$
   select fc.id,
@@ -27,7 +27,8 @@ as $function$
     case when coalesce(bool_or(coalesce(pub.plan_features_snapshot->>'profile_theme',pp.profile_theme)='premium'),false) then 'premium'
          when coalesce(bool_or(coalesce(pub.plan_features_snapshot->>'profile_theme',pp.profile_theme)='highlighted'),false) then 'highlighted'
          else 'standard' end,
-    coalesce(max(coalesce(nullif(pub.plan_features_snapshot->>'search_priority','')::integer,pp.search_priority)),0)
+    coalesce(max(coalesce(nullif(pub.plan_features_snapshot->>'search_priority','')::integer,pp.search_priority)),0),
+    coalesce(bool_or(coalesce(nullif(pub.plan_features_snapshot->>'has_video','')::boolean,pp.has_video)),false)
   from public.fans_creators fc
   join public.pecatho_creator_publications pub on pub.creator_id=fc.id
   join public.publication_plans pp on pp.id=pub.plan_id
