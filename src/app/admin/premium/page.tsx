@@ -203,7 +203,7 @@ export default function AdminCustomerPremiumPage() {
     setPublicationDuration(String(plan.duration_days));
     setPublicationActive(plan.active);
     setPublicationFree(plan.free);
-    setPublicationHasVideo(plan.has_video);
+    setPublicationHasVideo(typeof (plan.features as Record<string, unknown> | null)?.video_gallery === "boolean" ? Boolean((plan.features as Record<string, unknown>).video_gallery) : plan.has_video);
     setPublicationFeatured(plan.featured_card);
     setPublicationSearchPriority(String(plan.search_priority));
     setPublicationBadge(plan.show_premium_badge);
@@ -297,7 +297,8 @@ export default function AdminCustomerPremiumPage() {
   function suggestedCustomerPrice(days: number, discount: number): string | null {
     if (days === 30) return null;
     const monthlyPlan = plans.find((item) => item.audience === "customer" && item.duration_days === 30 && item.id !== editingId);
-    const base = monthlyPlan ? Number(monthlyPlan.price) : null;
+    const editingMonthlyPlan = plans.find((item) => item.id === editingId && item.audience === "customer" && item.duration_days === 30);
+    const base = monthlyPlan ? Number(monthlyPlan.price) : editingMonthlyPlan && Number(durationDays) === 30 ? Number(price.trim().replace(/\\s/g, "").replace(",", ".")) : null;
     if (base == null || !Number.isFinite(base) || base <= 0) return null;
     return (base * (days / 30) * (1 - discount / 100)).toFixed(2).replace(".", ",");
   }
@@ -355,6 +356,11 @@ export default function AdminCustomerPremiumPage() {
         : raw.includes("INVALID_PLAN_PRICE") ? "O preço deve ser maior que zero e não ultrapassar R$ 10.000,00."
         : raw.includes("INVALID_PLAN_AUDIENCE") ? "Selecione um público válido para o plano."
         : raw.includes("INVALID_PLAN_DURATION") ? "Selecione uma duração válida: mensal, trimestral, semestral ou anual."
+        : raw.includes("INVALID_PLAN_DISCOUNT") ? "O desconto deve estar entre 0% e 80%."
+        : raw.includes("MONTHLY_PLAN_DISCOUNT_MUST_BE_ZERO") ? "O plano mensal deve ter desconto de 0%."
+        : raw.includes("PROFESSIONAL_PLAN_DISCOUNT_NOT_SUPPORTED") ? "Descontos por período são configurados apenas para assinaturas de clientes."
+        : raw.includes("CUSTOMER_MONTHLY_BASE_PLAN_REQUIRED") ? "Cadastre ou mantenha um plano mensal de cliente para calcular os períodos maiores."
+        : raw.includes("CUSTOMER_DISCOUNT_PRICE_MISMATCH") ? "O preço final não corresponde ao valor mensal proporcional com o desconto configurado. Atualize o preço-base mensal ou o desconto."
         : raw.includes("PLAN_AUDIENCE_LOCKED") ? "O público deste plano não pode ser alterado porque já existem assinaturas vinculadas."
         : raw.includes("PREMIUM_PLAN_NEEDS_OPERATIONAL_FEATURE") ? "Um plano publicado precisa ter ao menos um diferencial operacional habilitado para esse público."
         : raw.includes("PREMIUM_BADGE_LABEL_REQUIRED") ? "Informe o texto do selo Premium."
