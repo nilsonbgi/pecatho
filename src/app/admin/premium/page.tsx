@@ -130,9 +130,18 @@ export default function AdminCustomerPremiumPage() {
           .select("id,name,description,duration_days,price,currency,active,free,has_video,features,audience,featured_card,search_priority,show_premium_badge,profile_theme,max_gallery_items,updated_at")
           .order("audience", { ascending: true }).order("price", { ascending: true }),
       ]);
-      if (loadError) throw loadError;
+      let premiumPlansData = data;
+      if (loadError) {
+        const missingDiscountColumn = /discount_percent|column .* does not exist|schema cache/i.test(loadError.message ?? "");
+        if (!missingDiscountColumn) throw loadError;
+        const fallback = await supabase.from("pecatho_customer_premium_plans")
+          .select("id,plan_key,name,description,price,currency,duration_days,benefits,active,sort_order,updated_at,audience,feature_flags,card_style,badge_label")
+          .order("sort_order", { ascending: true }).order("price", { ascending: true });
+        if (fallback.error) throw fallback.error;
+        premiumPlansData = (fallback.data ?? []).map((plan) => ({ ...plan, discount_percent: 0 })) as typeof data;
+      }
       if (publicationError) throw publicationError;
-      setPlans((data ?? []) as PremiumPlan[]);
+      setPlans((premiumPlansData ?? []) as PremiumPlan[]);
       setPublicationPlans((publicationData ?? []) as PublicationPlan[]);
     } finally {
       setLoadingPlans(false);
