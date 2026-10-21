@@ -37,7 +37,9 @@ export async function createMercadoPagoPreference(input: MercadoPagoPreferenceIn
             ? "pecatho_publication_plan"
             : productType === "creator_publication_plan"
               ? "pecatho_creator_publication_plan"
-              : input.creatorId ? "pecatho_fans" : "pecatho_digital_content";
+              : productType === "professional_premium_subscription"
+          ? "pecatho_professional_premium"
+          : input.creatorId ? "pecatho_fans" : "pecatho_digital_content";
 
   const successUrl = productType === "premium_subscription"
     ? `${baseUrl}/painel/cliente?premium=aguardando&order=${encodeURIComponent(input.orderId)}`
@@ -47,7 +49,9 @@ export async function createMercadoPagoPreference(input: MercadoPagoPreferenceIn
       ? `${baseUrl}/painel/anuncio/planos?status=aguardando&order=${encodeURIComponent(input.orderId)}`
       : productType === "creator_publication_plan"
         ? `${baseUrl}/fans/gerenciar/visibilidade?status=aguardando&order=${encodeURIComponent(input.orderId)}`
-        : `${baseUrl}/fans/checkout/sucesso?order=${encodeURIComponent(input.orderId)}`;
+        : productType === "professional_premium_subscription"
+      ? `${baseUrl}/painel?premium_profissional=aguardando&order=${encodeURIComponent(input.orderId)}`
+      : `${baseUrl}/fans/checkout/sucesso?order=${encodeURIComponent(input.orderId)}`;
 
   const response = await fetch("https://api.mercadopago.com/checkout/preferences", {
     method: "POST",

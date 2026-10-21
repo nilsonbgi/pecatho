@@ -13,6 +13,7 @@ type CatalogAttribute = { id: string; name: string; slug: string; field_type: st
 type CatalogService = { id: string; name: string; slug: string; display_public: boolean; sort_order: number };
 type Media = { profile_id: string; preview_storage_bucket: string | null; preview_storage_path: string | null; storage_bucket: string; storage_path: string; kind: string; access_type?: string; price?: number | null; is_primary: boolean; is_featured: boolean; is_public: boolean; show_in_cards: boolean; };
 type PublicProfileMeta = { id: string; availability: string | null };
+type PublicPremiumFeature = { entity_id: string; featured_card: boolean; search_priority: boolean; premium_profile: boolean; profile_badge: boolean; card_style: string; badge_label: string | null };
 type PublicationPlanPresentation = { id: string; audience: "companion" | "content_seller" | "both"; featured_card: boolean; show_premium_badge: boolean; profile_theme: "standard" | "highlighted" | "premium"; search_priority: number };
 type ProfessionalFeature = { entity_id: string; featured_card: boolean; search_priority: boolean; premium_profile: boolean; profile_badge: boolean; card_style: string; badge_label: string | null };
 type PublicPremiumFeature = ProfessionalFeature;
@@ -147,6 +148,7 @@ export default function AcompanhantesPage() {
         const m = byProfile.get(x.id);
         return {
           ...x,
+          ...(premiumById.get(x.id) ?? {}),
           imageUrl: m?.preview_storage_bucket && m?.preview_storage_path ? s.storage.from(m.preview_storage_bucket).getPublicUrl(m.preview_storage_path).data.publicUrl || null : null,
           mediaCount: mediaCounts.get(x.id) || 0,
           videoCount: videoCounts.get(x.id) || 0,
@@ -154,7 +156,7 @@ export default function AcompanhantesPage() {
           availability: availabilityMap.get(x.id) || null
         };
       });
-      setAdvertisers((current) => [...current, ...moreCards.filter((item) => !current.some((existing) => existing.id === item.id))]);
+      setAdvertisers((current) => [...current, ...moreCards.filter((item) => !current.some((existing) => existing.id === item.id))].sort((left, right) => Number(Boolean(right.premium_search_priority)) - Number(Boolean(left.premium_search_priority)) || Number(Boolean(right.premium_featured)) - Number(Boolean(left.premium_featured))));
       const matchingCount = Number(rows[0]?.total_count ?? 0);
       setTotalCount(matchingCount);
       setHasMore(advertisers.length + rows.length < matchingCount);

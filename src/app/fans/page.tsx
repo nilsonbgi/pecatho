@@ -91,6 +91,16 @@ export default async function FansPage() {
       creatorPresentationRows = [];
     }
   }
+  let professionalFeatureRows: Array<{ entity_id: string; featured_card: boolean; search_priority: boolean; premium_profile: boolean; profile_badge: boolean; card_style: string; badge_label: string | null }> = [];
+  if (creatorIds.length) {
+    try {
+      const { data } = await createAdminClient().rpc("get_public_professional_plan_features", { p_entity_ids: creatorIds, p_audience: "content_creator" });
+      professionalFeatureRows = (data ?? []) as typeof professionalFeatureRows;
+    } catch {
+      professionalFeatureRows = [];
+    }
+  }
+  const professionalFeatureMap = new Map(professionalFeatureRows.map((item) => [item.entity_id, item]));
   const creatorPresentationMap = new Map(creatorPresentationRows.map((item) => [item.creator_id, item]));
   for (let index = 0; index < publicCreators.length; index++) {
     const item = publicCreators[index];
@@ -101,6 +111,12 @@ export default async function FansPage() {
       plan_premium_badge: presentation?.show_premium_badge === true,
       plan_profile_theme: presentation?.profile_theme ?? "standard",
       plan_search_priority: presentation?.search_priority ?? 0,
+      premium_featured: professionalFeatureMap.get(item.id)?.featured_card === true,
+      premium_search_priority: professionalFeatureMap.get(item.id)?.search_priority === true,
+      premium_profile: professionalFeatureMap.get(item.id)?.premium_profile === true,
+      premium_profile_badge: professionalFeatureMap.get(item.id)?.profile_badge === true,
+      premium_card_style: professionalFeatureMap.get(item.id)?.card_style ?? null,
+      premium_badge_label: professionalFeatureMap.get(item.id)?.badge_label ?? null,
     };
   }
   let professionalFeatureRows: PublicPremiumFeature[] = [];
