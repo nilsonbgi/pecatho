@@ -94,7 +94,7 @@ export default function PublicationPlansPage() {
     else result.push("Galeria de vídeos não incluída");
 
     if (hasLimit("max_photos")) result.push(`Até ${features.max_photos} fotos`);
-    if (hasLimit("max_videos")) result.push(`Até ${features.max_videos} vídeos");
+    if (hasLimit("max_videos")) result.push(`Até ${features.max_videos} vídeos`);
     const totalGalleryLimit = typeof plan.max_gallery_items === "number" && plan.max_gallery_items > 0
       ? plan.max_gallery_items
       : hasLimit("max_gallery_items") ? features.max_gallery_items as number : null;
