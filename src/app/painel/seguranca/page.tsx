@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/browser";
 
@@ -17,7 +17,7 @@ const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/heic", "ap
 const maxBytes = 10 * 1024 * 1024;
 
 export default function SafetyCenterPage() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const [userId, setUserId] = useState("");
   const [reports, setReports] = useState<OwnReport[]>([]);
   const [blocks, setBlocks] = useState<Block[]>([]);
@@ -43,7 +43,22 @@ export default function SafetyCenterPage() {
     else setReports((r.data || []) as OwnReport[]);
     if (!b.error) setBlocks((b.data || []) as Block[]);
   }
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) { window.location.assign("/login"); return; }
+      const [reportsResult, blocksResult] = await Promise.all([
+        supabase.from("governance_reports").select("id,category,justification,status,created_at,target_user_id").order("created_at", { ascending: false }).limit(30),
+        supabase.from("governance_user_blocks").select("id,blocked_user_id,reason,created_at").order("created_at", { ascending: false }).limit(100),
+      ]);
+      if (!active) return;
+      setUserId(auth.user.id);
+      if (reportsResult.error) setError("Não foi possível carregar os registros. Confirme se a governança já foi habilitada no banco."); else setReports((reportsResult.data || []) as OwnReport[]);
+      if (!blocksResult.error) setBlocks((blocksResult.data || []) as Block[]);
+    })();
+    return () => { active = false; };
+  }, [supabase]);
 
   async function findTarget() {
     const username = targetUsername.trim().replace(/^@/, "");
@@ -58,7 +73,7 @@ export default function SafetyCenterPage() {
 
   async function submitReport(event: FormEvent) {
     event.preventDefault(); setBusy(true); setError(""); setMessage("");
-    let uploaded: string[] = [];
+    const uploaded: string[] = [];
     try {
       if (justification.trim().length < 30) throw new Error("Descreva o ocorrido com pelo menos 30 caracteres.");
       if (evidence.length > 5) throw new Error("Anexe no máximo cinco evidências por denúncia.");

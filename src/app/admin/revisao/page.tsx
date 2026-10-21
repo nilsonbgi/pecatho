@@ -28,6 +28,11 @@ export default function ReviewPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
+  async function loadAdvertisers() {
+    const { data, error: dbError } = await supabase.from("advertiser_profiles").select("id,user_id,title,display_name,summary,description,status,verification_status,category_id,state_id,city_id,birth_date,height_cm,weight_kg,availability,phone,whatsapp,pricing,payment_options,social_links,positioning").order("updated_at", { ascending: false });
+    if (dbError) setError(dbError.message); else setAdvertisers((data || []) as Advertiser[]);
+  }
+
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -38,11 +43,6 @@ export default function ReviewPage() {
       await loadAdvertisers();
     })();
   }, []);
-
-  async function loadAdvertisers() {
-    const { data, error: dbError } = await supabase.from("advertiser_profiles").select("id,user_id,title,display_name,summary,description,status,verification_status,category_id,state_id,city_id,birth_date,height_cm,weight_kg,availability,phone,whatsapp,pricing,payment_options,social_links,positioning").order("updated_at", { ascending: false });
-    if (dbError) setError(dbError.message); else setAdvertisers((data || []) as Advertiser[]);
-  }
 
   async function openAdvertiser(item: Advertiser) {
     setSelected(item); setBusy(true); setMessage(""); setError("");

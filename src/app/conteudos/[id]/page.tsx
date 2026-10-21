@@ -57,25 +57,22 @@ function mediaLabel(type: string) {
 
 export default function DigitalContentProductPage() {
   const params = useParams<{ id: string }>();
-  const [product, setProduct] = useState<Product | null>(null);
-  const [productLoading, setProductLoading] = useState(true);
   const [reloadProduct, setReloadProduct] = useState(0);
+  const [productRecord, setProductRecord] = useState<{ key: string; product: Product | null } | null>(null);
+  const loadKey = `${params.id}:${reloadProduct}`;
+  const product = productRecord?.key.startsWith(`${params.id}:`) ? productRecord.product : null;
+  const productLoading = productRecord?.key !== loadKey;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [reputation, setReputation] = useState<SellerReputation | null>(null);
-  const [reputationLoading, setReputationLoading] = useState(true);
+  const [reputationLoadedFor, setReputationLoadedFor] = useState("");
+  const reputationLoading = Boolean(product && reputationLoadedFor !== product.id);
   const [relatedProducts, setRelatedProducts] = useState<Array<{
     id: string; title: string; product_type: string; price: number | string; currency: string; cover_url: string | null;
   }>>([]);
 
   useEffect(() => {
     let active = true;
-    setProduct(null);
-    setError("");
-    setProductLoading(true);
-    setReputation(null);
-    setRelatedProducts([]);
-
     async function load() {
       try {
         const response = await fetch(
@@ -88,7 +85,7 @@ export default function DigitalContentProductPage() {
           throw new Error(body.error || "Conteúdo não encontrado.");
         }
 
-        if (active) setProduct(body.product as Product);
+        if (active) { setProductRecord({ key: loadKey, product: body.product as Product }); setError(""); }
       } catch (err) {
         if (active) {
           setError(
@@ -96,9 +93,8 @@ export default function DigitalContentProductPage() {
               ? err.message
               : "Não foi possível carregar o conteúdo.",
           );
+          setProductRecord({ key: loadKey, product: null });
         }
-      } finally {
-        if (active) setProductLoading(false);
       }
     }
 
@@ -107,14 +103,12 @@ export default function DigitalContentProductPage() {
     return () => {
       active = false;
     };
-  }, [params.id, reloadProduct]);
+  }, [params.id, reloadProduct, loadKey]);
 
   useEffect(() => {
     if (!product) return;
 
     let active = true;
-    setReputationLoading(true);
-
     fetch(
       `/api/conteudos/seller-reputation?owner_type=${encodeURIComponent(product.owner_type)}&owner_id=${encodeURIComponent(product.owner_id)}`,
       { cache: "no-store" },
@@ -124,13 +118,13 @@ export default function DigitalContentProductPage() {
         return response.json() as Promise<{ reputation?: SellerReputation | null }>;
       })
       .then((body) => {
-        if (active) setReputation(body.reputation ?? null);
+        if (active) { setReputation(body.reputation ?? null); setReputationLoadedFor(product.id); }
       })
       .catch(() => {
-        if (active) setReputation(null);
+        if (active) { setReputation(null); setReputationLoadedFor(product.id); }
       })
       .finally(() => {
-        if (active) setReputationLoading(false);
+        if (active) setReputationLoadedFor(product.id);
       });
 
     return () => {
@@ -230,7 +224,7 @@ export default function DigitalContentProductPage() {
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
             <button
               type="button"
-              onClick={() => { setError(""); setProductLoading(true); setReloadProduct((current) => current + 1); }}
+              onClick={() => { setError(""); setReloadProduct((current) => current + 1); }}
               className="rounded-xl bg-white px-5 py-3 text-xs font-black text-slate-950 transition hover:bg-violet-100"
             >
               Tentar novamente

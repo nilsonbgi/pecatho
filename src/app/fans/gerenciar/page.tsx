@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import ProfessionalPremiumPlans from "@/components/ProfessionalPremiumPlans";
+import { isTimestampInFuture } from "@/lib/time-comparisons";
 
 export const dynamic="force-dynamic";
 type CountResult={count:number|null};
@@ -22,7 +23,7 @@ export default async function FansManagePage(){
  const publishedPosts=await supabase.from("fans_posts").select("id",{count:"exact",head:true}).eq("creator_id",creator.id).eq("status","published");
  const {data:boostRows}=await supabase.from("fans_boosts").select("view_count,status,ends_at").eq("creator_id",creator.id);
  const boostExposureTotal=(boostRows??[]).reduce((total,row)=>total+Math.max(0,Number(row.view_count)||0),0);
- const activeBoostCount=(boostRows??[]).filter(row=>row.status==="active"&&new Date(row.ends_at).getTime()>Date.now()).length;
+ const activeBoostCount=(boostRows??[]).filter(row=>row.status==="active"&&isTimestampInFuture(row.ends_at)).length;
  const unreadActivity=activity.data?.filter(i=>!i.read_at).length??0;
  const cards=[
   ["/fans/gerenciar/perfil","Perfil do criador","Nome, apresentação, avatar e identidade pública.","◉"],

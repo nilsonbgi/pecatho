@@ -59,7 +59,38 @@ export default function PublicationPlansPage() {
     } finally { setLoading(false); }
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { window.location.assign("/login"); return; }
+        const { data: profile, error: profileError } = await supabase.from("advertiser_profiles").select("id,title,display_name").eq("user_id", user.id).maybeSingle();
+        if (!active) return;
+        if (profileError) throw profileError;
+        if (!profile) { setError("Crie e salve seu anúncio antes de contratar um plano."); return; }
+        setProfileId(profile.id);
+        setProfileTitle(profile.title || profile.display_name || "Seu anúncio");
+        const [{ data: creator, error: creatorError }, { data, error: plansError }] = await Promise.all([
+          supabase.from("fans_creators").select("id").eq("advertiser_profile_id", profile.id).eq("status", "active").maybeSingle(),
+          supabase.from("publication_plans").select("id,name,description,duration_days,price,active,free,has_video,audience,featured_card,search_priority,show_premium_badge,profile_theme,max_gallery_items,features").eq("active", true).order("price", { ascending: true }),
+        ]);
+        if (!active) return;
+        if (creatorError) throw creatorError;
+        if (plansError) throw plansError;
+        const audience = creator ? "content_seller" : "companion";
+        setPlans(((data ?? []) as Plan[]).filter((plan) =>
+          (plan.free ? Number(plan.price) === 0 : Number(plan.price) > 0) &&
+          (plan.audience === "both" || plan.audience === audience)
+        ));
+      } catch (cause) {
+        console.error(cause);
+        if (active) setError("Não foi possível carregar os planos. Confirme se a migration de diferenciais está aplicada.");
+      } finally { if (active) setLoading(false); }
+    })();
+    return () => { active = false; };
+  }, []);
 
   async function choosePlan(plan: Plan) {
     if (!profileId || busyId) return;

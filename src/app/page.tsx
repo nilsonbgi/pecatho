@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
+import { confirmAgeVerification, getAgeVerificationSnapshot, subscribeToAgeVerification } from "@/lib/age-verification";
 
 const categories = [
   ["01", "Acompanhantes", "Descubra perfis por cidade, categoria, características, serviços, disponibilidade e faixa de preço."],
@@ -18,16 +19,11 @@ const highlights = [
 ];
 
 export default function HomePage() {
-  const [ageVerified, setAgeVerified] = useState<boolean | null>(null);
+  const ageVerified = useSyncExternalStore(subscribeToAgeVerification, getAgeVerificationSnapshot, () => false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  useEffect(() => {
-    setAgeVerified(window.localStorage.getItem("pecatho_age_verified") === "true");
-  }, []);
-
   function confirmAge() {
-    window.localStorage.setItem("pecatho_age_verified", "true");
-    setAgeVerified(true);
+    confirmAgeVerification();
   }
 
   function leaveAgeRestrictedSite() {

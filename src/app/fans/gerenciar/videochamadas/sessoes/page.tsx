@@ -15,7 +15,7 @@ export default function CreatorLiveSessionsPage(){
  async function load(){
   const s=createClient();
   const {data:{user}}=await s.auth.getUser();
-  if(!user){window.location.href="/login?next=/fans/gerenciar/videochamadas/sessoes";return;}
+  if(!user){window.location.assign("/login?next=/fans/gerenciar/videochamadas/sessoes");return;}
   const {data:c}=await s.from("fans_creators").select("id").eq("user_id",user.id).maybeSingle();
   if(!c){setError("Espaço Fans não encontrado.");setLoading(false);return;}
   const {data,error:e}=await s.from("fans_live_sessions").select("id,title,duration_minutes,amount,currency,status,scheduled_for,confirmed_at,created_at,buyer_user_id,rejection_reason,paid_at,started_at,ended_at,ended_reason,commercial_outcome,refund_status,refund_amount,refund_reason,refund_requested_at,refund_processed_at").eq("creator_id",c.id).order("created_at",{ascending:false});
@@ -23,7 +23,22 @@ export default function CreatorLiveSessionsPage(){
   setLoading(false);
  }
 
- useEffect(()=>{void load()},[]);
+ useEffect(()=>{
+  let active=true;
+  void (async()=>{
+   const s=createClient();
+   const {data:{user}}=await s.auth.getUser();
+   if(!user){window.location.assign("/login?next=/fans/gerenciar/videochamadas/sessoes");return;}
+   const {data:c}=await s.from("fans_creators").select("id").eq("user_id",user.id).maybeSingle();
+   if(!active)return;
+   if(!c){setError("Espaço Fans não encontrado.");setLoading(false);return;}
+   const {data,error:e}=await s.from("fans_live_sessions").select("id,title,duration_minutes,amount,currency,status,scheduled_for,confirmed_at,created_at,buyer_user_id,rejection_reason,paid_at,started_at,ended_at,ended_reason,commercial_outcome,refund_status,refund_amount,refund_reason,refund_requested_at,refund_processed_at").eq("creator_id",c.id).order("created_at",{ascending:false});
+   if(!active)return;
+   if(e)setError("Não foi possível carregar as solicitações.");else setSessions((data??[]) as Session[]);
+   setLoading(false);
+  })();
+  return()=>{active=false};
+ },[]);
 
  useEffect(()=>{
   let channel: ReturnType<ReturnType<typeof createClient>["channel"]>|null=null;

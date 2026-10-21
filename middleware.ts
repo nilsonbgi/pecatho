@@ -15,7 +15,7 @@ function applySecurityHeaders(response: NextResponse) {
 }
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  const response = NextResponse.next({ request });
   const hostname = request.headers.get("host")?.split(":")[0].toLowerCase();
   const isFansHost = hostname ? FANS_HOSTS.has(hostname) : false;
   const pathname = request.nextUrl.pathname;

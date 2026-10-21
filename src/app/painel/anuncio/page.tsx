@@ -80,7 +80,7 @@ export default function AnuncioPage() {
   const [neighborhoodId, setNeighborhoodId] = useState<string>(""); const [locationVisibility, setLocationVisibility] = useState("private"); const [cepBusy, setCepBusy] = useState(false); const [latitude, setLatitude] = useState<number | null>(null); const [longitude, setLongitude] = useState<number | null>(null); const [publicLatitude, setPublicLatitude] = useState<number | null>(null); const [publicLongitude, setPublicLongitude] = useState<number | null>(null); const [locationMessage, setLocationMessage] = useState("");
   const [states, setStates] = useState<StateRow[]>([]); const [cities, setCities] = useState<CityRow[]>([]); const [categories, setCategories] = useState<CategoryRow[]>([]); const [attributes, setAttributes] = useState<AttributeRow[]>([]); const [services, setServices] = useState<ServiceRow[]>([]);
   const [attributeValues, setAttributeValues] = useState<Record<string, unknown>>({}); const [selectedServices, setSelectedServices] = useState<Record<string, boolean>>({}); const [serviceNotes, setServiceNotes] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true); const [catalogBusy, setCatalogBusy] = useState(false); const [busy, setBusy] = useState(false); const [message, setMessage] = useState(""); const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true); const [loadedCategoryId, setLoadedCategoryId] = useState(""); const catalogBusy = Boolean(categoryId && loadedCategoryId !== categoryId); const [busy, setBusy] = useState(false); const [message, setMessage] = useState(""); const [error, setError] = useState("");
   const [media, setMedia] = useState<MediaRow[]>([]); const [mediaSales, setMediaSales] = useState<MediaSaleRow[]>([]); const [mediaSalesSummary, setMediaSalesSummary] = useState<MediaSalesSummary>({ paidCount: 0, grossPaid: 0, pendingCount: 0, refundedCount: 0, grossRefunded: 0 }); const [mediaFinanceSummary, setMediaFinanceSummary] = useState<MediaFinanceSummary>({ balance: 0, credits: 0, fees: 0, reversals: 0 }); const [profileSlug, setProfileSlug] = useState(""); const [mediaPriceDrafts, setMediaPriceDrafts] = useState<Record<string, string>>({}); const [mediaBusy, setMediaBusy] = useState(false); const [profileStatus, setProfileStatus] = useState(""); const [verificationStatus, setVerificationStatus] = useState(""); const [publishBusy, setPublishBusy] = useState(false);
 
   const visibleCities = useMemo(() => cities.filter((c) => !stateId || String(c.state_id) === stateId), [cities, stateId]);
@@ -215,22 +215,22 @@ export default function AnuncioPage() {
   }, []);
 
   useEffect(() => {
-    if (!stateId) { setCities([]); return; }
+    if (!stateId) return;
     let alive = true; const supabase = createClient();
     (async () => { const { data, error: queryError } = await supabase.from("cities").select("id,name,state_id,ibge_code").eq("state_id", Number(stateId)).order("name"); if (alive) { if (queryError) setError("Não foi possível carregar as cidades."); setCities((data || []) as CityRow[]); } })();
     return () => { alive = false; };
   }, [stateId]);
 
   useEffect(() => {
-    if (!categoryId) { setAttributes([]); setServices([]); setAttributeValues({}); setSelectedServices({}); setServiceNotes({}); return; }
-    let alive = true; setCatalogBusy(true); setError(""); const supabase = createClient();
+    if (!categoryId) return;
+    let alive = true; const supabase = createClient();
     (async () => {
       const [a, s] = await Promise.all([
         supabase.from("category_attributes").select("id,name,slug,field_type,options,required,display_public,sort_order").eq("category_id", Number(categoryId)).order("sort_order"),
         supabase.from("category_services").select("id,name,slug,description,required,display_public,sort_order").eq("category_id", Number(categoryId)).order("sort_order"),
       ]);
       if (!alive) return;
-      if (a.error || s.error) { setError("Não foi possível carregar as características e serviços da categoria."); setAttributes([]); setServices([]); setCatalogBusy(false); return; }
+      if (a.error || s.error) { setError("Não foi possível carregar as características e serviços da categoria."); setAttributes([]); setServices([]); setLoadedCategoryId(categoryId); return; }
       const nextAttributes = (a.data || []) as AttributeRow[]; const nextServices = (s.data || []) as ServiceRow[]; setAttributes(nextAttributes); setServices(nextServices);
       const { data: profile } = await supabase.from("advertiser_profiles").select("id").eq("user_id", (await supabase.auth.getUser()).data.user?.id || "").maybeSingle();
       if (profile) {
@@ -245,7 +245,7 @@ export default function AnuncioPage() {
         if (ageAttribute && valueMap[ageAttribute.id] != null && valueMap[ageAttribute.id] !== "") setAge(String(valueMap[ageAttribute.id]));
         if (heightAttribute && valueMap[heightAttribute.id] != null && valueMap[heightAttribute.id] !== "") setHeight(String(valueMap[heightAttribute.id]));
       }
-      setCatalogBusy(false);
+      setLoadedCategoryId(categoryId);
     })();
     return () => { alive = false; };
   }, [categoryId]);
@@ -470,7 +470,7 @@ export default function AnuncioPage() {
 
   if (loading) return <main className="shell"><section className="hero"><p>Carregando editor...</p></section></main>;
   return <main className="shell advertiserAdEditor"><nav className="topbar"><div className="brand"><span className="brandMark">P</span><span>Pecatho</span></div><div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}><Link href="/painel/anuncio/planos" className="primaryButton" style={{ textDecoration: "none" }}>Planos e destaques</Link><Link href="/painel/anuncio/premium" className="secondaryButton" style={{ textDecoration: "none" }}>Planos e destaque Premium</Link>{profileStatus === "published" && profileSlug && <Link href={`/anunciantes/${profileSlug}`} target="_blank" className="secondaryButton" style={{ textDecoration: "none" }}>Ver anúncio publicado ↗</Link>}<Link href="/painel" className="navCta">Voltar ao painel</Link></div></nav><section className="hero editorHero"><div className="eyebrow">CENTRAL DO ANÚNCIO</div><h1>Construa uma presença que <em>converte.</em></h1><p className="heroCopy">Organize apresentação, mídia, localização, características, serviços, preços e contato em um único fluxo. Seus dados existentes são preservados enquanto você evolui o anúncio.</p><div className="editorStatus"><div><strong>Rascunho seguro</strong><span>Você controla quando solicitar a publicação.</span></div><div><strong>Moderação de mídia</strong><span>Arquivos entram no fluxo de revisão.</span></div><div><strong>Privacidade</strong><span>Endereço exato não é exposto ao público.</span></div><div><strong>{readinessPercent}% pronto</strong><span>{publicationReadiness.checks.filter((check) => check.ready).length} de {publicationReadiness.checks.length} critérios atendidos para análise.</span></div></div><div className="editorGrid"><aside className="editorNav"><div className="editorNavTitle"><span>CONFIGURAÇÃO</span><strong>Seu anúncio</strong></div>{sections.map((section, index) => <button key={section} type="button" className={`editorTab ${active === section ? "active" : ""}`} onClick={() => setActive(section)}>{section}</button>)}</aside><form className="authCard editorCard" onSubmit={submit}>
-    {active === "Apresentação" && <><h2>Apresentação</h2><label>Categoria<select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} required><option value="">Selecione a categoria</option>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>{selectedCategory && <p className="fieldNote">Categoria selecionada: <strong>{selectedCategory.name}</strong>. Os campos específicos permanecem vinculados à configuração administrativa.</p>}<label>Título<input value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={120} /></label><label>Nome público<input value={name} onChange={(e) => setName(e.target.value)} maxLength={100} /></label><label>Resumo<textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows={3} maxLength={280} /></label><label>Descrição<FormattedTextEditor value={description} onChange={setDescription} rows={8} maxLength={5000} label="Descrição pública do anúncio" /></label></>}
+    {active === "Apresentação" && <><h2>Apresentação</h2><label>Categoria<select value={categoryId} onChange={(e) => { const nextCategoryId = e.target.value; setCategoryId(nextCategoryId); setAttributes([]); setServices([]); setAttributeValues({}); setSelectedServices({}); setServiceNotes({}); }} required><option value="">Selecione a categoria</option>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>{selectedCategory && <p className="fieldNote">Categoria selecionada: <strong>{selectedCategory.name}</strong>. Os campos específicos permanecem vinculados à configuração administrativa.</p>}<label>Título<input value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={120} /></label><label>Nome público<input value={name} onChange={(e) => setName(e.target.value)} maxLength={100} /></label><label>Resumo<textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows={3} maxLength={280} /></label><label>Descrição<FormattedTextEditor value={description} onChange={setDescription} rows={8} maxLength={5000} label="Descrição pública do anúncio" /></label></>}
     {active === "Mídias" && <section>
       <h2>Mídias do anúncio</h2>
       <p className="fieldNote">Toda mídia nova começa privada, fora dos cards e da galeria. Você decide depois se a torna pública ou se a oferece como conteúdo pago; a moderação é uma etapa separada.</p>

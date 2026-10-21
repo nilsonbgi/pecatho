@@ -55,10 +55,6 @@ export default function DigitalContentShowcase({
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
-    setCatalogError(false);
-    setReputationLoading(true);
-
     fetch(
       `/api/conteudos/public?owner_type=${encodeURIComponent(ownerType)}&owner_id=${encodeURIComponent(ownerId)}`,
       { cache: "no-store" },

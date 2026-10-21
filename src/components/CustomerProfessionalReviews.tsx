@@ -20,7 +20,6 @@ export default function CustomerProfessionalReviews() {
   const [error, setError] = useState("");
 
   async function load() {
-    setLoading(true);
     try {
       const response = await fetch("/api/clientes/avaliacoes-profissionais", { cache: "no-store" });
       const body = await response.json();
@@ -33,7 +32,19 @@ export default function CustomerProfessionalReviews() {
     }
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    let active = true;
+    fetch("/api/clientes/avaliacoes-profissionais", { cache: "no-store" })
+      .then(async (response) => {
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.error || "Não foi possível carregar suas experiências.");
+        return body.experiences as Experience[];
+      })
+      .then((experiences) => { if (active) setItems(experiences ?? []); })
+      .catch((failure: unknown) => { if (active) setError(failure instanceof Error ? failure.message : "Não foi possível carregar suas experiências."); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
 
   async function submit(experienceId: string) {
     setBusy(experienceId);

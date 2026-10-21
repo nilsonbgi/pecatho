@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { confirmAgeVerification, getAgeVerificationSnapshot, subscribeToAgeVerification } from "@/lib/age-verification";
 import { createClient } from "@/lib/supabase/browser";
 import ApproximateLocationMap from "@/components/ApproximateLocationMap";
 import DigitalContentShowcase from "@/components/DigitalContentShowcase";
@@ -59,8 +60,10 @@ function contactDigits(value: string | null | undefined) {
 
 export default function PublicAdvertiserPage() {
   const params = useParams<{ slug: string }>();
+  const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [premiumFeatures, setPremiumFeatures] = useState<PremiumFeatures | null>(null);
+  const [premiumFeaturesBySlug, setPremiumFeaturesBySlug] = useState<{ slug: string; data: PremiumFeatures | null } | null>(null);
+  const premiumFeatures = premiumFeaturesBySlug?.slug === params.slug ? premiumFeaturesBySlug.data : null;
   const [address, setAddress] = useState<Address | null>(null);
   const [city, setCity] = useState<City | null>(null);
   const [state, setState] = useState<State | null>(null);
@@ -83,12 +86,8 @@ export default function PublicAdvertiserPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [conversationBusy, setConversationBusy] = useState(false);
   const [conversationNotice, setConversationNotice] = useState("");
-  const [ageVerified, setAgeVerified] = useState(false);
+  const ageVerified = useSyncExternalStore(subscribeToAgeVerification, getAgeVerificationSnapshot, () => false);
   const [profilePlanPresentation, setProfilePlanPresentation] = useState<{ badge: boolean; theme: "standard" | "highlighted" | "premium"; premiumProfile?: boolean; premiumBadge?: boolean; premiumStyle?: string; premiumBadgeLabel?: string | null }>({ badge: false, theme: "standard" });
-
-  useEffect(() => {
-    setAgeVerified(window.localStorage.getItem("pecatho_age_verified") === "true");
-  }, []);
 
   useEffect(() => {
     let active = true;
@@ -120,7 +119,6 @@ export default function PublicAdvertiserPage() {
   useEffect(() => {
     let active = true;
     const supabase = createClient();
-    setPremiumFeatures(null);
     (async () => {
       const { data: p, error: profileError } = await supabase
         .rpc("get_public_advertiser_profile", { p_slug: params.slug })
@@ -151,7 +149,7 @@ export default function PublicAdvertiserPage() {
       if (!active) return;
       setProfile(typed); setAddress({ public_latitude: typed.public_latitude, public_longitude: typed.public_longitude }); setCity((c.data as City | null) || null); setState((s.data as State | null) || null); setCategory((cat.data as Category | null) || null);
       setAttributes((attrs.data ?? []) as Attribute[]); setAttributeValues((attrValues.data ?? []) as AttributeValue[]); setServices((svc.data ?? []) as Service[]); setProfileServices((svcValues.data ?? []) as ProfileService[]);
-      setFans((fansResult.data as FansCreator | null) || null); setMedia(gallery); setReviews((reviewResult.data ?? []) as Review[]); setPremiumFeatures(Array.isArray(premiumResult.data) && premiumResult.data.length ? premiumResult.data[0] as PremiumFeatures : null); setLoading(false);
+      setFans((fansResult.data as FansCreator | null) || null); setMedia(gallery); setReviews((reviewResult.data ?? []) as Review[]); setPremiumFeaturesBySlug({ slug: params.slug, data: Array.isArray(premiumResult.data) && premiumResult.data.length ? premiumResult.data[0] as PremiumFeatures : null }); setLoading(false);
 
       const { data: authData } = await supabase.auth.getUser();
       if (authData.user && !typed.is_owner) {
@@ -243,7 +241,7 @@ export default function PublicAdvertiserPage() {
       const supabase = createClient();
       const { data: authData } = await supabase.auth.getUser();
       if (!authData.user) {
-        window.location.href = `/login?redirect=/anunciantes/${params.slug}`;
+        router.push(`/login?redirect=/anunciantes/${params.slug}`);
         return;
       }
       if (profile.is_owner) {
@@ -254,7 +252,7 @@ export default function PublicAdvertiserPage() {
       if (rpcError) throw rpcError;
       if (!data) throw new Error("A conversa não foi criada.");
       const destination = context ? `/painel/mensagens/${data}?context=${encodeURIComponent(context)}` : `/painel/mensagens/${data}`;
-      window.location.href = destination;
+      router.push(destination);
     } catch (err) {
       console.error(err);
       setConversationNotice("Não foi possível iniciar a conversa agora.");
@@ -267,7 +265,7 @@ export default function PublicAdvertiserPage() {
       const supabase = createClient();
       const { data: authData } = await supabase.auth.getUser();
       if (!authData.user) {
-        window.location.href = `/login?redirect=/anunciantes/${params.slug}`;
+        router.push(`/login?redirect=/anunciantes/${params.slug}`);
         return;
       }
 
@@ -305,7 +303,7 @@ export default function PublicAdvertiserPage() {
       const provider = await providerResponse.json().catch(() => ({}));
       if (!providerResponse.ok || !provider.checkout_url) throw new Error(provider.error || "Não foi possível abrir o checkout.");
 
-      window.location.href = provider.checkout_url;
+      window.location.assign(provider.checkout_url);
     } catch (err) {
       console.error(err);
       setNotice(err instanceof Error ? err.message : "Não foi possível iniciar o pagamento deste conteúdo.");
@@ -327,7 +325,7 @@ export default function PublicAdvertiserPage() {
             <h2 id="advertiser-age-title">Conteúdo destinado a maiores de 18 anos</h2>
             <p>Este perfil integra a área de acompanhantes de serviços adultos do Pecatho. Para continuar, confirme que você possui 18 anos ou mais.</p>
             <div className="pAgeWarning"><strong>⚠ Aviso:</strong> este perfil pode apresentar imagens, serviços e informações de natureza sexualmente explícita. Menores de 18 anos não podem prosseguir.</div>
-            <div className="pAgeActions"><button type="button" className="pAgeEnter" onClick={() => { window.localStorage.setItem("pecatho_age_verified", "true"); setAgeVerified(true); }}>TENHO 18 ANOS OU MAIS · ENTRAR</button><button type="button" className="pAgeLeave" onClick={() => { window.location.href = "https://www.google.com"; }}>SAIR</button></div>
+            <div className="pAgeActions"><button type="button" className="pAgeEnter" onClick={confirmAgeVerification}>TENHO 18 ANOS OU MAIS · ENTRAR</button><button type="button" className="pAgeLeave" onClick={() => { window.location.href = "https://www.google.com"; }}>SAIR</button></div>
             <div className="pAgeLegal">A confirmação é armazenada neste navegador para evitar a repetição do aviso em acessos futuros.</div>
           </div>
         </div>

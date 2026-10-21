@@ -18,7 +18,14 @@ export default function LocalidadesPage() {
     else setCityCount(count ?? 0);
   }
 
-  useEffect(() => { void loadCount(); }, []);
+  useEffect(() => {
+    let active = true;
+    createClient().from("cities").select("id", { count: "exact", head: true }).then(({ count, error: countError }) => {
+      if (!active) return;
+      if (countError) setError(countError.message); else setCityCount(count ?? 0);
+    });
+    return () => { active = false; };
+  }, []);
 
   async function synchronize() {
     setBusy(true); setError(""); setMessage("");

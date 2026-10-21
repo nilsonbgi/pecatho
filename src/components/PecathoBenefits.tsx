@@ -62,7 +62,7 @@ export default function PecathoBenefits({ initialPoints = 0 }: { initialPoints?:
   const benefitMap = useMemo(() => new Map(benefits.map((item) => [item.id, item])), [benefits]);
   const venueMap = useMemo(() => new Map(venues.map((item) => [item.id, item.name])), [venues]);
 
-  const load = useCallback(async () => {
+  const fetchCatalog = useCallback(async () => {
     const supabase = createClient();
     const now = new Date().toISOString();
     const [{ data: benefitRows, error: benefitError }, { data: couponRows, error: couponError }, { data: pointRow }, { data: venueRows }] = await Promise.all([
@@ -73,17 +73,30 @@ export default function PecathoBenefits({ initialPoints = 0 }: { initialPoints?:
     ]);
     if (benefitError) throw benefitError;
     if (couponError) throw couponError;
-    setBenefits((benefitRows ?? []) as Benefit[]);
-    setCoupons((couponRows ?? []) as UserCoupon[]);
-    setPoints(Number(pointRow?.balance ?? initialPoints));
-    setVenues((venueRows ?? []) as Venue[]);
+    return {
+      benefits: (benefitRows ?? []) as Benefit[],
+      coupons: (couponRows ?? []) as UserCoupon[],
+      points: Number(pointRow?.balance ?? initialPoints),
+      venues: (venueRows ?? []) as Venue[],
+    };
   }, [initialPoints]);
+
+  const load = useCallback(async () => {
+    const catalog = await fetchCatalog();
+    setBenefits(catalog.benefits);
+    setCoupons(catalog.coupons);
+    setPoints(catalog.points);
+    setVenues(catalog.venues);
+  }, [fetchCatalog]);
 
   useEffect(() => {
     let active = true;
-    void load().catch(() => { if (active) setError("Não foi possível carregar o catálogo de benefícios."); }).finally(() => { if (active) setLoading(false); });
+    fetchCatalog()
+      .then((catalog) => { if (active) { setBenefits(catalog.benefits); setCoupons(catalog.coupons); setPoints(catalog.points); setVenues(catalog.venues); } })
+      .catch(() => { if (active) setError("Não foi possível carregar o catálogo de benefícios."); })
+      .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [load]);
+  }, [fetchCatalog]);
 
   async function redeem(benefit: Benefit) {
     setRedeeming(benefit.id);

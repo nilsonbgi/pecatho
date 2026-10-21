@@ -15,32 +15,34 @@ export default function FansVisibilityPlansPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
-  async function load() {
-    setLoading(true);
-    try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { window.location.href = "/login"; return; }
-      const [{ data: creator, error: creatorError }, { data, error: plansError }] = await Promise.all([
-        supabase.from("fans_creators").select("id,display_name").eq("user_id", user.id).maybeSingle(),
-        supabase.from("publication_plans").select("id,name,description,duration_days,price,active,free,audience,featured_card,search_priority,show_premium_badge,profile_theme,has_video,max_gallery_items,features").eq("active", true).order("price", { ascending: true }),
-      ]);
-      if (creatorError) throw creatorError;
-      if (plansError) throw plansError;
-      if (!creator) { setError("Ative seu espaço Fans antes de contratar um plano de visibilidade."); return; }
-      setCreatorId(creator.id);
-      setCreatorName(creator.display_name || "Seu perfil Fans");
-      setPlans(((data ?? []) as Plan[]).filter((plan) =>
-        (plan.free ? Number(plan.price) === 0 : Number(plan.price) > 0) &&
-        (plan.audience === "both" || plan.audience === "content_seller")
-      ));
-    } catch (cause) {
-      console.error(cause);
-      setError("Não foi possível carregar os planos. Confirme se as migrations de diferenciais estão aplicadas.");
-    } finally { setLoading(false); }
-  }
-
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { window.location.assign("/login"); return; }
+        const [{ data: creator, error: creatorError }, { data, error: plansError }] = await Promise.all([
+          supabase.from("fans_creators").select("id,display_name").eq("user_id", user.id).maybeSingle(),
+          supabase.from("publication_plans").select("id,name,description,duration_days,price,active,free,audience,featured_card,search_priority,show_premium_badge,profile_theme,has_video,max_gallery_items,features").eq("active", true).order("price", { ascending: true }),
+        ]);
+        if (!active) return;
+        if (creatorError) throw creatorError;
+        if (plansError) throw plansError;
+        if (!creator) { setError("Ative seu espaço Fans antes de contratar um plano de visibilidade."); return; }
+        setCreatorId(creator.id);
+        setCreatorName(creator.display_name || "Seu perfil Fans");
+        setPlans(((data ?? []) as Plan[]).filter((plan) =>
+          (plan.free ? Number(plan.price) === 0 : Number(plan.price) > 0) &&
+          (plan.audience === "both" || plan.audience === "content_seller")
+        ));
+      } catch (cause) {
+        console.error(cause);
+        if (active) setError("Não foi possível carregar os planos. Confirme se as migrations de diferenciais estão aplicadas.");
+      } finally { if (active) setLoading(false); }
+    })();
+    return () => { active = false; };
+  }, []);
 
   async function choosePlan(plan: Plan) {
     if (!creatorId || busyId) return;
