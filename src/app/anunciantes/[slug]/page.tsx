@@ -23,6 +23,7 @@ type AttributeValue = { attribute_id: string; value: unknown };
 type Service = { id: string; name: string; slug: string; description: string | null; sort_order: number };
 type ProfileService = { service_id: string; selected: boolean; notes: string | null };
 type FansCreator = { slug: string; display_name: string; bio: string | null; status: string };
+type PremiumFeatures = { featured_card: boolean; search_priority: boolean; premium_profile: boolean; profile_badge: boolean; card_style: string; badge_label: string | null };
 
 type GalleryItem = Media & { url: string | null; previewUrl: string | null; unlockedUrl?: string | null };
 
@@ -59,6 +60,7 @@ function contactDigits(value: string | null | undefined) {
 export default function PublicAdvertiserPage() {
   const params = useParams<{ slug: string }>();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [premiumFeatures, setPremiumFeatures] = useState<PremiumFeatures | null>(null);
   const [address, setAddress] = useState<Address | null>(null);
   const [city, setCity] = useState<City | null>(null);
   const [state, setState] = useState<State | null>(null);
@@ -118,6 +120,7 @@ export default function PublicAdvertiserPage() {
   useEffect(() => {
     let active = true;
     const supabase = createClient();
+    setPremiumFeatures(null);
     (async () => {
       const { data: p, error: profileError } = await supabase
         .rpc("get_public_advertiser_profile", { p_slug: params.slug })
@@ -127,7 +130,7 @@ export default function PublicAdvertiserPage() {
         return;
       }
       const typed = p as Profile;
-      const [c, s, cat, attrs, attrValues, svc, svcValues, mediaResult, reviewResult, fansResult] = await Promise.all([
+      const [c, s, cat, attrs, attrValues, svc, svcValues, mediaResult, reviewResult, fansResult, premiumResult] = await Promise.all([
         typed.city_id ? supabase.from("cities").select("name").eq("id", typed.city_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
         typed.state_id ? supabase.from("states").select("uf,name").eq("id", typed.state_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
         typed.category_id ? supabase.from("categories").select("name").eq("id", typed.category_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
@@ -138,6 +141,7 @@ export default function PublicAdvertiserPage() {
         supabase.rpc("get_public_profile_media", { p_profile_ids: [typed.id] }),
         supabase.rpc("get_public_profile_feedback", { p_profile_id: typed.id, p_limit: 12 }),
         supabase.rpc("get_public_fans_creator", { p_advertiser_profile_id: typed.id }).maybeSingle(),
+        supabase.rpc("get_public_professional_plan_features", { p_entity_ids: [typed.id], p_audience: "companion" }),
       ]);
       const gallery = ((mediaResult.data ?? []) as Media[]).filter((item) => item.moderation_status === "approved" && item.show_in_gallery !== false).map((item) => ({
         ...item,
@@ -147,7 +151,7 @@ export default function PublicAdvertiserPage() {
       if (!active) return;
       setProfile(typed); setAddress({ public_latitude: typed.public_latitude, public_longitude: typed.public_longitude }); setCity((c.data as City | null) || null); setState((s.data as State | null) || null); setCategory((cat.data as Category | null) || null);
       setAttributes((attrs.data ?? []) as Attribute[]); setAttributeValues((attrValues.data ?? []) as AttributeValue[]); setServices((svc.data ?? []) as Service[]); setProfileServices((svcValues.data ?? []) as ProfileService[]);
-      setFans((fansResult.data as FansCreator | null) || null); setMedia(gallery); setReviews((reviewResult.data ?? []) as Review[]); setLoading(false);
+      setFans((fansResult.data as FansCreator | null) || null); setMedia(gallery); setReviews((reviewResult.data ?? []) as Review[]); setPremiumFeatures(Array.isArray(premiumResult.data) && premiumResult.data.length ? premiumResult.data[0] as PremiumFeatures : null); setLoading(false);
 
       const { data: authData } = await supabase.auth.getUser();
       if (authData.user && !typed.is_owner) {
@@ -351,7 +355,7 @@ export default function PublicAdvertiserPage() {
             )}
             <div style={{position:"absolute",left:18,top:18,display:"flex",flexWrap:"wrap",gap:8}}>
               <span style={{padding:"7px 10px",borderRadius:999,background:"rgba(0,0,0,.68)",color:"#fff",fontSize:10,fontWeight:900,letterSpacing:".12em"}}>{category?.name || "ANUNCIANTE"}</span>
-              {profile.verification_status === "verified" && <span style={{padding:"7px 10px",borderRadius:999,background:"rgba(16,185,129,.94)",color:"#fff",fontSize:10,fontWeight:900}}>✓ PERFIL VERIFICADO</span>}
+              {profile.verification_status === "verified" && <span style={{padding:"7px 10px",borderRadius:999,background:"rgba(16,185,129,.94)",color:"#fff",fontSize:10,fontWeight:900}}>✓ PERFIL VERIFICADO</span>}{premiumFeatures?.featured_card && <span className="premiumPlanBadge">✦ EM DESTAQUE</span>}{premiumFeatures?.profile_badge && <span className="premiumPlanBadge">{premiumFeatures.badge_label || "Perfil Premium"}</span>}
             </div>
             <div style={{position:"absolute",left:18,right:18,bottom:18,display:"flex",flexWrap:"wrap",gap:8}}>
               <span style={{padding:"8px 11px",borderRadius:999,background:"rgba(0,0,0,.68)",color:"#fff",fontSize:11,fontWeight:800}}>📷 {publicImages} fotos</span>

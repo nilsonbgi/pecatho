@@ -215,8 +215,8 @@ export default async function FansPage() {
     boostedDiscoveryPosts = [];
   }
 
-  const featuredCreators = publicCreators.slice(0, 6);
-  const discoveryCreators = publicCreators.slice(0, 12);
+  const featuredCreators = [...creatorsWithFeatures.filter((item) => item.premium_featured), ...creatorsWithFeatures.filter((item) => !item.premium_featured)].slice(0, 6);
+  const discoveryCreators = creatorsWithFeatures.slice(0, 12);
   const heroCreator = featuredCreators[0] || null;
   const creatorCountLabel = creatorsTotal && creatorsTotal > 0 ? creatorsTotal.toLocaleString("pt-BR") : "0";
   const userInitial = user?.email?.slice(0, 1).toUpperCase() || "F";
