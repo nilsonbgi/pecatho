@@ -1397,3 +1397,10 @@
 .commercialAdvertiserCard.planThemeHighlighted .commercialTitleRow h3{color:#f0d985}
 .commercialTrustBadges{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap}
 .publicationPremiumBadge{display:inline-flex;align-items:center;gap:4px;padding:5px 7px;border:1px solid rgba(231,195,63,.45);border-radius:999px;background:rgba(12,12,14,.84);color:#f5d96c;font-size:9px;font-weight:900;letter-spacing:.04em;white-space:nowrap}
+
+
+.publicProfile.profilePlanThemeHighlighted .publicProfileHero{border:1px solid rgba(231,195,63,.35);box-shadow:0 18px 50px rgba(231,195,63,.06)}
+.publicProfile.profilePlanThemePremium .publicProfileHero{border:1px solid rgba(231,195,63,.65);box-shadow:0 22px 64px rgba(231,195,63,.13),0 0 0 1px rgba(231,195,63,.12);background:linear-gradient(135deg,rgba(231,195,63,.12),rgba(12,12,17,.98) 50%)}
+.publicProfile.profilePlanThemePremium .publicProfileHero h1{color:#f5d96c}
+.publicProfile.profilePlanThemeHighlighted .publicProfileHero h1{color:#f1dc8e}
+.publicProfilePlanBadge{display:inline-flex;align-items:center;gap:6px;margin:4px 0 12px;padding:8px 11px;border:1px solid rgba(231,195,63,.55);border-radius:999px;background:rgba(10,10,13,.82);color:#f5d96c;font-size:10px;font-weight:900;letter-spacing:.09em}
