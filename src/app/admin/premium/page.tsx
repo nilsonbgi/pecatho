@@ -71,6 +71,7 @@ export default function AdminCustomerPremiumPage() {
   const [publicationSearchPriority, setPublicationSearchPriority] = useState("0");
   const [publicationBadge, setPublicationBadge] = useState(false);
   const [publicationTheme, setPublicationTheme] = useState<"standard" | "highlighted" | "premium">("standard");
+  const [publicationMaxGalleryItems, setPublicationMaxGalleryItems] = useState("");
   const [publicationBusy, setPublicationBusy] = useState(false);
   const publicationActiveCount = publicationPlans.filter((plan) => plan.active).length;
   const activeCount = plans.filter((plan) => plan.active).length;
@@ -159,6 +160,7 @@ export default function AdminCustomerPremiumPage() {
     setPublicationSearchPriority(String(plan.search_priority));
     setPublicationBadge(plan.show_premium_badge);
     setPublicationTheme(plan.profile_theme);
+    setPublicationMaxGalleryItems(plan.max_gallery_items == null ? "" : String(plan.max_gallery_items));
     setError("");
     setMessage("");
   }
@@ -177,6 +179,7 @@ export default function AdminCustomerPremiumPage() {
     setPublicationSearchPriority("0");
     setPublicationBadge(false);
     setPublicationTheme("standard");
+    setPublicationMaxGalleryItems("");
   }
 
   async function savePublication(event: React.FormEvent<HTMLFormElement>) {
@@ -201,7 +204,7 @@ export default function AdminCustomerPremiumPage() {
         p_search_priority: Number(publicationSearchPriority),
         p_show_premium_badge: publicationBadge,
         p_profile_theme: publicationTheme,
-        p_max_gallery_items: editingPublicationId ? publicationPlans.find((plan) => plan.id === editingPublicationId)?.max_gallery_items ?? null : null,
+        p_max_gallery_items: publicationMaxGalleryItems.trim() === "" ? null : Number(publicationMaxGalleryItems),
         p_features: editingPublicationId ? publicationPlans.find((plan) => plan.id === editingPublicationId)?.features ?? {} : {},
       });
       if (saveError) throw saveError;
@@ -297,6 +300,7 @@ export default function AdminCustomerPremiumPage() {
             <div className="pillars"><label>Preço em reais<input required inputMode="decimal" value={publicationFree ? "0,00" : publicationPrice} disabled={publicationFree} onChange={(event) => setPublicationPrice(event.target.value)} placeholder="49,90" /></label><label>Duração em dias<input required type="number" min={1} max={365} value={publicationDuration} onChange={(event) => setPublicationDuration(event.target.value)} /></label></div>
             <label>Prioridade nas pesquisas (0–100)<input required type="number" min={0} max={100} value={publicationSearchPriority} onChange={(event) => setPublicationSearchPriority(event.target.value)} /><small>Quanto maior o valor, maior a prioridade entre perfis com o mesmo filtro. Planos em destaque aparecem antes dos demais.</small></label>
             <label>Estilo do perfil<select value={publicationTheme} onChange={(event) => setPublicationTheme(event.target.value as "standard" | "highlighted" | "premium")}><option value="standard">Padrão</option><option value="highlighted">Destaque visual</option><option value="premium">Premium</option></select></label>
+            <label>Limite de itens na galeria (opcional)<input type="number" min={1} max={500} step={1} value={publicationMaxGalleryItems} onChange={(event) => setPublicationMaxGalleryItems(event.target.value)} placeholder="Sem limite adicional" /><small>Deixe vazio para não aplicar limite específico. Valores permitidos: 1 a 500 itens.</small></label>
             <label className="premiumAdminCheck"><input type="checkbox" checked={publicationFree} onChange={(event) => { setPublicationFree(event.target.checked); if (event.target.checked) setPublicationPrice("0,00"); else if (publicationPrice === "0,00") setPublicationPrice(""); }} /> Plano gratuito</label>
             <label className="premiumAdminCheck"><input type="checkbox" checked={publicationActive} onChange={(event) => setPublicationActive(event.target.checked)} /> Plano ativo</label>
             <label className="premiumAdminCheck"><input type="checkbox" checked={publicationFeatured} onChange={(event) => setPublicationFeatured(event.target.checked)} /> Card especial com destaque visual</label>
@@ -307,7 +311,7 @@ export default function AdminCustomerPremiumPage() {
         </section>
         <section className="card premiumAdminCatalog" id="catalogo-publicacao">
           <div className="premiumAdminSectionHeader"><h2>Planos de acompanhantes e vendedores</h2><button type="button" className="secondaryButton" disabled={loadingPlans} onClick={() => void load()}>{loadingPlans ? "Atualizando…" : "Atualizar catálogo"}</button></div>
-          {publicationPlans.length === 0 ? <p className="fieldNote">Nenhum plano de publicação cadastrado. Crie o primeiro plano acima.</p> : <div className="financeHistory">{publicationPlans.map((plan) => <article key={plan.id}><div><strong>{plan.name}</strong><small>{plan.audience === "companion" ? "Acompanhantes" : plan.audience === "content_seller" ? "Vendedores de conteúdo" : "Ambos os públicos"} · {plan.duration_days} dias · {plan.free ? "Gratuito" : Number(plan.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</small><small>{plan.featured_card ? "Card especial" : "Card padrão"} · prioridade {plan.search_priority} · perfil {plan.profile_theme === "premium" ? "Premium" : plan.profile_theme === "highlighted" ? "Destaque" : "padrão"}{plan.show_premium_badge ? " · selo Premium" : ""}{plan.has_video ? " · vídeo habilitado" : ""}</small><small>{plan.description || "Sem descrição"}</small>{(plan.free && Number(plan.price) !== 0) || (!plan.free && Number(plan.price) <= 0) ? <small style={{ color: "#fca5a5", fontWeight: 800 }}>Configuração comercial inválida: ajuste o preço ou marque como gratuito antes de disponibilizar.</small> : null}</div><span className="financeStatus">{plan.active ? "Ativo" : "Inativo"}</span><button className="secondaryButton" type="button" onClick={() => editPublication(plan)}>Editar</button></article>)}</div>}
+          {publicationPlans.length === 0 ? <p className="fieldNote">Nenhum plano de publicação cadastrado. Crie o primeiro plano acima.</p> : <div className="financeHistory">{publicationPlans.map((plan) => <article key={plan.id}><div><strong>{plan.name}</strong><small>{plan.audience === "companion" ? "Acompanhantes" : plan.audience === "content_seller" ? "Vendedores de conteúdo" : "Ambos os públicos"} · {plan.duration_days} dias · {plan.free ? "Gratuito" : Number(plan.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</small><small>{plan.featured_card ? "Card especial" : "Card padrão"} · prioridade {plan.search_priority} · perfil {plan.profile_theme === "premium" ? "Premium" : plan.profile_theme === "highlighted" ? "Destaque" : "padrão"}{plan.show_premium_badge ? " · selo Premium" : ""}{plan.has_video ? " · vídeo habilitado" : ""}{plan.max_gallery_items != null ? ` · galeria até ${plan.max_gallery_items} itens` : ""}</small><small>{plan.description || "Sem descrição"}</small>{(plan.free && Number(plan.price) !== 0) || (!plan.free && Number(plan.price) <= 0) ? <small style={{ color: "#fca5a5", fontWeight: 800 }}>Configuração comercial inválida: ajuste o preço ou marque como gratuito antes de disponibilizar.</small> : null}</div><span className="financeStatus">{plan.active ? "Ativo" : "Inativo"}</span><button className="secondaryButton" type="button" onClick={() => editPublication(plan)}>Editar</button></article>)}</div>}
         </section>
         </>}
         {managementArea === "customer" && <>
