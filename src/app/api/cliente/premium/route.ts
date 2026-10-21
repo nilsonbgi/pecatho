@@ -22,7 +22,8 @@ export async function GET() {
       .order("created_at", { ascending: false }).limit(10),
   ]);
 
-  let plans = initialPlans;
+  type CustomerPremiumPlanRows = NonNullable<typeof initialPlans>;
+  let plans: CustomerPremiumPlanRows = initialPlans ?? [];
   if (initialPlansError) {
     const missingDiscountColumn = /discount_percent|column .* does not exist|schema cache/i.test(initialPlansError.message ?? "");
     if (!missingDiscountColumn) {
@@ -34,7 +35,7 @@ export async function GET() {
     if (fallback.error) {
       return NextResponse.json({ error: "Não foi possível carregar o catálogo Premium." }, { status: 503 });
     }
-    plans = (fallback.data ?? []).map((plan) => ({ ...plan, discount_percent: 0 })) as typeof initialPlans;
+    plans = (fallback.data ?? []).map((plan) => ({ ...plan, discount_percent: 0 })) as unknown as CustomerPremiumPlanRows;
   }
 
   if (subscriptionsError) {
