@@ -42,7 +42,8 @@ export default async function FansCreatorPublicPage({params}:Props){
   const {data:premiumSubscription}=await admin.from("pecatho_customer_premium_subscriptions")
    .select("id,feature_flags").eq("user_id",user.id).eq("status","active")
    .lte("starts_at",now).gt("ends_at",now).order("ends_at",{ascending:false}).limit(1).maybeSingle();
-  hasActiveCustomerPremium=!!premiumSubscription;
+  const customerFeatures=premiumSubscription?.feature_flags as Record<string,unknown>|null;
+  hasActiveCustomerPremium=customerFeatures?.private_seller_contact===true;
  }
  const whatsappAvailableToViewer=hasActiveCustomerPremium&&!!creator.whatsapp_number;
  const [{data:posts},{data:plans},{data:liveOffers},{data:boostPlans}]=await Promise.all([
