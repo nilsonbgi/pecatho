@@ -47,6 +47,34 @@ const checks = [
     ],
   },
   {
+    file: "src/app/api/fans/payments/mercadopago/webhook/route.ts",
+    name: "Mercado Pago — conciliação segura de reembolsos parciais e integrais",
+    required: [
+      "const refundsResponse = await fetch(",
+      '"/refunds"',
+      '["approved", "processed", "accredited"]',
+      'const normalizedRefundedAmount = status === "refunded"',
+      "refundStateAlreadyMatches",
+      "fullRefundSettlementError",
+      'status: fullRefund ? "refunded" : "partially_refunded"',
+      "refunded_amount: normalizedRefundedAmount",
+      "A notificação precisa ser reenviada.",
+    ],
+  },
+  {
+    file: "supabase/migrations/20261024120000_pecatho_affiliate_partial_refunds.sql",
+    name: "Afiliados — reversão proporcional, acumulada e idempotente",
+    required: [
+      "ADD COLUMN IF NOT EXISTS refunded_amount",
+      "ADD COLUMN IF NOT EXISTS reversed_amount",
+      "v_target_reversed",
+      "v_reversal_delta",
+      "'pecatho-affiliate-reversal:'",
+      "'partially_refunded'",
+      "commission_amount_reversed_total",
+    ],
+  },
+  {
     file: "src/components/CustomerPremium.tsx",
     name: "Premium do cliente — ativação condicionada à confirmação",
     required: [
