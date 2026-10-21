@@ -11,6 +11,7 @@ type PremiumPlan = {
   currency: string;
   duration_days: number;
   benefits: string[] | null;
+  feature_flags?: { private_seller_contact?: boolean } | null;
 };
 
 type PremiumSubscription = {
@@ -21,6 +22,7 @@ type PremiumSubscription = {
   ends_at: string | null;
   paid_amount: number | string;
   created_at: string;
+  plan?: PremiumPlan | null;
 };
 
 type PremiumResponse = {
@@ -92,6 +94,9 @@ export default function CustomerPremium() {
           <div className="eyebrow">ASSINATURA ATIVA</div>
           <h3>Seu Premium está ativo</h3>
           <p>Válido até <strong>{date(data.current.ends_at)}</strong>.</p>
+          {data.current.plan?.description && <p>{data.current.plan.description}</p>}
+          {data.current.plan?.feature_flags?.private_seller_contact && <p>✓ Contato privado com vendedores de conteúdo liberado durante a vigência.</p>}
+          {data.current.plan?.benefits?.length ? <ul>{data.current.plan.benefits.map((benefit, index) => <li key={"active-premium-benefit-" + index}>{benefit}</li>)}</ul> : null}
           <p className="fieldNote">O prazo foi calculado a partir da confirmação do pagamento. Não há renovação automática habilitada.</p>
         </article>
       ) : loading ? null : data?.plans?.length ? (
@@ -100,11 +105,12 @@ export default function CustomerPremium() {
             const benefits = Array.isArray(plan.benefits) ? plan.benefits : [];
             return (
               <article className="card" key={plan.id} style={{ border: "1px solid rgba(231,195,63,.28)" }}>
-                <div className="eyebrow">ASSINATURA POR {plan.duration_days} DIAS</div>
+                <div className="eyebrow">ASSINATURA {plan.duration_days === 30 ? "MENSAL" : plan.duration_days === 90 ? "TRIMESTRAL" : plan.duration_days === 180 ? "SEMESTRAL" : plan.duration_days === 365 ? "ANUAL" : "POR " + plan.duration_days + " DIAS"}</div>
                 <h3>{plan.name}</h3>
                 <p className="financeBig">{money(plan.price, plan.currency)}</p>
                 {plan.description && <p>{plan.description}</p>}
-                {benefits.length > 0 ? <ul>{benefits.map((benefit, index) => <li key={plan.id + "-benefit-" + index}>{benefit}</li>)}</ul> : <p className="fieldNote">Os benefícios deste plano serão informados antes da contratação.</p>}
+                {plan.feature_flags?.private_seller_contact && <p>✓ Contato privado com vendedores de conteúdo durante a vigência.</p>}
+                {benefits.length > 0 ? <ul>{benefits.map((benefit, index) => <li key={plan.id + "-benefit-" + index}>{benefit}</li>)}</ul> : null}
                 <button className="primaryButton" type="button" disabled={buying !== null} onClick={() => void subscribe(plan)}>
                   {buying === plan.id ? "Preparando pagamento..." : "Assinar com Mercado Pago"}
                 </button>
