@@ -46,7 +46,7 @@ alter table public.digital_content_products
     (product_type = 'package'
       and package_image_limit is not null and package_image_limit >= 0
       and package_video_limit is not null and package_video_limit >= 0
-      and package_image_limit + package_video_limit > 0)
+      and package_image_limit + package_video_limit >= 0)
   );
 
 -- Backfill paid historical sales with all files they already had access to.
