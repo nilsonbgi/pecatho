@@ -22,6 +22,24 @@ type PremiumPlan = {
   badge_label: string | null;
 };
 
+type PublicationFeatureConfig = {
+  photo_gallery: boolean;
+  video_gallery: boolean;
+  max_photos: number | null;
+  max_videos: number | null;
+  featured_photo: boolean;
+  featured_video: boolean;
+  highlight_card_photo: boolean;
+  advertiser_gallery: boolean;
+  profile_audio: boolean;
+  allow_reviews: boolean;
+  allow_gifts: boolean;
+};
+const defaultPublicationFeatures: PublicationFeatureConfig = {
+  photo_gallery: true, video_gallery: false, max_photos: null, max_videos: null,
+  featured_photo: false, featured_video: false, highlight_card_photo: false,
+  advertiser_gallery: true, profile_audio: false, allow_reviews: true, allow_gifts: false,
+};
 type PlanAudience = "customer" | "companion" | "content_creator";
 type FeatureFlags = { private_seller_contact: boolean; featured_card: boolean; search_priority: boolean; premium_profile: boolean; profile_badge: boolean };
 const defaultFeatures = (audience: PlanAudience): FeatureFlags => ({ private_seller_contact: audience === "customer", featured_card: false, search_priority: false, premium_profile: false, profile_badge: false });
@@ -86,6 +104,7 @@ export default function AdminCustomerPremiumPage() {
   const [publicationBadge, setPublicationBadge] = useState(false);
   const [publicationTheme, setPublicationTheme] = useState<"standard" | "highlighted" | "premium">("standard");
   const [publicationMaxGalleryItems, setPublicationMaxGalleryItems] = useState("");
+  const [publicationFeatures, setPublicationFeatures] = useState<PublicationFeatureConfig>(defaultPublicationFeatures);
   const [publicationBusy, setPublicationBusy] = useState(false);
   const publicationActiveCount = publicationPlans.filter((plan) => plan.active).length;
   const activeCount = plans.filter((plan) => plan.active).length;
@@ -186,6 +205,20 @@ export default function AdminCustomerPremiumPage() {
     setPublicationBadge(plan.show_premium_badge);
     setPublicationTheme(plan.profile_theme);
     setPublicationMaxGalleryItems(plan.max_gallery_items == null ? "" : String(plan.max_gallery_items));
+    const savedFeatures = (plan.features ?? {}) as Record<string, unknown>;
+    setPublicationFeatures({
+      photo_gallery: typeof savedFeatures.photo_gallery === "boolean" ? savedFeatures.photo_gallery : defaultPublicationFeatures.photo_gallery,
+      video_gallery: typeof savedFeatures.video_gallery === "boolean" ? savedFeatures.video_gallery : plan.has_video,
+      max_photos: typeof savedFeatures.max_photos === "number" ? savedFeatures.max_photos : null,
+      max_videos: typeof savedFeatures.max_videos === "number" ? savedFeatures.max_videos : null,
+      featured_photo: typeof savedFeatures.featured_photo === "boolean" ? savedFeatures.featured_photo : false,
+      featured_video: typeof savedFeatures.featured_video === "boolean" ? savedFeatures.featured_video : false,
+      highlight_card_photo: typeof savedFeatures.highlight_card_photo === "boolean" ? savedFeatures.highlight_card_photo : false,
+      advertiser_gallery: typeof savedFeatures.advertiser_gallery === "boolean" ? savedFeatures.advertiser_gallery : defaultPublicationFeatures.advertiser_gallery,
+      profile_audio: typeof savedFeatures.profile_audio === "boolean" ? savedFeatures.profile_audio : false,
+      allow_reviews: typeof savedFeatures.allow_reviews === "boolean" ? savedFeatures.allow_reviews : defaultPublicationFeatures.allow_reviews,
+      allow_gifts: typeof savedFeatures.allow_gifts === "boolean" ? savedFeatures.allow_gifts : false,
+    });
     setError("");
     setMessage("");
   }
@@ -205,6 +238,7 @@ export default function AdminCustomerPremiumPage() {
     setPublicationBadge(false);
     setPublicationTheme("standard");
     setPublicationMaxGalleryItems("");
+    setPublicationFeatures(defaultPublicationFeatures);
   }
 
   async function savePublication(event: React.FormEvent<HTMLFormElement>) {
@@ -230,7 +264,10 @@ export default function AdminCustomerPremiumPage() {
         p_show_premium_badge: publicationBadge,
         p_profile_theme: publicationTheme,
         p_max_gallery_items: publicationMaxGalleryItems.trim() === "" ? null : Number(publicationMaxGalleryItems),
-        p_features: editingPublicationId ? publicationPlans.find((plan) => plan.id === editingPublicationId)?.features ?? {} : {},
+        p_features: {
+          ...publicationFeatures,
+          max_gallery_items: publicationMaxGalleryItems.trim() === "" ? null : Number(publicationMaxGalleryItems),
+        },
       });
       if (saveError) throw saveError;
       setMessage(publicationActive ? "Plano de publicação salvo e ativado. Os diferenciais serão aplicados às publicações válidas." : "Plano de publicação salvo como inativo.");
@@ -335,7 +372,24 @@ export default function AdminCustomerPremiumPage() {
             <div className="pillars"><label>Preço em reais<input required inputMode="decimal" value={publicationFree ? "0,00" : publicationPrice} disabled={publicationFree} onChange={(event) => setPublicationPrice(event.target.value)} placeholder="49,90" /></label><label>Duração em dias<input required type="number" min={1} max={365} value={publicationDuration} onChange={(event) => setPublicationDuration(event.target.value)} /></label></div>
             <label>Prioridade nas pesquisas (0–100)<input required type="number" min={0} max={100} value={publicationSearchPriority} onChange={(event) => setPublicationSearchPriority(event.target.value)} /><small>Quanto maior o valor, maior a prioridade entre perfis com o mesmo filtro. Planos em destaque aparecem antes dos demais.</small></label>
             <label>Estilo do perfil<select value={publicationTheme} onChange={(event) => setPublicationTheme(event.target.value as "standard" | "highlighted" | "premium")}><option value="standard">Padrão</option><option value="highlighted">Destaque visual</option><option value="premium">Premium</option></select></label>
-            <label>Limite de itens na galeria (opcional)<input type="number" min={1} max={500} step={1} value={publicationMaxGalleryItems} onChange={(event) => setPublicationMaxGalleryItems(event.target.value)} placeholder="Sem limite adicional" /><small>Deixe vazio para não aplicar limite específico. Valores permitidos: 1 a 500 itens.</small></label>
+            <label>Limite total de itens na galeria (opcional)<input type="number" min={1} max={500} step={1} value={publicationMaxGalleryItems} onChange={(event) => setPublicationMaxGalleryItems(event.target.value)} placeholder="Sem limite adicional" /><small>Limite geral adicional para fotos e vídeos marcados para a galeria. Deixe vazio para não aplicar limite total.</small></label>
+            <section className="premiumEntitlementEditor" aria-label="Recursos incluídos no plano">
+              <div className="eyebrow">RECURSOS DE PERFIL E CONTEÚDO</div>
+              <p className="fieldNote">Essas opções ficam salvas no plano. Limites individuais de fotos e vídeos são independentes do limite total da galeria.</p>
+              <label className="premiumFeatureToggle"><input type="checkbox" checked={publicationFeatures.photo_gallery} onChange={(event) => setPublicationFeatures((old) => ({ ...old, photo_gallery: event.target.checked }))} /><span><strong>Galeria de fotos</strong><small>Permite disponibilizar fotos na galeria pública do perfil.</small></span></label>
+              <label className="premiumFeatureToggle"><input type="checkbox" checked={publicationFeatures.video_gallery} onChange={(event) => { const checked = event.target.checked; setPublicationFeatures((old) => ({ ...old, video_gallery: checked })); setPublicationHasVideo(checked); }} /><span><strong>Galeria de vídeos</strong><small>Permite vídeos no perfil, respeitando a validação de mídia.</small></span></label>
+              <div className="pillars">
+                <label>Limite de fotos<input type="number" min={1} max={500} step={1} value={publicationFeatures.max_photos ?? ""} onChange={(event) => setPublicationFeatures((old) => ({ ...old, max_photos: event.target.value === "" ? null : Number(event.target.value) }))} placeholder="Sem limite específico" /><small>Vazio = sem limite individual.</small></label>
+                <label>Limite de vídeos<input type="number" min={1} max={200} step={1} value={publicationFeatures.max_videos ?? ""} onChange={(event) => setPublicationFeatures((old) => ({ ...old, max_videos: event.target.value === "" ? null : Number(event.target.value) }))} placeholder="Sem limite específico" /><small>Vazio = sem limite individual.</small></label>
+              </div>
+              <label className="premiumFeatureToggle"><input type="checkbox" checked={publicationFeatures.featured_photo} onChange={(event) => setPublicationFeatures((old) => ({ ...old, featured_photo: event.target.checked }))} /><span><strong>Foto destacada no perfil</strong><small>Permite selecionar uma foto principal com destaque.</small></span></label>
+              <label className="premiumFeatureToggle"><input type="checkbox" checked={publicationFeatures.featured_video} onChange={(event) => setPublicationFeatures((old) => ({ ...old, featured_video: event.target.checked }))} /><span><strong>Vídeo destacado no perfil</strong><small>Permite selecionar um vídeo principal com destaque.</small></span></label>
+              <label className="premiumFeatureToggle"><input type="checkbox" checked={publicationFeatures.highlight_card_photo} onChange={(event) => setPublicationFeatures((old) => ({ ...old, highlight_card_photo: event.target.checked }))} /><span><strong>Foto para cards de destaque</strong><small>Permite usar uma imagem própria nos cards especiais e resultados promovidos.</small></span></label>
+              <label className="premiumFeatureToggle"><input type="checkbox" checked={publicationFeatures.advertiser_gallery} onChange={(event) => setPublicationFeatures((old) => ({ ...old, advertiser_gallery: event.target.checked }))} /><span><strong>Aparecer na galeria pública de anunciantes</strong><small>Controla a inclusão do perfil na galeria pública de anunciantes.</small></span></label>
+              <label className="premiumFeatureToggle"><input type="checkbox" checked={publicationFeatures.profile_audio} onChange={(event) => setPublicationFeatures((old) => ({ ...old, profile_audio: event.target.checked }))} /><span><strong>Áudio no perfil</strong><small>Permite disponibilizar áudio de apresentação no perfil.</small></span></label>
+              <label className="premiumFeatureToggle"><input type="checkbox" checked={publicationFeatures.allow_reviews} onChange={(event) => setPublicationFeatures((old) => ({ ...old, allow_reviews: event.target.checked }))} /><span><strong>Permitir avaliações</strong><small>Habilita o recurso de avaliações para o perfil.</small></span></label>
+              <label className="premiumFeatureToggle"><input type="checkbox" checked={publicationFeatures.allow_gifts} onChange={(event) => setPublicationFeatures((old) => ({ ...old, allow_gifts: event.target.checked }))} /><span><strong>Permitir presentes</strong><small>Habilita o recebimento de presentes conforme as regras da plataforma.</small></span></label>
+            </section>
             <label className="premiumAdminCheck"><input type="checkbox" checked={publicationFree} onChange={(event) => { setPublicationFree(event.target.checked); if (event.target.checked) setPublicationPrice("0,00"); else if (publicationPrice === "0,00") setPublicationPrice(""); }} /> Plano gratuito</label>
             <label className="premiumAdminCheck"><input type="checkbox" checked={publicationActive} onChange={(event) => setPublicationActive(event.target.checked)} /> Plano ativo</label>
             <label className="premiumAdminCheck"><input type="checkbox" checked={publicationFeatured} onChange={(event) => setPublicationFeatured(event.target.checked)} /> Card especial com destaque visual</label>
@@ -346,7 +400,7 @@ export default function AdminCustomerPremiumPage() {
         </section>
         <section className="card premiumAdminCatalog" id="catalogo-publicacao">
           <div className="premiumAdminSectionHeader"><h2>Planos de acompanhantes e vendedores</h2><button type="button" className="secondaryButton" disabled={loadingPlans} onClick={() => void load()}>{loadingPlans ? "Atualizando…" : "Atualizar catálogo"}</button></div>
-          {publicationPlans.length === 0 ? <p className="fieldNote">Nenhum plano de publicação cadastrado. Crie o primeiro plano acima.</p> : <div className="financeHistory">{publicationPlans.map((plan) => <article key={plan.id}><div><strong>{plan.name}</strong><small>{plan.audience === "companion" ? "Acompanhantes" : plan.audience === "content_seller" ? "Vendedores de conteúdo" : "Ambos os públicos"} · {plan.duration_days} dias · {plan.free ? "Gratuito" : Number(plan.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</small><small>{plan.featured_card ? "Card especial" : "Card padrão"} · prioridade {plan.search_priority} · perfil {plan.profile_theme === "premium" ? "Premium" : plan.profile_theme === "highlighted" ? "Destaque" : "padrão"}{plan.show_premium_badge ? " · selo Premium" : ""}{plan.has_video ? " · vídeo habilitado" : ""}{plan.max_gallery_items != null ? ` · galeria até ${plan.max_gallery_items} itens` : ""}</small><small>{plan.description || "Sem descrição"}</small>{(plan.free && Number(plan.price) !== 0) || (!plan.free && Number(plan.price) <= 0) ? <small style={{ color: "#fca5a5", fontWeight: 800 }}>Configuração comercial inválida: ajuste o preço ou marque como gratuito antes de disponibilizar.</small> : null}</div><span className="financeStatus">{plan.active ? "Ativo" : "Inativo"}</span><button className="secondaryButton" type="button" onClick={() => editPublication(plan)}>Editar</button></article>)}</div>}
+          {publicationPlans.length === 0 ? <p className="fieldNote">Nenhum plano de publicação cadastrado. Crie o primeiro plano acima.</p> : <div className="financeHistory">{publicationPlans.map((plan) => <article key={plan.id}><div><strong>{plan.name}</strong><small>{plan.audience === "companion" ? "Acompanhantes" : plan.audience === "content_seller" ? "Vendedores de conteúdo" : "Ambos os públicos"} · {plan.duration_days} dias · {plan.free ? "Gratuito" : Number(plan.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</small><small>{plan.featured_card ? "Card especial" : "Card padrão"} · prioridade {plan.search_priority} · perfil {plan.profile_theme === "premium" ? "Premium" : plan.profile_theme === "highlighted" ? "Destaque" : "padrão"}{plan.show_premium_badge ? " · selo Premium" : ""}{plan.has_video ? " · vídeo habilitado" : ""}{plan.max_gallery_items != null ? ` · galeria até ${plan.max_gallery_items} itens` : ""}{plan.features?.photo_gallery === true ? " · galeria de fotos" : ""}{plan.features?.video_gallery === true ? " · galeria de vídeos" : ""}{typeof plan.features?.max_photos === "number" ? ` · ${plan.features.max_photos} fotos` : ""}{typeof plan.features?.max_videos === "number" ? ` · ${plan.features.max_videos} vídeos` : ""}{plan.features?.featured_photo === true ? " · foto destacada" : ""}{plan.features?.featured_video === true ? " · vídeo destacado" : ""}{plan.features?.highlight_card_photo === true ? " · foto de card" : ""}{plan.features?.profile_audio === true ? " · áudio" : ""}{plan.features?.allow_reviews === true ? " · avaliações" : ""}{plan.features?.allow_gifts === true ? " · presentes" : ""}</small><small>{plan.description || "Sem descrição"}</small>{(plan.free && Number(plan.price) !== 0) || (!plan.free && Number(plan.price) <= 0) ? <small style={{ color: "#fca5a5", fontWeight: 800 }}>Configuração comercial inválida: ajuste o preço ou marque como gratuito antes de disponibilizar.</small> : null}</div><span className="financeStatus">{plan.active ? "Ativo" : "Inativo"}</span><button className="secondaryButton" type="button" onClick={() => editPublication(plan)}>Editar</button></article>)}</div>}
         </section>
         </>}
         {managementArea === "customer" && <>
