@@ -44,6 +44,7 @@ export async function POST(request: Request) {
       code.includes("RECIPIENT_NOT_FOUND") ? 404 :
       code.includes("INVALID_GIFT_AMOUNT") || code.includes("GIFT_AMOUNT_BELOW_BOOST_PLAN") || code.includes("BOOST_PLAN_NOT_AVAILABLE") || code.includes("NO_ELIGIBLE_PUBLISHED_POST") || code.includes("BOOST_GIFT_REQUIRES_CREATOR") ? 400 : 400;
     const message =
+      code.includes("GIFTS_NOT_INCLUDED_IN_PUBLICATION_PLAN") ? "O plano de publicação vigente deste perfil não inclui o recebimento de presentes." :
       code.includes("CUSTOMER_ACCOUNT_REQUIRED") ? "Para enviar um presente, entre com uma conta de cliente ou habilite o perfil de cliente na sua conta." :
       code.includes("SELF_GIFT_NOT_ALLOWED") ? "Você não pode enviar um presente para o seu próprio perfil." :
       code.includes("RECIPIENT_NOT_FOUND") ? "Este perfil não está disponível para receber presentes no momento." :
