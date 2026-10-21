@@ -116,8 +116,16 @@ begin
     if v_images + v_videos <> v_selected then
       raise exception 'UNSUPPORTED_MEDIA_SELECTION';
     end if;
-  elsif v_selected <> 1 then
-    raise exception 'SELECTION_LIMIT_EXCEEDED';
+  elsif v_product.product_type = 'single_image' then
+    if v_selected <> 1 or v_images <> 1 then
+      raise exception 'SELECTION_LIMIT_EXCEEDED';
+    end if;
+  elsif v_product.product_type = 'single_video' then
+    if v_selected <> 1 or v_videos <> 1 then
+      raise exception 'SELECTION_LIMIT_EXCEEDED';
+    end if;
+  else
+    raise exception 'PRODUCT_NOT_AVAILABLE';
   end if;
 
   if exists (select 1 from public.digital_content_sale_selections where sale_id = v_sale.id) then
