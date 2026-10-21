@@ -23,6 +23,7 @@ type AttributeValue = { attribute_id: string; value: unknown };
 type Service = { id: string; name: string; slug: string; description: string | null; sort_order: number };
 type ProfileService = { service_id: string; selected: boolean; notes: string | null };
 type FansCreator = { slug: string; display_name: string; bio: string | null; status: string };
+type PremiumFeatures = { featured_card: boolean; search_priority: boolean; premium_profile: boolean; profile_badge: boolean; card_style: string; badge_label: string | null };
 
 type GalleryItem = Media & { url: string | null; previewUrl: string | null; unlockedUrl?: string | null };
 
@@ -59,6 +60,7 @@ function contactDigits(value: string | null | undefined) {
 export default function PublicAdvertiserPage() {
   const params = useParams<{ slug: string }>();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [premiumFeatures, setPremiumFeatures] = useState<PremiumFeatures | null>(null);
   const [address, setAddress] = useState<Address | null>(null);
   const [city, setCity] = useState<City | null>(null);
   const [state, setState] = useState<State | null>(null);
@@ -121,7 +123,7 @@ export default function PublicAdvertiserPage() {
         return;
       }
       const typed = p as Profile;
-      const [c, s, cat, attrs, attrValues, svc, svcValues, mediaResult, reviewResult, fansResult] = await Promise.all([
+      const [c, s, cat, attrs, attrValues, svc, svcValues, mediaResult, reviewResult, fansResult, premiumResult] = await Promise.all([
         typed.city_id ? supabase.from("cities").select("name").eq("id", typed.city_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
         typed.state_id ? supabase.from("states").select("uf,name").eq("id", typed.state_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
         typed.category_id ? supabase.from("categories").select("name").eq("id", typed.category_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
@@ -132,6 +134,7 @@ export default function PublicAdvertiserPage() {
         supabase.rpc("get_public_profile_media", { p_profile_ids: [typed.id] }),
         supabase.rpc("get_public_profile_feedback", { p_profile_id: typed.id, p_limit: 12 }),
         supabase.rpc("get_public_fans_creator", { p_advertiser_profile_id: typed.id }).maybeSingle(),
+        supabase.rpc("get_public_professional_plan_features", { p_entity_ids: [typed.id], p_audience: "companion" }),
       ]);
       const gallery = ((mediaResult.data ?? []) as Media[]).filter((item) => item.moderation_status === "approved" && item.show_in_gallery !== false).map((item) => ({
         ...item,
@@ -141,7 +144,7 @@ export default function PublicAdvertiserPage() {
       if (!active) return;
       setProfile(typed); setAddress({ public_latitude: typed.public_latitude, public_longitude: typed.public_longitude }); setCity((c.data as City | null) || null); setState((s.data as State | null) || null); setCategory((cat.data as Category | null) || null);
       setAttributes((attrs.data ?? []) as Attribute[]); setAttributeValues((attrValues.data ?? []) as AttributeValue[]); setServices((svc.data ?? []) as Service[]); setProfileServices((svcValues.data ?? []) as ProfileService[]);
-      setFans((fansResult.data as FansCreator | null) || null); setMedia(gallery); setReviews((reviewResult.data ?? []) as Review[]); setLoading(false);
+      setFans((fansResult.data as FansCreator | null) || null); setMedia(gallery); setReviews((reviewResult.data ?? []) as Review[]); setPremiumFeatures(Array.isArray(premiumResult.data) && premiumResult.data.length ? premiumResult.data[0] as PremiumFeatures : null); setLoading(false);
 
       const { data: authData } = await supabase.auth.getUser();
       if (authData.user && !typed.is_owner) {
@@ -308,7 +311,7 @@ export default function PublicAdvertiserPage() {
   if (error || !profile) return <main className="shell"><section className="hero"><div className="eyebrow">PECATHO</div><h1>Anúncio <em>indisponível.</em></h1><p className="heroCopy">{error || "Este anúncio não está disponível."}</p><Link href="/anunciantes" className="primaryButton">Voltar aos acompanhantes</Link></section></main>;
 
   return (
-    <main className={`shell publicProfile ${profilePlanPresentation.theme === "premium" ? "profilePlanThemePremium" : profilePlanPresentation.theme === "highlighted" ? "profilePlanThemeHighlighted" : ""}`}>
+    <main className={`shell publicProfile ${profilePlanPresentation.theme === "premium" ? "profilePlanThemePremium" : profilePlanPresentation.theme === "highlighted" ? "profilePlanThemeHighlighted" : ""} ${premiumFeatures?.premium_profile ? "premiumProfilePage premiumStyle-" + premiumFeatures.card_style : ""} ${premiumFeatures?.featured_card ? "premiumProfileFeatured" : ""}`}>
       {ageVerified === false && (
         <div className="pAgeGate" role="dialog" aria-modal="true" aria-labelledby="advertiser-age-title">
           <div className="pAgeCard">
@@ -345,7 +348,7 @@ export default function PublicAdvertiserPage() {
             )}
             <div style={{position:"absolute",left:18,top:18,display:"flex",flexWrap:"wrap",gap:8}}>
               <span style={{padding:"7px 10px",borderRadius:999,background:"rgba(0,0,0,.68)",color:"#fff",fontSize:10,fontWeight:900,letterSpacing:".12em"}}>{category?.name || "ANUNCIANTE"}</span>
-              {profile.verification_status === "verified" && <span style={{padding:"7px 10px",borderRadius:999,background:"rgba(16,185,129,.94)",color:"#fff",fontSize:10,fontWeight:900}}>✓ PERFIL VERIFICADO</span>}
+              {profile.verification_status === "verified" && <span style={{padding:"7px 10px",borderRadius:999,background:"rgba(16,185,129,.94)",color:"#fff",fontSize:10,fontWeight:900}}>✓ PERFIL VERIFICADO</span>}{premiumFeatures?.featured_card && <span className="premiumPlanBadge">✦ EM DESTAQUE</span>}{premiumFeatures?.profile_badge && <span className="premiumPlanBadge">{premiumFeatures.badge_label || "Perfil Premium"}</span>}
             </div>
             <div style={{position:"absolute",left:18,right:18,bottom:18,display:"flex",flexWrap:"wrap",gap:8}}>
               <span style={{padding:"8px 11px",borderRadius:999,background:"rgba(0,0,0,.68)",color:"#fff",fontSize:11,fontWeight:800}}>📷 {publicImages} fotos</span>
@@ -356,7 +359,7 @@ export default function PublicAdvertiserPage() {
           <div className="profileHeroCopy">
             <div className="eyebrow" style={{color:"#c4b5fd"}}>{category?.name || "ANUNCIANTE"}</div>
             <h1 style={{fontSize:"clamp(2rem,4vw,3.5rem)",lineHeight:1,margin:"10px 0",letterSpacing:"-.05em"}}>{profile.title || profile.display_name || "Perfil Pecatho"}</h1>
-            {profilePlanPresentation.badge && <span className="publicProfilePlanBadge">✦ PERFIL PREMIUM</span>}
+            {profilePlanPresentation.badge && <span className="publicProfilePlanBadge">✦ PERFIL PREMIUM</span>}{premiumFeatures?.premium_profile && <p className="premiumProfileNote">Apresentação Premium ativa</p>}
             {age && <div style={{fontSize:14,fontWeight:800,color:"#ddd6fe"}}>{age} anos{city?.name ? ` · ${city.name}` : ""}{state?.uf ? ` · ${state.uf}` : ""}</div>}
             <p className="heroCopy" style={{marginTop:16}}>{profile.summary || "Conheça este perfil no Pecatho."}</p>
             <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:16}}>
