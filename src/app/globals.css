@@ -1430,3 +1430,9 @@
 .premiumProfileEnabled{outline:1px solid rgba(231,195,63,.20);outline-offset:-1px}
 .fansPremiumMiniTag{position:absolute;top:8px;right:8px;width:25px;height:25px;padding:0;font-size:13px}
 .fansPremiumInlineBadge{padding:3px 7px;margin-left:5px;font-size:9px;vertical-align:middle}
+
+.premiumProfilePage .publicProfileHero{border:1px solid rgba(231,195,63,.36);box-shadow:0 18px 55px rgba(0,0,0,.2),0 0 0 1px rgba(231,195,63,.07)}
+.premiumProfilePage.premiumStyle-gold .profileHeroCopy{background:radial-gradient(ellipse at 100% 0,rgba(231,195,63,.13),transparent 55%),linear-gradient(145deg,#11100b,#17140b)}
+.premiumProfilePage.premiumStyle-obsidian .profileHeroCopy{background:radial-gradient(ellipse at 100% 0,rgba(148,163,184,.13),transparent 55%),linear-gradient(145deg,#07080a,#171a20)}
+.premiumProfilePage.premiumStyle-signature .profileHeroCopy{background:radial-gradient(ellipse at 100% 0,rgba(192,132,252,.13),transparent 55%),linear-gradient(145deg,#100a16,#211127)}
+.premiumProfileNote{color:#e7c33f;font-size:12px;font-weight:800}
