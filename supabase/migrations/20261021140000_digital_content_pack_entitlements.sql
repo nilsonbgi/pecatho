@@ -120,7 +120,10 @@ begin
     raise exception 'SELECTION_LIMIT_EXCEEDED';
   end if;
 
-  delete from public.digital_content_sale_selections where sale_id = v_sale.id;
+  if exists (select 1 from public.digital_content_sale_selections where sale_id = v_sale.id) then
+    raise exception 'SELECTION_ALREADY_LOCKED';
+  end if;
+
   insert into public.digital_content_sale_selections(sale_id, product_item_id, buyer_user_id)
   select v_sale.id, i.id, v_user
     from public.digital_content_product_items i
