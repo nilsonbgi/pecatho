@@ -54,8 +54,8 @@ export async function POST(request: Request) {
     console.error("Falha ao salvar seleção de arquivos comprados:", error);
     const msg = error.message || "";
     const denied = /AUTH_REQUIRED|CONTENT_ACCESS_DENIED/i.test(msg);
-    const invalid = /SELECTION_REQUIRED|DUPLICATE_SELECTION|INVALID_SELECTION_ITEM|SELECTION_LIMIT_EXCEEDED|UNSUPPORTED_MEDIA_SELECTION/i.test(msg);
-    return NextResponse.json({ error: denied ? "Você não tem acesso a esta compra." : invalid ? "A seleção excede os limites do pacote ou contém arquivos inválidos. Revise as quantidades de imagens e vídeos." : "Não foi possível salvar sua seleção. Tente novamente." }, { status: denied ? 403 : invalid ? 400 : 503, headers });
+    const invalid = /SELECTION_REQUIRED|DUPLICATE_SELECTION|INVALID_SELECTION_ITEM|SELECTION_LIMIT_EXCEEDED|UNSUPPORTED_MEDIA_SELECTION|SELECTION_ALREADY_LOCKED/i.test(msg);
+    return NextResponse.json({ error: denied ? "Você não tem acesso a esta compra." : invalid ? /SELECTION_ALREADY_LOCKED/i.test(msg) ? "Esta compra já teve sua seleção confirmada e não pode ser alterada. Compre outro pacote para acessar arquivos adicionais." : "A seleção excede os limites do pacote ou contém arquivos inválidos. Revise as quantidades de imagens e vídeos." : "Não foi possível salvar sua seleção. Tente novamente." }, { status: denied ? 403 : invalid ? 400 : 503, headers });
   }
   return NextResponse.json({ ok: true, selection: data }, { headers });
 }
