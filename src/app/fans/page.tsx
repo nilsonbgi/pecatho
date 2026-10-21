@@ -17,7 +17,6 @@ type BoostedDiscoveryPost = {
   ends_at: string;
 };
 
-type PublicPremiumFeature = { entity_id: string; featured_card: boolean; search_priority: boolean; premium_profile: boolean; profile_badge: boolean; card_style: string; badge_label: string | null };
 type PublicFansCreator = {
   id: string;
   slug: string;
@@ -119,28 +118,6 @@ export default async function FansPage() {
       premium_badge_label: professionalFeatureMap.get(item.id)?.badge_label ?? null,
     };
   }
-  let professionalFeatureRows: PublicPremiumFeature[] = [];
-  if (creatorIds.length) {
-    try {
-      const { data } = await createAdminClient().rpc("get_public_professional_plan_features", { p_entity_ids: creatorIds, p_audience: "content_creator" });
-      professionalFeatureRows = (data ?? []) as PublicPremiumFeature[];
-    } catch {
-      professionalFeatureRows = [];
-    }
-  }
-  const professionalFeatureMap = new Map(professionalFeatureRows.map((item) => [item.entity_id, item]));
-  for (let index = 0; index < publicCreators.length; index++) {
-    const item = publicCreators[index];
-    const feature = professionalFeatureMap.get(item.id);
-    publicCreators[index] = { ...item,
-      premium_featured: feature?.featured_card === true,
-      premium_search_priority: feature?.search_priority === true,
-      premium_profile: feature?.premium_profile === true,
-      premium_profile_badge: feature?.profile_badge === true,
-      premium_card_style: feature?.card_style ?? null,
-      premium_badge_label: feature?.badge_label ?? null,
-    };
-  }
   publicCreators.sort((a, b) =>
     Number(Boolean(b.premium_featured)) - Number(Boolean(a.premium_featured)) ||
     Number(Boolean(b.premium_search_priority)) - Number(Boolean(a.premium_search_priority)) ||
@@ -231,8 +208,8 @@ export default async function FansPage() {
     boostedDiscoveryPosts = [];
   }
 
-  const featuredCreators = [...creatorsWithFeatures.filter((item) => item.premium_featured), ...creatorsWithFeatures.filter((item) => !item.premium_featured)].slice(0, 6);
-  const discoveryCreators = creatorsWithFeatures.slice(0, 12);
+  const featuredCreators = [...publicCreators.filter((item) => item.premium_featured), ...publicCreators.filter((item) => !item.premium_featured)].slice(0, 6);
+  const discoveryCreators = publicCreators.slice(0, 12);
   const heroCreator = featuredCreators[0] || null;
   const creatorCountLabel = creatorsTotal && creatorsTotal > 0 ? creatorsTotal.toLocaleString("pt-BR") : "0";
   const userInitial = user?.email?.slice(0, 1).toUpperCase() || "F";

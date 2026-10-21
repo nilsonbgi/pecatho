@@ -65,16 +65,6 @@ type PublicationPlan = {
   updated_at: string;
 };
 
-type PlanAudience = "customer" | "companion" | "content_creator";
-type FeatureFlags = { private_seller_contact: boolean; featured_card: boolean; search_priority: boolean; premium_profile: boolean; profile_badge: boolean };
-const defaultFeatures = (audience: PlanAudience): FeatureFlags => ({
-  private_seller_contact: audience === "customer",
-  featured_card: false,
-  search_priority: false,
-  premium_profile: false,
-  profile_badge: false,
-});
-
 export default function AdminCustomerPremiumPage() {
   const supabase = createClient();
   const [authorized, setAuthorized] = useState<boolean | null>(null);
