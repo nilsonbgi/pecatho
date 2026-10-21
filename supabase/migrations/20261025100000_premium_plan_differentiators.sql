@@ -27,6 +27,8 @@ $migration$;
 
 create index if not exists profile_publications_active_plan_idx on public.profile_publications(profile_id,status,ends_at desc);
 
+grant select on public.publication_plans to authenticated;
+
 drop policy if exists publication_plans_admin_select on public.publication_plans;
 create policy publication_plans_admin_select on public.publication_plans for select to authenticated using (
   exists (select 1 from public.user_roles ur where ur.user_id=(select auth.uid()) and ur.role in ('super_admin','admin'))
