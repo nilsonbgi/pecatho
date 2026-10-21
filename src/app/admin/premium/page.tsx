@@ -216,7 +216,7 @@ export default function AdminCustomerPremiumPage() {
         : raw.includes("INVALID_PROFILE_THEME") ? "Selecione um estilo de perfil válido."
         : raw.includes("FREE_PLAN_PRICE_MUST_BE_ZERO") ? "Planos gratuitos devem ter preço zero."
         : raw.includes("PAID_PLAN_PRICE_REQUIRED") ? "Planos pagos precisam ter preço maior que zero."
-        : raw.includes("INVALID_PLAN_DURATION") ? "A duração deve ficar entre 1 e 365 dias."
+        : raw.includes("INVALID_PLAN_DURATION") ? "Selecione uma periodicidade válida: mensal (30), trimestral (90), semestral (180) ou anual (365 dias)."
         : raw.includes("INVALID_PLAN_PRICE") ? "O preço não pode ultrapassar R$ 100.000,00."
         : raw.includes("admin_save_pecatho_publication_plan") || raw.includes("schema cache") ? "A migration de diferenciais dos planos de publicação precisa estar aplicada no Supabase."
         : "Não foi possível salvar o plano de publicação. Revise os campos e a configuração do banco.");
@@ -325,7 +325,7 @@ export default function AdminCustomerPremiumPage() {
             <label>Descrição<textarea rows={2} maxLength={500} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Explique a proposta do plano." /></label>
             <div className="pillars">
               <label>Preço em reais<input required inputMode="decimal" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="19,90" /></label>
-              <label>Duração em dias<input required type="number" min={1} max={365} value={durationDays} onChange={(event) => setDurationDays(event.target.value)} /></label>
+              <label>Periodicidade da assinatura<select required value={durationDays} onChange={(event) => setDurationDays(event.target.value)}><option value="30">Mensal · 30 dias</option><option value="90">Trimestral · 90 dias</option><option value="180">Semestral · 180 dias</option><option value="365">Anual · 365 dias</option></select></label>
             </div>
             <label>Benefícios incluídos (um por linha)<textarea rows={4} maxLength={5000} value={benefitsText} onChange={(event) => setBenefitsText(event.target.value)} placeholder={"Descontos em benefícios selecionados\nOfertas exclusivas para clientes Premium"} /></label>
             <label style={{ display: "flex", alignItems: "center", gap: 10 }}><input type="checkbox" checked={active} onChange={(event) => setActive(event.target.checked)} /> Publicar este plano no painel do cliente</label>
@@ -343,7 +343,7 @@ export default function AdminCustomerPremiumPage() {
             <select aria-label="Filtrar por status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "all" | "active" | "inactive")} style={{ minWidth: 0, background: "#0b0d12", color: "#f6f7fb", border: "1px solid rgba(255,255,255,.14)", borderRadius: 10, padding: "12px" }}><option value="all">Todos os status</option><option value="active">Publicados</option><option value="inactive">Inativos</option></select>
           </div>
           {filteredPlans.length === 0 ? <div className="fieldNote" style={{ padding: "20px 0" }}><strong>{plans.length ? "Nenhum plano corresponde aos filtros." : "Nenhum plano configurado."}</strong><p>{plans.length ? "Altere a busca ou o status selecionado." : "Cadastre preço, duração e benefícios antes de disponibilizar a contratação."}</p>{(search || statusFilter !== "all") && <button type="button" className="secondaryButton" onClick={() => { setSearch(""); setStatusFilter("all"); }}>Limpar filtros</button>}</div> : <div className="financeHistory">{filteredPlans.map((plan) => <article key={plan.id}>
-            <div><strong>{plan.name}</strong><small>{plan.plan_key} · {plan.duration_days} dias · {Number(plan.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</small><small>{plan.description || "Sem descrição"}</small>{plan.benefits?.length ? <small style={{ display: "block", marginTop: 8, lineHeight: 1.6 }}>Benefícios: {plan.benefits.slice(0, 3).join(" · ")}{plan.benefits.length > 3 ? " · +" + (plan.benefits.length - 3) : ""}</small> : <small style={{ display: "block", marginTop: 8 }}>Sem benefícios cadastrados</small>}</div>
+            <div><strong>{plan.name}</strong><small>{plan.plan_key} · {plan.duration_days === 30 ? "Mensal" : plan.duration_days === 90 ? "Trimestral" : plan.duration_days === 180 ? "Semestral" : plan.duration_days === 365 ? "Anual" : `${plan.duration_days} dias`} · {Number(plan.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</small><small>{plan.description || "Sem descrição"}</small>{plan.benefits?.length ? <small style={{ display: "block", marginTop: 8, lineHeight: 1.6 }}>Benefícios: {plan.benefits.slice(0, 3).join(" · ")}{plan.benefits.length > 3 ? " · +" + (plan.benefits.length - 3) : ""}</small> : <small style={{ display: "block", marginTop: 8 }}>Sem benefícios cadastrados</small>}</div>
             <span className="financeStatus">{plan.active ? "Publicado" : "Inativo"}</span>
             <button className="secondaryButton" type="button" onClick={() => edit(plan)}>Editar</button>
           </article>)}</div>}
