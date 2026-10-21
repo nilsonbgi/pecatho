@@ -21,12 +21,17 @@ as $function$
           nullif(pp.features->>'allow_reviews','')::boolean,
           true
         )
-        when 'allow_gifts' then coalesce(
-          nullif(pub.plan_features_snapshot->>'allow_gifts','')::boolean,
-          nullif(pub.plan_features_snapshot #>> '{features,allow_gifts}','')::boolean,
-          nullif(pp.features->>'allow_gifts','')::boolean,
-          true
-        )
+        when 'allow_gifts' then case
+          when (coalesce(pub.plan_features_snapshot->'features','{}'::jsonb) ? 'allow_gifts')
+            or (coalesce(pp.features,'{}'::jsonb) ? 'allow_gifts')
+          then coalesce(
+            nullif(pub.plan_features_snapshot->>'allow_gifts','')::boolean,
+            nullif(pub.plan_features_snapshot #>> '{features,allow_gifts}','')::boolean,
+            nullif(pp.features->>'allow_gifts','')::boolean,
+            true
+          )
+          else true
+        end
         else true
       end as allowed
     from public.profile_publications pub
@@ -57,12 +62,17 @@ as $function$
           nullif(pp.features->>'allow_reviews','')::boolean,
           true
         )
-        when 'allow_gifts' then coalesce(
-          nullif(cp.plan_features_snapshot->>'allow_gifts','')::boolean,
-          nullif(cp.plan_features_snapshot #>> '{features,allow_gifts}','')::boolean,
-          nullif(pp.features->>'allow_gifts','')::boolean,
-          true
-        )
+        when 'allow_gifts' then case
+          when (coalesce(cp.plan_features_snapshot->'features','{}'::jsonb) ? 'allow_gifts')
+            or (coalesce(pp.features,'{}'::jsonb) ? 'allow_gifts')
+          then coalesce(
+            nullif(cp.plan_features_snapshot->>'allow_gifts','')::boolean,
+            nullif(cp.plan_features_snapshot #>> '{features,allow_gifts}','')::boolean,
+            nullif(pp.features->>'allow_gifts','')::boolean,
+            true
+          )
+          else true
+        end
         else true
       end as allowed
     from public.pecatho_creator_publications cp
