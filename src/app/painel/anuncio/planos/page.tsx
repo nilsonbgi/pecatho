@@ -33,7 +33,10 @@ export default function PublicationPlansPage() {
       if (creatorError) throw creatorError;
       if (plansError) throw plansError;
       const audience = creator ? "content_seller" : "companion";
-      setPlans(((data ?? []) as Plan[]).filter((plan) => plan.audience === "both" || plan.audience === audience));
+      setPlans(((data ?? []) as Plan[]).filter((plan) =>
+        (plan.free ? Number(plan.price) === 0 : Number(plan.price) > 0) &&
+        (plan.audience === "both" || plan.audience === audience)
+      ));
     } catch (cause) {
       console.error(cause);
       setError("Não foi possível carregar os planos. Confirme se a migration de diferenciais está aplicada.");
