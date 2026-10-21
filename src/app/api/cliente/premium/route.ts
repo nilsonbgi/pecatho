@@ -12,7 +12,7 @@ export async function GET() {
 
   const admin = createAdminClient();
   const now = new Date().toISOString();
-  const [{ data: plans, error: plansError }, { data: subscriptions, error: subscriptionsError }] = await Promise.all([
+  const [{ data: initialPlans, error: initialPlansError }, { data: subscriptions, error: subscriptionsError }] = await Promise.all([
     admin.from("pecatho_customer_premium_plans")
       .select("id,plan_key,name,description,price,currency,duration_days,discount_percent,benefits,sort_order,feature_flags")
       .eq("active", true).in("duration_days", [30, 90, 180, 365]).order("sort_order", { ascending: true }).order("price", { ascending: true }),
@@ -22,7 +22,22 @@ export async function GET() {
       .order("created_at", { ascending: false }).limit(10),
   ]);
 
-  if (plansError || subscriptionsError) {
+  let plans = initialPlans;
+  if (initialPlansError) {
+    const missingDiscountColumn = /discount_percent|column .* does not exist|schema cache/i.test(initialPlansError.message ?? "");
+    if (!missingDiscountColumn) {
+      return NextResponse.json({ error: "Não foi possível carregar os dados do Premium. Confirme se a migração de banco foi aplicada." }, { status: 503 });
+    }
+    const fallback = await admin.from("pecatho_customer_premium_plans")
+      .select("id,plan_key,name,description,price,currency,duration_days,benefits,sort_order,feature_flags")
+      .eq("active", true).in("duration_days", [30, 90, 180, 365]).order("sort_order", { ascending: true }).order("price", { ascending: true });
+    if (fallback.error) {
+      return NextResponse.json({ error: "Não foi possível carregar o catálogo Premium." }, { status: 503 });
+    }
+    plans = (fallback.data ?? []).map((plan) => ({ ...plan, discount_percent: 0 })) as typeof initialPlans;
+  }
+
+  if (subscriptionsError) {
     return NextResponse.json({ error: "Não foi possível carregar os dados do Premium. Confirme se a migração de banco foi aplicada." }, { status: 503 });
   }
 
