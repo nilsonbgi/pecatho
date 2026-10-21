@@ -19,7 +19,7 @@ export async function GET(
   const { data: product, error } = await admin
     .from("digital_content_products")
     .select(
-      "id,title,description,product_type,price,currency,status,owner_type,owner_id,owner_user_id,cover_bucket,cover_path",
+      "id,title,description,product_type,package_image_limit,package_video_limit,price,currency,status,owner_type,owner_id,owner_user_id,cover_bucket,cover_path",
     )
     .eq("id", id)
     .eq("status", "published")
@@ -163,6 +163,8 @@ export async function GET(
         title: product.title,
         description: product.description,
         product_type: product.product_type,
+        package_image_limit: product.package_image_limit,
+        package_video_limit: product.package_video_limit,
         price: product.price,
         currency: product.currency,
         owner_type: product.owner_type,
