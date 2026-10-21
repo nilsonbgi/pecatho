@@ -3,19 +3,6 @@ alter table public.digital_content_products
   add column if not exists package_image_limit integer,
   add column if not exists package_video_limit integer;
 
-alter table public.digital_content_products
-  drop constraint if exists digital_content_products_package_limits_check;
-alter table public.digital_content_products
-  add constraint digital_content_products_package_limits_check
-  check (
-    (product_type <> 'package' and package_image_limit is null and package_video_limit is null)
-    or
-    (product_type = 'package'
-      and package_image_limit is not null and package_image_limit >= 0
-      and package_video_limit is not null and package_video_limit >= 0
-      and package_image_limit + package_video_limit > 0)
-  );
-
 create table if not exists public.digital_content_sale_selections (
   sale_id uuid not null references public.digital_content_sales(id) on delete cascade,
   product_item_id uuid not null references public.digital_content_product_items(id) on delete restrict,
@@ -48,6 +35,19 @@ from (
 ) x
 where p.id = x.id and p.product_type = 'package'
   and (p.package_image_limit is null or p.package_video_limit is null);
+
+alter table public.digital_content_products
+  drop constraint if exists digital_content_products_package_limits_check;
+alter table public.digital_content_products
+  add constraint digital_content_products_package_limits_check
+  check (
+    (product_type <> 'package' and package_image_limit is null and package_video_limit is null)
+    or
+    (product_type = 'package'
+      and package_image_limit is not null and package_image_limit >= 0
+      and package_video_limit is not null and package_video_limit >= 0
+      and package_image_limit + package_video_limit > 0)
+  );
 
 -- Backfill paid historical sales with all files they already had access to.
 insert into public.digital_content_sale_selections(sale_id, product_item_id, buyer_user_id)
