@@ -103,22 +103,20 @@ returns table(profile_id uuid,featured_card boolean,show_premium_badge boolean,p
 language sql stable security definer set search_path = 'pg_catalog'
 as $function$
   select ap.id,
-    coalesce(bool_or(pp.featured_card),false),
-    coalesce(bool_or(pp.show_premium_badge),false),
-    case when coalesce(bool_or(pp.profile_theme='premium'),false) then 'premium'
-         when coalesce(bool_or(pp.profile_theme='highlighted'),false) then 'highlighted'
+    coalesce(bool_or(coalesce(nullif(pub.plan_features_snapshot->>'featured_card','')::boolean,pp.featured_card)),false),
+    coalesce(bool_or(coalesce(nullif(pub.plan_features_snapshot->>'show_premium_badge','')::boolean,pp.show_premium_badge)),false),
+    case when coalesce(bool_or(coalesce(pub.plan_features_snapshot->>'profile_theme',pp.profile_theme)='premium'),false) then 'premium'
+         when coalesce(bool_or(coalesce(pub.plan_features_snapshot->>'profile_theme',pp.profile_theme)='highlighted'),false) then 'highlighted'
          else 'standard' end,
-    coalesce(max(pp.search_priority),0)
+    coalesce(max(coalesce(nullif(pub.plan_features_snapshot->>'search_priority','')::integer,pp.search_priority)),0)
   from public.advertiser_profiles ap
   join public.profile_publications pub on pub.profile_id=ap.id
   join public.publication_plans pp on pp.id=pub.plan_id
   where ap.id=any(coalesce(p_profile_ids,'{}'::uuid[]))
     and ap.status::text='published'
     and pub.status::text='published' and pub.starts_at<=now() and pub.ends_at>now()
-    and pp.active=true
-    and (pp.audience='both' or pp.audience=case
-      when exists(select 1 from public.fans_creators fc where fc.advertiser_profile_id=ap.id and fc.status='active') then 'content_seller'
-      else 'companion' end)
+    and coalesce(pub.plan_features_snapshot->>'audience',pp.audience) in ('both',
+      case when exists(select 1 from public.fans_creators fc where fc.advertiser_profile_id=ap.id and fc.status='active') then 'content_seller' else 'companion' end)
   group by ap.id;
 $function$;
 revoke all on function public.get_public_profile_plan_features(uuid[]) from public;
@@ -135,10 +133,9 @@ begin
     join public.publication_plans pp on pp.id=pub.plan_id
     where pub.profile_id=new.profile_id and pub.status::text='published'
       and pub.starts_at<=now() and pub.ends_at>now()
-      and pp.active=true and pp.has_video=true
-      and (pp.audience='both' or pp.audience=case
-        when exists(select 1 from public.fans_creators fc where fc.advertiser_profile_id=new.profile_id and fc.status='active') then 'content_seller'
-        else 'companion' end)
+      and coalesce(nullif(pub.plan_features_snapshot->>'has_video','')::boolean,pp.has_video)=true
+      and coalesce(pub.plan_features_snapshot->>'audience',pp.audience) in ('both',
+        case when exists(select 1 from public.fans_creators fc where fc.advertiser_profile_id=new.profile_id and fc.status='active') then 'content_seller' else 'companion' end)
   ) then
     raise exception 'VIDEO_REQUIRES_ELIGIBLE_PUBLICATION_PLAN';
   end if;
@@ -175,12 +172,12 @@ as $function$
       where jsonb_typeof(period.value->'price') in ('number','string') and (period.value->>'price') ~ '^([0-9]+([.][0-9]+)?|[.][0-9]+)$'
     ) prices on true
     left join lateral (
-      select bool_or(pp.featured_card) as featured_card,max(pp.search_priority) as search_priority
+      select bool_or(coalesce(nullif(pub.plan_features_snapshot->>'featured_card','')::boolean,pp.featured_card)) as featured_card,
+        max(coalesce(nullif(pub.plan_features_snapshot->>'search_priority','')::integer,pp.search_priority)) as search_priority
       from public.profile_publications pub join public.publication_plans pp on pp.id=pub.plan_id
-      where pub.profile_id=ap.id and pub.status::text='published' and pub.starts_at<=now() and pub.ends_at>now() and pp.active=true
-        and (pp.audience='both' or pp.audience=case
-          when exists(select 1 from public.fans_creators fc where fc.advertiser_profile_id=ap.id and fc.status='active') then 'content_seller'
-          else 'companion' end)
+      where pub.profile_id=ap.id and pub.status::text='published' and pub.starts_at<=now() and pub.ends_at>now()
+        and coalesce(pub.plan_features_snapshot->>'audience',pp.audience) in ('both',
+          case when exists(select 1 from public.fans_creators fc where fc.advertiser_profile_id=ap.id and fc.status='active') then 'content_seller' else 'companion' end)
     ) entitlements on true
     where ap.status::text='published'
       and (p_category_id is null or ap.category_id=p_category_id)
