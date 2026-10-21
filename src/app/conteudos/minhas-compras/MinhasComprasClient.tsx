@@ -222,7 +222,8 @@ export default function MinhasComprasClient() {
       const selectionBody = await selectionResponse.json();
       if (!selectionResponse.ok) throw new Error(selectionBody.error || "Não foi possível carregar os arquivos do pacote.");
       setSelectionItems(Array.isArray(selectionBody.items) ? selectionBody.items : []);
-      setSelectedItemIds(Array.isArray(selectionBody.selected_ids) ? selectionBody.selected_ids : []);\n      setSelectionLocked(Array.isArray(selectionBody.selected_ids) && selectionBody.selected_ids.length > 0);
+      setSelectedItemIds(Array.isArray(selectionBody.selected_ids) ? selectionBody.selected_ids : []);
+      setSelectionLocked(Array.isArray(selectionBody.selected_ids) && selectionBody.selected_ids.length > 0);
       setSelectionLimits(selectionBody.limits ?? { images: 1, videos: 1 });
       if (!Array.isArray(selectionBody.selected_ids) || selectionBody.selected_ids.length === 0) return;
       const response = await fetch(
