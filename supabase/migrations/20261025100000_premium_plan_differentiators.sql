@@ -103,12 +103,12 @@ returns table(profile_id uuid,featured_card boolean,show_premium_badge boolean,p
 language sql stable security definer set search_path = 'pg_catalog'
 as $function$
   select ap.id,
-    coalesce(bool_or(coalesce(nullif(pub.plan_features_snapshot->>'featured_card','')::boolean,pp.featured_card)),false),
-    coalesce(bool_or(coalesce(nullif(pub.plan_features_snapshot->>'show_premium_badge','')::boolean,pp.show_premium_badge)),false),
-    case when coalesce(bool_or(coalesce(pub.plan_features_snapshot->>'profile_theme',pp.profile_theme)='premium'),false) then 'premium'
-         when coalesce(bool_or(coalesce(pub.plan_features_snapshot->>'profile_theme',pp.profile_theme)='highlighted'),false) then 'highlighted'
+    coalesce(bool_or(case when pub.plan_features_snapshot ? 'featured_card' then coalesce((pub.plan_features_snapshot->>'featured_card')::boolean,false) else false end),false),
+    coalesce(bool_or(case when pub.plan_features_snapshot ? 'show_premium_badge' then coalesce((pub.plan_features_snapshot->>'show_premium_badge')::boolean,false) else false end),false),
+    case when coalesce(bool_or(pub.plan_features_snapshot ? 'profile_theme' and pub.plan_features_snapshot->>'profile_theme'='premium'),false) then 'premium'
+         when coalesce(bool_or(pub.plan_features_snapshot ? 'profile_theme' and pub.plan_features_snapshot->>'profile_theme'='highlighted'),false) then 'highlighted'
          else 'standard' end,
-    coalesce(max(coalesce(nullif(pub.plan_features_snapshot->>'search_priority','')::integer,pp.search_priority)),0)
+    coalesce(max(case when pub.plan_features_snapshot ? 'search_priority' then coalesce((pub.plan_features_snapshot->>'search_priority')::integer,0) else 0 end),0)
   from public.advertiser_profiles ap
   join public.profile_publications pub on pub.profile_id=ap.id
   join public.publication_plans pp on pp.id=pub.plan_id
@@ -172,8 +172,8 @@ as $function$
       where jsonb_typeof(period.value->'price') in ('number','string') and (period.value->>'price') ~ '^([0-9]+([.][0-9]+)?|[.][0-9]+)$'
     ) prices on true
     left join lateral (
-      select bool_or(coalesce(nullif(pub.plan_features_snapshot->>'featured_card','')::boolean,pp.featured_card)) as featured_card,
-        max(coalesce(nullif(pub.plan_features_snapshot->>'search_priority','')::integer,pp.search_priority)) as search_priority
+      select bool_or(case when pub.plan_features_snapshot ? 'featured_card' then coalesce((pub.plan_features_snapshot->>'featured_card')::boolean,false) else false end) as featured_card,
+        max(case when pub.plan_features_snapshot ? 'search_priority' then coalesce((pub.plan_features_snapshot->>'search_priority')::integer,0) else 0 end) as search_priority
       from public.profile_publications pub join public.publication_plans pp on pp.id=pub.plan_id
       where pub.profile_id=ap.id and pub.status::text='published' and pub.starts_at<=now() and pub.ends_at>now()
         and coalesce(pub.plan_features_snapshot->>'audience',pp.audience) in ('both',
