@@ -57,10 +57,6 @@ begin
     from public.pecatho_customer_premium_plans
     where audience='customer' and duration_days=30 and (p_plan_id is null or id<>p_plan_id);
 
-    if v_base_price is null and found and v_existing.id is not null
-      and v_existing.audience='customer' and v_existing.duration_days=30 then
-      v_base_price := v_existing.price;
-    end if;
     if v_base_price is null or v_base_price <= 0 then
       raise exception 'CUSTOMER_MONTHLY_BASE_PLAN_REQUIRED';
     end if;
