@@ -18,6 +18,26 @@ type PremiumPlan = {
   updated_at: string;
 };
 
+type PublicationPlan = {
+  id: string;
+  name: string;
+  description: string | null;
+  duration_days: number;
+  price: number | string;
+  currency: string;
+  active: boolean;
+  free: boolean;
+  has_video: boolean;
+  features: Record<string, unknown> | null;
+  audience: "companion" | "content_seller" | "both";
+  featured_card: boolean;
+  search_priority: number;
+  show_premium_badge: boolean;
+  profile_theme: "standard" | "highlighted" | "premium";
+  max_gallery_items: number | null;
+  updated_at: string;
+};
+
 export default function AdminCustomerPremiumPage() {
   const supabase = createClient();
   const [authorized, setAuthorized] = useState<boolean | null>(null);
@@ -36,6 +56,23 @@ export default function AdminCustomerPremiumPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [loadingPlans, setLoadingPlans] = useState(false);
+  const [managementArea, setManagementArea] = useState<"publication" | "customer">("publication");
+  const [publicationPlans, setPublicationPlans] = useState<PublicationPlan[]>([]);
+  const [editingPublicationId, setEditingPublicationId] = useState<string | null>(null);
+  const [publicationAudience, setPublicationAudience] = useState<"companion" | "content_seller" | "both">("companion");
+  const [publicationName, setPublicationName] = useState("");
+  const [publicationDescription, setPublicationDescription] = useState("");
+  const [publicationPrice, setPublicationPrice] = useState("");
+  const [publicationDuration, setPublicationDuration] = useState("30");
+  const [publicationActive, setPublicationActive] = useState(false);
+  const [publicationFree, setPublicationFree] = useState(false);
+  const [publicationHasVideo, setPublicationHasVideo] = useState(false);
+  const [publicationFeatured, setPublicationFeatured] = useState(false);
+  const [publicationSearchPriority, setPublicationSearchPriority] = useState("0");
+  const [publicationBadge, setPublicationBadge] = useState(false);
+  const [publicationTheme, setPublicationTheme] = useState<"standard" | "highlighted" | "premium">("standard");
+  const [publicationBusy, setPublicationBusy] = useState(false);
+  const publicationActiveCount = publicationPlans.filter((plan) => plan.active).length;
   const activeCount = plans.filter((plan) => plan.active).length;
   const inactiveCount = plans.length - activeCount;
   const filteredPlans = plans.filter((plan) => {
@@ -48,12 +85,18 @@ export default function AdminCustomerPremiumPage() {
   async function load() {
     setLoadingPlans(true);
     try {
-      const { data, error: loadError } = await supabase
-        .from("pecatho_customer_premium_plans")
-        .select("id,plan_key,name,description,price,currency,duration_days,benefits,active,sort_order,updated_at")
-        .order("sort_order", { ascending: true }).order("price", { ascending: true });
+      const [{ data, error: loadError }, { data: publicationData, error: publicationError }] = await Promise.all([
+        supabase.from("pecatho_customer_premium_plans")
+          .select("id,plan_key,name,description,price,currency,duration_days,benefits,active,sort_order,updated_at")
+          .order("sort_order", { ascending: true }).order("price", { ascending: true }),
+        supabase.from("publication_plans")
+          .select("id,name,description,duration_days,price,currency,active,free,has_video,features,audience,featured_card,search_priority,show_premium_badge,profile_theme,max_gallery_items,updated_at")
+          .order("audience", { ascending: true }).order("price", { ascending: true }),
+      ]);
       if (loadError) throw loadError;
+      if (publicationError) throw publicationError;
       setPlans((data ?? []) as PremiumPlan[]);
+      setPublicationPlans((publicationData ?? []) as PublicationPlan[]);
     } finally {
       setLoadingPlans(false);
     }
@@ -100,6 +143,86 @@ export default function AdminCustomerPremiumPage() {
     setActive(false);
     setError("");
     setMessage("");
+  }
+
+  function editPublication(plan: PublicationPlan) {
+    setEditingPublicationId(plan.id);
+    setPublicationAudience(plan.audience);
+    setPublicationName(plan.name);
+    setPublicationDescription(plan.description ?? "");
+    setPublicationPrice(String(plan.price).replace(".", ","));
+    setPublicationDuration(String(plan.duration_days));
+    setPublicationActive(plan.active);
+    setPublicationFree(plan.free);
+    setPublicationHasVideo(plan.has_video);
+    setPublicationFeatured(plan.featured_card);
+    setPublicationSearchPriority(String(plan.search_priority));
+    setPublicationBadge(plan.show_premium_badge);
+    setPublicationTheme(plan.profile_theme);
+    setError("");
+    setMessage("");
+  }
+
+  function resetPublication() {
+    setEditingPublicationId(null);
+    setPublicationAudience("companion");
+    setPublicationName("");
+    setPublicationDescription("");
+    setPublicationPrice("");
+    setPublicationDuration("30");
+    setPublicationActive(false);
+    setPublicationFree(false);
+    setPublicationHasVideo(false);
+    setPublicationFeatured(false);
+    setPublicationSearchPriority("0");
+    setPublicationBadge(false);
+    setPublicationTheme("standard");
+  }
+
+  async function savePublication(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPublicationBusy(true);
+    setError("");
+    setMessage("");
+    const parsedPrice = publicationFree ? 0 : Number(publicationPrice.trim().replace(/\\s/g, "").replace(",", "."));
+    try {
+      if (!Number.isFinite(parsedPrice) || parsedPrice < 0 || (!publicationFree && parsedPrice <= 0)) throw new Error("Informe um preço válido para o plano.");
+      const { error: saveError } = await supabase.rpc("admin_save_pecatho_publication_plan", {
+        p_plan_id: editingPublicationId,
+        p_name: publicationName.trim(),
+        p_description: publicationDescription.trim() || null,
+        p_duration_days: Number(publicationDuration),
+        p_price: parsedPrice,
+        p_active: publicationActive,
+        p_free: publicationFree,
+        p_audience: publicationAudience,
+        p_has_video: publicationHasVideo,
+        p_featured_card: publicationFeatured,
+        p_search_priority: Number(publicationSearchPriority),
+        p_show_premium_badge: publicationBadge,
+        p_profile_theme: publicationTheme,
+        p_max_gallery_items: null,
+        p_features: editingPublicationId ? publicationPlans.find((plan) => plan.id === editingPublicationId)?.features ?? {} : {},
+      });
+      if (saveError) throw saveError;
+      setMessage(publicationActive ? "Plano de publicação salvo e ativado. Os diferenciais serão aplicados às publicações válidas." : "Plano de publicação salvo como inativo.");
+      resetPublication();
+      await load();
+    } catch (e) {
+      const raw = e instanceof Error ? e.message : "";
+      setError(raw.includes("ADMIN_REQUIRED") ? "Seu usuário não tem permissão para administrar os planos."
+        : raw.includes("INVALID_PLAN_AUDIENCE") ? "Selecione um público válido."
+        : raw.includes("INVALID_SEARCH_PRIORITY") ? "A prioridade deve estar entre 0 e 100."
+        : raw.includes("INVALID_PROFILE_THEME") ? "Selecione um estilo de perfil válido."
+        : raw.includes("FREE_PLAN_PRICE_MUST_BE_ZERO") ? "Planos gratuitos devem ter preço zero."
+        : raw.includes("PAID_PLAN_PRICE_REQUIRED") ? "Planos pagos precisam ter preço maior que zero."
+        : raw.includes("INVALID_PLAN_DURATION") ? "A duração deve ficar entre 1 e 365 dias."
+        : raw.includes("INVALID_PLAN_PRICE") ? "O preço não pode ultrapassar R$ 100.000,00."
+        : raw.includes("admin_save_pecatho_publication_plan") || raw.includes("schema cache") ? "A migration de diferenciais dos planos de publicação precisa estar aplicada no Supabase."
+        : "Não foi possível salvar o plano de publicação. Revise os campos e a configuração do banco.");
+    } finally {
+      setPublicationBusy(false);
+    }
   }
 
   async function save(event: React.FormEvent<HTMLFormElement>) {
@@ -154,11 +277,46 @@ export default function AdminCustomerPremiumPage() {
         <p className="heroCopy">Configure preço, duração e benefícios antes de publicar. Planos inativos não são exibidos aos clientes. A ativação da assinatura depende exclusivamente da confirmação de pagamento recebida e validada pelo webhook do Mercado Pago.</p>
         {error && <p role="alert" className="fieldNote" style={{ border: "1px solid rgba(239,68,68,.35)", padding: 12, borderRadius: 12 }}>{error}</p>}
         {message && <p role="status" className="fieldNote" style={{ border: "1px solid rgba(34,197,94,.35)", padding: 12, borderRadius: 12 }}>{message}</p>}
+        <nav className="premiumAdminTabs" aria-label="Categorias de planos">
+          <button type="button" className={managementArea === "publication" ? "active" : ""} aria-pressed={managementArea === "publication"} onClick={() => { setManagementArea("publication"); setError(""); setMessage(""); }}>Planos de anunciantes <small>Acompanhantes e vendedores de conteúdo</small></button>
+          <button type="button" className={managementArea === "customer" ? "active" : ""} aria-pressed={managementArea === "customer"} onClick={() => { setManagementArea("customer"); setError(""); setMessage(""); }}>Assinaturas Premium <small>Clientes · mensal, trimestral, semestral e anual</small></button>
+        </nav>
+        {managementArea === "publication" && <>
+        <section className="pillars premiumAdminMetrics" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", margin: "26px 0 18px" }} aria-label="Resumo dos planos de publicação">
+          <article className="card" style={{ minHeight: 0 }}><div className="eyebrow">PLANOS DE ANUNCIANTES</div><h2 style={{ marginTop: 0, fontSize: 30 }}>{publicationPlans.length}</h2><p>Planos configurados para os dois públicos</p></article>
+          <article className="card" style={{ minHeight: 0 }}><div className="eyebrow">ATIVOS</div><h2 style={{ marginTop: 0, fontSize: 30, color: "#86efac" }}>{publicationActiveCount}</h2><p>Podem ser selecionados em fluxos compatíveis</p></article>
+          <article className="card" style={{ minHeight: 0 }}><div className="eyebrow">COM DIFERENCIAIS</div><h2 style={{ marginTop: 0, fontSize: 30 }}>{publicationPlans.filter((plan) => plan.active && (plan.featured_card || plan.search_priority > 0 || plan.show_premium_badge || plan.profile_theme !== "standard")).length}</h2><p>Card especial, prioridade e estilo de perfil</p></article>
+        </section>
+        <section className="card premiumAdminEditor" id="editor-publicacao">
+          <h2>{editingPublicationId ? "Editar plano de publicação" : "Criar plano de publicação"}</h2>
+          <p className="fieldNote">Configure diferenciais comerciais para acompanhantes e vendedores de conteúdo. Card especial, prioridade de busca e identidade visual só são aplicados enquanto a publicação vinculada estiver vigente.</p>
+          <form onSubmit={(event) => void savePublication(event)} className="premiumAdminForm">
+            <label>Público do plano<select required value={publicationAudience} onChange={(event) => setPublicationAudience(event.target.value as "companion" | "content_seller" | "both")}><option value="companion">Acompanhantes</option><option value="content_seller">Vendedores de conteúdo</option><option value="both">Ambos os públicos</option></select></label>
+            <label>Nome comercial<input required minLength={3} maxLength={100} value={publicationName} onChange={(event) => setPublicationName(event.target.value)} placeholder="Destaque Premium" /></label>
+            <label>Descrição<textarea rows={2} maxLength={500} value={publicationDescription} onChange={(event) => setPublicationDescription(event.target.value)} placeholder="Descreva o que diferencia este plano." /></label>
+            <div className="pillars"><label>Preço em reais<input required inputMode="decimal" value={publicationFree ? "0,00" : publicationPrice} disabled={publicationFree} onChange={(event) => setPublicationPrice(event.target.value)} placeholder="49,90" /></label><label>Duração em dias<input required type="number" min={1} max={365} value={publicationDuration} onChange={(event) => setPublicationDuration(event.target.value)} /></label></div>
+            <label>Prioridade nas pesquisas (0–100)<input required type="number" min={0} max={100} value={publicationSearchPriority} onChange={(event) => setPublicationSearchPriority(event.target.value)} /><small>Quanto maior o valor, maior a prioridade entre perfis com o mesmo filtro. Planos em destaque aparecem antes dos demais.</small></label>
+            <label>Estilo do perfil<select value={publicationTheme} onChange={(event) => setPublicationTheme(event.target.value as "standard" | "highlighted" | "premium")}><option value="standard">Padrão</option><option value="highlighted">Destaque visual</option><option value="premium">Premium</option></select></label>
+            <label className="premiumAdminCheck"><input type="checkbox" checked={publicationFree} onChange={(event) => { setPublicationFree(event.target.checked); if (event.target.checked) setPublicationPrice("0,00"); else if (publicationPrice === "0,00") setPublicationPrice(""); }} /> Plano gratuito</label>
+            <label className="premiumAdminCheck"><input type="checkbox" checked={publicationActive} onChange={(event) => setPublicationActive(event.target.checked)} /> Plano ativo</label>
+            <label className="premiumAdminCheck"><input type="checkbox" checked={publicationFeatured} onChange={(event) => setPublicationFeatured(event.target.checked)} /> Card especial com destaque visual</label>
+            <label className="premiumAdminCheck"><input type="checkbox" checked={publicationBadge} onChange={(event) => setPublicationBadge(event.target.checked)} /> Exibir selo Premium no card</label>
+            <label className="premiumAdminCheck"><input type="checkbox" checked={publicationHasVideo} onChange={(event) => setPublicationHasVideo(event.target.checked)} /> Permitir vídeo conforme o plano</label>
+            <div className="premiumAdminFormActions"><button className="primaryButton" type="submit" disabled={publicationBusy}>{publicationBusy ? "Salvando…" : editingPublicationId ? "Salvar alterações" : "Criar plano"}</button>{editingPublicationId && <button className="secondaryButton" type="button" disabled={publicationBusy} onClick={resetPublication}>Cancelar edição</button>}</div>
+          </form>
+        </section>
+        <section className="card premiumAdminCatalog" id="catalogo-publicacao">
+          <div className="premiumAdminSectionHeader"><h2>Planos de acompanhantes e vendedores</h2><button type="button" className="secondaryButton" disabled={loadingPlans} onClick={() => void load()}>{loadingPlans ? "Atualizando…" : "Atualizar catálogo"}</button></div>
+          {publicationPlans.length === 0 ? <p className="fieldNote">Nenhum plano de publicação cadastrado. Crie o primeiro plano acima.</p> : <div className="financeHistory">{publicationPlans.map((plan) => <article key={plan.id}><div><strong>{plan.name}</strong><small>{plan.audience === "companion" ? "Acompanhantes" : plan.audience === "content_seller" ? "Vendedores de conteúdo" : "Ambos os públicos"} · {plan.duration_days} dias · {plan.free ? "Gratuito" : Number(plan.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</small><small>{plan.featured_card ? "Card especial" : "Card padrão"} · prioridade {plan.search_priority} · perfil {plan.profile_theme === "premium" ? "Premium" : plan.profile_theme === "highlighted" ? "Destaque" : "padrão"}{plan.show_premium_badge ? " · selo Premium" : ""}{plan.has_video ? " · vídeo habilitado" : ""}</small><small>{plan.description || "Sem descrição"}</small></div><span className="financeStatus">{plan.active ? "Ativo" : "Inativo"}</span><button className="secondaryButton" type="button" onClick={() => editPublication(plan)}>Editar</button></article>)}</div>}
+        </section>
+        </>}
+        {managementArea === "customer" && <>
         <section className="pillars premiumAdminMetrics" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", margin: "26px 0 18px" }} aria-label="Resumo do catálogo">
           <article className="card" style={{ minHeight: 0 }}><div className="eyebrow">CATÁLOGO</div><h2 style={{ marginTop: 0, fontSize: 30 }}>{plans.length}</h2><p>Planos cadastrados</p></article>
           <article className="card" style={{ minHeight: 0 }}><div className="eyebrow">PUBLICADOS</div><h2 style={{ marginTop: 0, fontSize: 30, color: "#86efac" }}>{activeCount}</h2><p>Disponíveis no catálogo, conforme as regras da plataforma</p></article>
           <article className="card" style={{ minHeight: 0 }}><div className="eyebrow">INATIVOS</div><h2 style={{ marginTop: 0, fontSize: 30 }}>{inactiveCount}</h2><p>Preservados para edição ou republicação</p></article>
         </section>
+        <section className="premiumAdminCustomerPlans">
         <section className="card premiumAdminEditor" id="editor">
           <h2>{editingId ? "Editar plano" : "Cadastrar novo plano"}</h2>
           <form onSubmit={(event) => void save(event)} style={{ display: "grid", gap: 14 }}>
@@ -190,6 +348,8 @@ export default function AdminCustomerPremiumPage() {
             <button className="secondaryButton" type="button" onClick={() => edit(plan)}>Editar</button>
           </article>)}</div>}
         </section>
+        </section>
+        </>}
       </section>
     </main>
   );
