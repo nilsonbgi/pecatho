@@ -519,7 +519,7 @@ $function$;
 
 
 -- Reject nonstandard subscription terms before payment, preserving creator attribution.
-create function public.create_pecatho_customer_premium_checkout(
+create or replace function public.create_pecatho_customer_premium_checkout(
   p_plan_id uuid,
   p_creator_id uuid default null
 ) returns jsonb
