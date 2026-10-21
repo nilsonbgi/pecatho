@@ -119,7 +119,9 @@ export async function POST(request: Request) {
   const productType = order.metadata?.product_type;
   const settlementFunction = productType === "premium_subscription"
     ? "settle_pecatho_customer_premium_checkout"
-    : productType === "publication_plan"
+    : productType === "professional_premium_subscription"
+      ? "settle_pecatho_professional_premium_checkout"
+      : productType === "publication_plan"
       ? "settle_pecatho_publication_checkout"
       : productType === "creator_publication_plan"
         ? "settle_pecatho_creator_publication_checkout"

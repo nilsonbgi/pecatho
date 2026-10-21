@@ -14,6 +14,7 @@ type CatalogService = { id: string; name: string; slug: string; display_public: 
 type Media = { profile_id: string; preview_storage_bucket: string | null; preview_storage_path: string | null; storage_bucket: string; storage_path: string; kind: string; access_type?: string; price?: number | null; is_primary: boolean; is_featured: boolean; is_public: boolean; show_in_cards: boolean; };
 type PublicProfileMeta = { id: string; availability: string | null };
 type PublicationPlanPresentation = { id: string; audience: "companion" | "content_seller" | "both"; featured_card: boolean; show_premium_badge: boolean; profile_theme: "standard" | "highlighted" | "premium"; search_priority: number };
+type ProfessionalFeature = { entity_id: string; featured_card: boolean; search_priority: boolean; premium_profile: boolean; profile_badge: boolean; card_style: string; badge_label: string | null };
 type ProfilePublicationAssignment = { profile_id: string; plan_id: string; starts_at: string | null; ends_at: string | null; status: string };
 
 type Option = { label: string; value: string };
@@ -21,7 +22,7 @@ function options(value: unknown): Option[] { if (!Array.isArray(value)) return [
 
 export default function AcompanhantesPage() {
   const [advertisers, setAdvertisers] = useState<(Advertiser & { imageUrl: string | null; mediaCount: number; videoCount: number; paidMediaCount: number; availability: string | null })[]>([]); const [totalCount, setTotalCount] = useState(0);
-  const [planPresentation, setPlanPresentation] = useState<Record<string, { featured: boolean; badge: boolean; theme: "standard" | "highlighted" | "premium" }>>({});
+  const [planPresentation, setPlanPresentation] = useState<Record<string, { featured: boolean; badge: boolean; theme: "standard" | "highlighted" | "premium"; premiumFeatured?: boolean; premiumPriority?: boolean; premiumProfile?: boolean; premiumBadge?: boolean; premiumStyle?: string; premiumBadgeLabel?: string | null }>>({});
   const [categories, setCategories] = useState<Category[]>([]); const [states, setStates] = useState<State[]>([]); const [cities, setCities] = useState<City[]>([]);
   const [attributes, setAttributes] = useState<CatalogAttribute[]>([]); const [services, setServices] = useState<CatalogService[]>([]);
   const [categoryId, setCategoryId] = useState(""); const [stateId, setStateId] = useState(""); const [cityId, setCityId] = useState(""); const [query, setQuery] = useState(""); const [searchQuery, setSearchQuery] = useState("");
@@ -168,11 +169,17 @@ export default function AcompanhantesPage() {
     (async () => {
       try {
         const s = createClient();
-        const { data, error: planError } = await s.rpc("get_public_profile_plan_features", { p_profile_ids: ids });
+        const [{ data, error: planError }, { data: professionalRows }] = await Promise.all([
+          s.rpc("get_public_profile_plan_features", { p_profile_ids: ids }),
+          s.rpc("get_public_professional_plan_features", { p_entity_ids: ids, p_audience: "companion" }),
+        ]);
         if (planError) throw planError;
-        const next: Record<string, { featured: boolean; badge: boolean; theme: "standard" | "highlighted" | "premium" }> = {};
+        const next: Record<string, { featured: boolean; badge: boolean; theme: "standard" | "highlighted" | "premium"; premiumFeatured?: boolean; premiumPriority?: boolean; premiumProfile?: boolean; premiumBadge?: boolean; premiumStyle?: string; premiumBadgeLabel?: string | null }> = {};
         for (const item of (data ?? []) as Array<{ profile_id: string; featured_card: boolean; show_premium_badge: boolean; profile_theme: "standard" | "highlighted" | "premium" }>) {
           next[item.profile_id] = { featured: item.featured_card, badge: item.show_premium_badge, theme: item.profile_theme };
+        }
+        for (const item of (professionalRows ?? []) as ProfessionalFeature[]) {
+          next[item.entity_id] = { ...(next[item.entity_id] ?? { featured: false, badge: false, theme: "standard" as const }), premiumFeatured: item.featured_card, premiumPriority: item.search_priority, premiumProfile: item.premium_profile, premiumBadge: item.profile_badge, premiumStyle: item.card_style, premiumBadgeLabel: item.badge_label };
         }
         if (active) setPlanPresentation(next);
       } catch (error) {
@@ -209,10 +216,10 @@ export default function AcompanhantesPage() {
   const oneHour = valid.find((row) => Number(row.minutes) === 60);
   const display = oneHour || valid[0];
   const presentation = planPresentation[item.id];
-  return <article className={`advertiserCard commercialAdvertiserCard ${presentation?.featured ? "planFeaturedCard" : ""} ${presentation?.theme === "highlighted" ? "planThemeHighlighted" : presentation?.theme === "premium" ? "planThemePremium" : ""}`} key={item.id}>
+  return <article className={`advertiserCard commercialAdvertiserCard ${presentation?.featured ? "planFeaturedCard" : ""} ${presentation?.theme === "highlighted" ? "planThemeHighlighted" : presentation?.theme === "premium" ? "planThemePremium" : ""} ${presentation?.premiumFeatured ? "premiumFeaturedCard premiumStyle-" + (presentation.premiumStyle || "gold") : ""} ${presentation?.premiumProfile ? "premiumProfileEnabled" : ""}`} key={item.id}>
     <div className="advertiserVisual commercialAdvertiserVisual">
       {item.imageUrl ? <img src={item.imageUrl} alt={item.display_name || item.title || "Perfil Pecatho"} /> : <div className="visualPlaceholder"><span>✦</span><div>Pecatho</div><small>Mídia de apresentação</small></div>}
-      <div className="commercialVisualTop"><span className="commercialCategory">{item.category_id != null ? categoryName.get(item.category_id) || "ACOMPANHANTE" : "ACOMPANHANTE"}</span><span className="commercialTrustBadges">{presentation?.badge && <span className="publicationPremiumBadge">✦ PREMIUM</span>}{item.verification_status === "verified" && <span className="verifiedMark">✓ VERIFICADO</span>}</span></div>
+      <div className="commercialVisualTop"><span className="commercialCategory">{item.category_id != null ? categoryName.get(item.category_id) || "ACOMPANHANTE" : "ACOMPANHANTE"}</span><span className="commercialTrustBadges">{presentation?.premiumBadge && <span className="premiumPlanBadge">✦ {presentation.premiumBadgeLabel || "Perfil Premium"}</span>}{presentation?.badge && <span className="publicationPremiumBadge">✦ PREMIUM</span>}{item.verification_status === "verified" && <span className="verifiedMark">✓ VERIFICADO</span>}</span></div>
       <div className="commercialVisualBottom"><span>▣ {item.mediaCount} mídia(s)</span>{item.videoCount > 0 && <span>▶ {item.videoCount} vídeo(s)</span>}{item.paidMediaCount > 0 && <span className="paidContentBadge">✦ Conteúdo exclusivo</span>}</div>
     </div>
     <div className="advertiserBody commercialAdvertiserBody">

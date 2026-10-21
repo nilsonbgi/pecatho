@@ -5,7 +5,7 @@ type MercadoPagoPreferenceInput = {
   amount: number;
   buyerEmail: string;
   creatorId?: string;
-  productType?: "digital_content" | "profile_media" | "gift" | "premium_subscription" | "fans_boost" | "publication_plan" | "creator_publication_plan";
+  productType?: "digital_content" | "profile_media" | "gift" | "premium_subscription" | "fans_boost" | "publication_plan" | "creator_publication_plan" | "professional_premium_subscription";
 };
 
 type MercadoPagoPreference = {
@@ -31,6 +31,8 @@ export async function createMercadoPagoPreference(input: MercadoPagoPreferenceIn
         ? "pecatho_gift"
         : productType === "premium_subscription"
           ? "pecatho_customer_premium"
+          : productType === "professional_premium_subscription"
+            ? "pecatho_professional_premium"
           : productType === "publication_plan"
             ? "pecatho_publication_plan"
             : productType === "creator_publication_plan"
@@ -39,6 +41,8 @@ export async function createMercadoPagoPreference(input: MercadoPagoPreferenceIn
 
   const successUrl = productType === "premium_subscription"
     ? `${baseUrl}/painel/cliente?premium=aguardando&order=${encodeURIComponent(input.orderId)}`
+    : productType === "professional_premium_subscription"
+      ? `${baseUrl}/painel/anuncio/premium?status=aguardando&order=${encodeURIComponent(input.orderId)}`
     : productType === "publication_plan"
       ? `${baseUrl}/painel/anuncio/planos?status=aguardando&order=${encodeURIComponent(input.orderId)}`
       : productType === "creator_publication_plan"

@@ -17,6 +17,7 @@ type BoostedDiscoveryPost = {
   ends_at: string;
 };
 
+type PublicPremiumFeature = { entity_id: string; featured_card: boolean; search_priority: boolean; premium_profile: boolean; profile_badge: boolean; card_style: string; badge_label: string | null };
 type PublicFansCreator = {
   id: string;
   slug: string;
@@ -33,6 +34,12 @@ type PublicFansCreator = {
   plan_premium_badge?: boolean;
   plan_profile_theme?: "standard" | "highlighted" | "premium";
   plan_search_priority?: number;
+  premium_featured?: boolean;
+  premium_search_priority?: boolean;
+  premium_profile?: boolean;
+  premium_profile_badge?: boolean;
+  premium_card_style?: string | null;
+  premium_badge_label?: string | null;
 };
 
 function summarizeCreatorBio(value: string | null, maxLength = 132): string {
@@ -67,7 +74,7 @@ export default async function FansPage() {
     { data: creatorPlans },
     { data: creatorOffers },
   ] = await Promise.all([
-    supabase.rpc("get_public_fans_creator_leaderboard", { p_limit: 24 }),
+    supabase.rpc("get_public_fans_creator_leaderboard", { p_limit: 100 }),
     supabase.rpc("get_public_fans_creators_count"),
     supabase.from("fans_plans").select("creator_id").eq("status", "active"),
     supabase.from("fans_live_offers").select("creator_id").eq("status", "active"),
@@ -96,7 +103,31 @@ export default async function FansPage() {
       plan_search_priority: presentation?.search_priority ?? 0,
     };
   }
+  let professionalFeatureRows: PublicPremiumFeature[] = [];
+  if (creatorIds.length) {
+    try {
+      const { data } = await createAdminClient().rpc("get_public_professional_plan_features", { p_entity_ids: creatorIds, p_audience: "content_creator" });
+      professionalFeatureRows = (data ?? []) as PublicPremiumFeature[];
+    } catch {
+      professionalFeatureRows = [];
+    }
+  }
+  const professionalFeatureMap = new Map(professionalFeatureRows.map((item) => [item.entity_id, item]));
+  for (let index = 0; index < publicCreators.length; index++) {
+    const item = publicCreators[index];
+    const feature = professionalFeatureMap.get(item.id);
+    publicCreators[index] = { ...item,
+      premium_featured: feature?.featured_card === true,
+      premium_search_priority: feature?.search_priority === true,
+      premium_profile: feature?.premium_profile === true,
+      premium_profile_badge: feature?.profile_badge === true,
+      premium_card_style: feature?.card_style ?? null,
+      premium_badge_label: feature?.badge_label ?? null,
+    };
+  }
   publicCreators.sort((a, b) =>
+    Number(Boolean(b.premium_featured)) - Number(Boolean(a.premium_featured)) ||
+    Number(Boolean(b.premium_search_priority)) - Number(Boolean(a.premium_search_priority)) ||
     Number(Boolean(b.plan_featured_card)) - Number(Boolean(a.plan_featured_card)) ||
     Number(b.plan_search_priority || 0) - Number(a.plan_search_priority || 0)
   );
@@ -382,8 +413,9 @@ export default async function FansPage() {
           </div>
 
           {featuredCreators.length === 0 ? <div className="fansEmpty">Ainda não há criadores ativos para destacar.</div> : <div className="fansFeaturedGrid">
-            {featuredCreators.map((item) => <Link key={item.id} href={"/fans/" + item.slug} className="fansFeaturedCard">
+            {featuredCreators.map((item) => <Link key={item.id} href={"/fans/" + item.slug} className={`fansFeaturedCard ${item.premium_featured ? "premiumFeaturedCard premiumStyle-" + (item.premium_card_style || "gold") : ""} ${item.premium_profile ? "premiumProfileEnabled" : ""}`}>
               {item.avatar_url ? <img src={item.avatar_url} alt={item.display_name} /> : <div className="fansFeaturedCardFallback">{item.display_name.slice(0, 1).toUpperCase()}</div>}
+              {item.premium_featured && <span className="fansPremiumPlanTag">✦ DESTAQUE</span>}{item.premium_profile_badge && <span className="fansPremiumProfileBadge">{item.premium_badge_label || "Perfil Premium"}</span>}
               <div className="fansFeaturedInfo"><strong>{item.display_name}</strong><span className="fansReputationBadge">🏆 {item.reputation_level || "Iniciante"} · {Number(item.reputation_score || 0).toLocaleString("pt-BR")} pontos</span><span><i className="fansOnline" />{planMap.get(item.id) || 0} plano(s) disponível(is)</span></div>
             </Link>)}
           </div>}
@@ -395,9 +427,9 @@ export default async function FansPage() {
           </div>
 
           {discoveryCreators.length === 0 ? <div className="fansEmpty">Ainda não há criadores ativos publicados no Fans.</div> : <div className="fansCreatorGrid">
-            {discoveryCreators.map((item) => <Link key={item.id} href={"/fans/" + item.slug} className={`fansCreatorCard ${item.plan_featured_card ? "fansPlanFeatured" : ""} ${item.plan_profile_theme === "premium" ? "fansPlanPremium" : item.plan_profile_theme === "highlighted" ? "fansPlanHighlighted" : ""}`}>
-              <div className="fansCreatorAvatar">{item.avatar_url ? <img src={item.avatar_url} alt={item.display_name} /> : item.display_name.slice(0, 1).toUpperCase()}</div>
-              <div style={{minWidth:0,flex:1}}><strong>{item.display_name}</strong>{item.plan_premium_badge && <span className="fansPublicationPremiumBadge">✦ PERFIL PREMIUM</span>}<div className="fansCreatorMeta"><span className="fansOnline" />{planMap.get(item.id) || 0} plano(s) · {offerMap.get(item.id) || 0} experiência(s) privada(s)</div><div className="fansReputationBadge" style={{marginTop:8}}>🏆 {item.reputation_level || "Iniciante"} · {Number(item.reputation_score || 0).toLocaleString("pt-BR")} pontos</div><div className="fansCreatorBio">{summarizeCreatorBio(item.bio)}</div></div>
+            {discoveryCreators.map((item) => <Link key={item.id} href={"/fans/" + item.slug} className={`fansCreatorCard ${item.plan_featured_card ? "fansPlanFeatured" : ""} ${item.plan_profile_theme === "premium" ? "fansPlanPremium" : item.plan_profile_theme === "highlighted" ? "fansPlanHighlighted" : ""} ${item.premium_featured ? "premiumFeaturedCard premiumStyle-" + (item.premium_card_style || "gold") : ""} ${item.premium_profile ? "premiumProfileEnabled" : ""}`}>
+              <div className="fansCreatorAvatar">{item.avatar_url ? <img src={item.avatar_url} alt={item.display_name} /> : item.display_name.slice(0, 1).toUpperCase()}{item.premium_featured && <span className="fansPremiumMiniTag">✦</span>}</div>
+              <div style={{minWidth:0,flex:1}}><strong>{item.display_name} {item.premium_profile_badge && <span className="fansPremiumInlineBadge">{item.premium_badge_label || "Premium"}</span>}</strong>{item.plan_premium_badge && <span className="fansPublicationPremiumBadge">✦ PERFIL PREMIUM</span>}<div className="fansCreatorMeta"><span className="fansOnline" />{planMap.get(item.id) || 0} plano(s) · {offerMap.get(item.id) || 0} experiência(s) privada(s)</div><div className="fansReputationBadge" style={{marginTop:8}}>🏆 {item.reputation_level || "Iniciante"} · {Number(item.reputation_score || 0).toLocaleString("pt-BR")} pontos</div><div className="fansCreatorBio">{summarizeCreatorBio(item.bio)}</div></div>
               <span className="fansCreatorArrow">›</span>
             </Link>)}
           </div>}

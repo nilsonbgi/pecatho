@@ -18,7 +18,7 @@ export default async function ClientePainel() {
   if (!user) redirect("/login");
 
   const { data: profile } = await supabase.from("profiles").select("display_name,status,account_type").eq("id", user.id).maybeSingle();
-  if (profile?.account_type !== "customer") redirect("/painel");
+  if (!["customer", "both"].includes(profile?.account_type ?? "")) redirect("/painel");
 
   const admin = createAdminClient();
   const [{ data: sales }, { count: mediaPurchases }, { count: followingCount }, { count: conversationCount }, { count: unreadNotifications }, { data: reviews }, { data: gifts }, { data: pointAccount }, { data: pointHistory }] = await Promise.all([
