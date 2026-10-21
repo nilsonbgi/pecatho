@@ -12,6 +12,7 @@ type PremiumPlan = {
   price: number | string;
   currency: string;
   duration_days: number;
+  discount_percent: number;
   benefits: string[] | null;
   active: boolean;
   sort_order: number;
@@ -22,6 +23,24 @@ type PremiumPlan = {
   badge_label: string | null;
 };
 
+type PublicationFeatureConfig = {
+  photo_gallery: boolean;
+  video_gallery: boolean;
+  max_photos: number | null;
+  max_videos: number | null;
+  featured_photo: boolean;
+  featured_video: boolean;
+  highlight_card_photo: boolean;
+  advertiser_gallery: boolean;
+  profile_audio: boolean;
+  allow_reviews: boolean;
+  allow_gifts: boolean;
+};
+const defaultPublicationFeatures: PublicationFeatureConfig = {
+  photo_gallery: true, video_gallery: false, max_photos: null, max_videos: null,
+  featured_photo: false, featured_video: false, highlight_card_photo: false,
+  advertiser_gallery: true, profile_audio: false, allow_reviews: true, allow_gifts: false,
+};
 type PlanAudience = "customer" | "companion" | "content_creator";
 type FeatureFlags = { private_seller_contact: boolean; featured_card: boolean; search_priority: boolean; premium_profile: boolean; profile_badge: boolean };
 const defaultFeatures = (audience: PlanAudience): FeatureFlags => ({ private_seller_contact: audience === "customer", featured_card: false, search_priority: false, premium_profile: false, profile_badge: false });
@@ -56,6 +75,7 @@ export default function AdminCustomerPremiumPage() {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [durationDays, setDurationDays] = useState("30");
+  const [discountPercent, setDiscountPercent] = useState("0");
   const [benefitsText, setBenefitsText] = useState("");
   const [active, setActive] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -86,6 +106,7 @@ export default function AdminCustomerPremiumPage() {
   const [publicationBadge, setPublicationBadge] = useState(false);
   const [publicationTheme, setPublicationTheme] = useState<"standard" | "highlighted" | "premium">("standard");
   const [publicationMaxGalleryItems, setPublicationMaxGalleryItems] = useState("");
+  const [publicationFeatures, setPublicationFeatures] = useState<PublicationFeatureConfig>(defaultPublicationFeatures);
   const [publicationBusy, setPublicationBusy] = useState(false);
   const publicationActiveCount = publicationPlans.filter((plan) => plan.active).length;
   const activeCount = plans.filter((plan) => plan.active).length;
@@ -103,15 +124,25 @@ export default function AdminCustomerPremiumPage() {
     try {
       const [{ data, error: loadError }, { data: publicationData, error: publicationError }] = await Promise.all([
         supabase.from("pecatho_customer_premium_plans")
-          .select("id,plan_key,name,description,price,currency,duration_days,benefits,active,sort_order,updated_at,audience,feature_flags,card_style,badge_label")
+          .select("id,plan_key,name,description,price,currency,duration_days,discount_percent,benefits,active,sort_order,updated_at,audience,feature_flags,card_style,badge_label")
           .order("sort_order", { ascending: true }).order("price", { ascending: true }),
         supabase.from("publication_plans")
           .select("id,name,description,duration_days,price,currency,active,free,has_video,features,audience,featured_card,search_priority,show_premium_badge,profile_theme,max_gallery_items,updated_at")
           .order("audience", { ascending: true }).order("price", { ascending: true }),
       ]);
-      if (loadError) throw loadError;
+      type PremiumPlanRows = NonNullable<typeof data>;
+      let premiumPlansData: PremiumPlanRows = data ?? [];
+      if (loadError) {
+        const missingDiscountColumn = /discount_percent|column .* does not exist|schema cache/i.test(loadError.message ?? "");
+        if (!missingDiscountColumn) throw loadError;
+        const fallback = await supabase.from("pecatho_customer_premium_plans")
+          .select("id,plan_key,name,description,price,currency,duration_days,benefits,active,sort_order,updated_at,audience,feature_flags,card_style,badge_label")
+          .order("sort_order", { ascending: true }).order("price", { ascending: true });
+        if (fallback.error) throw fallback.error;
+        premiumPlansData = (fallback.data ?? []).map((plan) => ({ ...plan, discount_percent: 0 })) as unknown as PremiumPlanRows;
+      }
       if (publicationError) throw publicationError;
-      setPlans((data ?? []) as PremiumPlan[]);
+      setPlans((premiumPlansData ?? []) as PremiumPlan[]);
       setPublicationPlans((publicationData ?? []) as PublicationPlan[]);
     } finally {
       setLoadingPlans(false);
@@ -142,6 +173,7 @@ export default function AdminCustomerPremiumPage() {
     setDescription(plan.description ?? "");
     setPrice(String(plan.price).replace(".", ","));
     setDurationDays(String(plan.duration_days));
+    setDiscountPercent(String(plan.discount_percent ?? 0));
     setBenefitsText((plan.benefits ?? []).join("\n"));
     setActive(plan.active);
     setAudience(plan.audience ?? "customer");
@@ -160,6 +192,7 @@ export default function AdminCustomerPremiumPage() {
     setDescription("");
     setPrice("");
     setDurationDays("30");
+    setDiscountPercent("0");
     setBenefitsText("");
     setActive(false);
     setAudience("customer");
@@ -180,12 +213,26 @@ export default function AdminCustomerPremiumPage() {
     setPublicationDuration(String(plan.duration_days));
     setPublicationActive(plan.active);
     setPublicationFree(plan.free);
-    setPublicationHasVideo(plan.has_video);
+    setPublicationHasVideo(typeof (plan.features as Record<string, unknown> | null)?.video_gallery === "boolean" ? Boolean((plan.features as Record<string, unknown>).video_gallery) : plan.has_video);
     setPublicationFeatured(plan.featured_card);
     setPublicationSearchPriority(String(plan.search_priority));
     setPublicationBadge(plan.show_premium_badge);
     setPublicationTheme(plan.profile_theme);
     setPublicationMaxGalleryItems(plan.max_gallery_items == null ? "" : String(plan.max_gallery_items));
+    const savedFeatures = (plan.features ?? {}) as Record<string, unknown>;
+    setPublicationFeatures({
+      photo_gallery: typeof savedFeatures.photo_gallery === "boolean" ? savedFeatures.photo_gallery : defaultPublicationFeatures.photo_gallery,
+      video_gallery: typeof savedFeatures.video_gallery === "boolean" ? savedFeatures.video_gallery : plan.has_video,
+      max_photos: typeof savedFeatures.max_photos === "number" ? savedFeatures.max_photos : null,
+      max_videos: typeof savedFeatures.max_videos === "number" ? savedFeatures.max_videos : null,
+      featured_photo: typeof savedFeatures.featured_photo === "boolean" ? savedFeatures.featured_photo : false,
+      featured_video: typeof savedFeatures.featured_video === "boolean" ? savedFeatures.featured_video : false,
+      highlight_card_photo: typeof savedFeatures.highlight_card_photo === "boolean" ? savedFeatures.highlight_card_photo : false,
+      advertiser_gallery: typeof savedFeatures.advertiser_gallery === "boolean" ? savedFeatures.advertiser_gallery : defaultPublicationFeatures.advertiser_gallery,
+      profile_audio: typeof savedFeatures.profile_audio === "boolean" ? savedFeatures.profile_audio : false,
+      allow_reviews: typeof savedFeatures.allow_reviews === "boolean" ? savedFeatures.allow_reviews : defaultPublicationFeatures.allow_reviews,
+      allow_gifts: typeof savedFeatures.allow_gifts === "boolean" ? savedFeatures.allow_gifts : false,
+    });
     setError("");
     setMessage("");
   }
@@ -205,6 +252,7 @@ export default function AdminCustomerPremiumPage() {
     setPublicationBadge(false);
     setPublicationTheme("standard");
     setPublicationMaxGalleryItems("");
+    setPublicationFeatures(defaultPublicationFeatures);
   }
 
   async function savePublication(event: React.FormEvent<HTMLFormElement>) {
@@ -230,7 +278,10 @@ export default function AdminCustomerPremiumPage() {
         p_show_premium_badge: publicationBadge,
         p_profile_theme: publicationTheme,
         p_max_gallery_items: publicationMaxGalleryItems.trim() === "" ? null : Number(publicationMaxGalleryItems),
-        p_features: editingPublicationId ? publicationPlans.find((plan) => plan.id === editingPublicationId)?.features ?? {} : {},
+        p_features: {
+          ...publicationFeatures,
+          max_gallery_items: publicationMaxGalleryItems.trim() === "" ? null : Number(publicationMaxGalleryItems),
+        },
       });
       if (saveError) throw saveError;
       setMessage(publicationActive ? "Plano de publicação salvo e ativado. Os diferenciais serão aplicados às publicações válidas." : "Plano de publicação salvo como inativo.");
@@ -253,6 +304,32 @@ export default function AdminCustomerPremiumPage() {
     }
   }
 
+  function suggestedCustomerPrice(days: number, discount: number): string | null {
+    if (days === 30) return null;
+    const monthlyPlan = plans.find((item) => item.audience === "customer" && item.duration_days === 30 && item.id !== editingId);
+    const editingMonthlyPlan = plans.find((item) => item.id === editingId && item.audience === "customer" && item.duration_days === 30);
+    const base = monthlyPlan ? Number(monthlyPlan.price) : editingMonthlyPlan && Number(durationDays) === 30 ? Number(price.trim().replace(/\\s/g, "").replace(",", ".")) : null;
+    if (base == null || !Number.isFinite(base) || base <= 0) return null;
+    return (base * (days / 30) * (1 - discount / 100)).toFixed(2).replace(".", ",");
+  }
+
+  function changeCustomerDuration(nextDays: string) {
+    setDurationDays(nextDays);
+    if (audience === "customer") {
+      const suggested = suggestedCustomerPrice(Number(nextDays), Number(discountPercent));
+      if (suggested !== null) setPrice(suggested);
+      if (Number(nextDays) === 30) setDiscountPercent("0");
+    }
+  }
+
+  function changeCustomerDiscount(nextDiscount: string) {
+    setDiscountPercent(nextDiscount);
+    if (audience === "customer") {
+      const suggested = suggestedCustomerPrice(Number(durationDays), Number(nextDiscount));
+      if (suggested !== null) setPrice(suggested);
+    }
+  }
+
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
@@ -269,6 +346,7 @@ export default function AdminCustomerPremiumPage() {
         p_description: description.trim() || null,
         p_price: parsedPrice,
         p_duration_days: Number(durationDays),
+        p_discount_percent: audience === "customer" ? Number(discountPercent) : 0,
         p_benefits: benefits,
         p_active: active,
         p_audience: audience,
@@ -288,6 +366,13 @@ export default function AdminCustomerPremiumPage() {
         : raw.includes("INVALID_PLAN_PRICE") ? "O preço deve ser maior que zero e não ultrapassar R$ 10.000,00."
         : raw.includes("INVALID_PLAN_AUDIENCE") ? "Selecione um público válido para o plano."
         : raw.includes("INVALID_PLAN_DURATION") ? "Selecione uma duração válida: mensal, trimestral, semestral ou anual."
+        : raw.includes("INVALID_PLAN_DISCOUNT") ? "O desconto deve estar entre 0% e 80%."
+        : raw.includes("MONTHLY_PLAN_DISCOUNT_MUST_BE_ZERO") ? "O plano mensal deve ter desconto de 0%."
+        : raw.includes("PROFESSIONAL_PLAN_DISCOUNT_NOT_SUPPORTED") ? "Descontos por período são configurados apenas para assinaturas de clientes."
+        : raw.includes("CUSTOMER_MONTHLY_BASE_PLAN_REQUIRED") ? "Cadastre ou mantenha um plano mensal de cliente para calcular os períodos maiores."
+        : raw.includes("CUSTOMER_DISCOUNT_PRICE_MISMATCH") ? "O preço final não corresponde ao valor mensal proporcional com o desconto configurado. Atualize o preço-base mensal ou o desconto."
+        : raw.includes("PROGRESSIVE_DISCOUNT_REQUIRED") ? "Planos trimestrais, semestrais e anuais precisam ter desconto maior que zero."
+        : raw.includes("PROGRESSIVE_DISCOUNT_MUST_INCREASE") ? "O desconto deve aumentar progressivamente: trimestral menor que semestral, e semestral menor que anual."
         : raw.includes("PLAN_AUDIENCE_LOCKED") ? "O público deste plano não pode ser alterado porque já existem assinaturas vinculadas."
         : raw.includes("PREMIUM_PLAN_NEEDS_OPERATIONAL_FEATURE") ? "Um plano publicado precisa ter ao menos um diferencial operacional habilitado para esse público."
         : raw.includes("PREMIUM_BADGE_LABEL_REQUIRED") ? "Informe o texto do selo Premium."
@@ -295,7 +380,7 @@ export default function AdminCustomerPremiumPage() {
         : raw.includes("INVALID_PLAN_BENEFITS") || raw.includes("INVALID_PLAN_BENEFIT_ITEM") || raw.includes("INVALID_PLAN_BENEFIT") ? "Revise os benefícios: cada linha deve conter de 1 a 240 caracteres, com até 20 itens."
         : raw.includes("PREMIUM_PLAN_NOT_FOUND") ? "O plano selecionado não foi encontrado. Atualize a lista e tente novamente."
         : raw.includes("duplicate key") ? "Já existe um plano com essa chave."
-        : raw.includes("admin_save_pecatho_customer_premium_plan") || raw.includes("schema cache") || raw.includes("Could not find the function") ? "A função administrativa do Premium não está disponível no banco. A migration supabase/migrations/20261014153000_customer_premium_admin_catalog.sql precisa estar aplicada no Supabase."
+        : raw.includes("admin_save_pecatho_customer_premium_plan") || raw.includes("schema cache") || raw.includes("Could not find the function") ? "A função administrativa atualizada não está disponível no banco. Aplique a migration supabase/migrations/20261027110000_customer_premium_progressive_discounts.sql no Supabase após o merge."
         : raw.includes("permission denied") || raw.includes("insufficient_privilege") ? "O banco recusou a operação por permissão. Verifique a função administrativa e as permissões do papel autenticado."
         : "Não foi possível salvar o plano. Confira os campos e a configuração administrativa do banco.");
     } finally {
@@ -335,7 +420,24 @@ export default function AdminCustomerPremiumPage() {
             <div className="pillars"><label>Preço em reais<input required inputMode="decimal" value={publicationFree ? "0,00" : publicationPrice} disabled={publicationFree} onChange={(event) => setPublicationPrice(event.target.value)} placeholder="49,90" /></label><label>Duração em dias<input required type="number" min={1} max={365} value={publicationDuration} onChange={(event) => setPublicationDuration(event.target.value)} /></label></div>
             <label>Prioridade nas pesquisas (0–100)<input required type="number" min={0} max={100} value={publicationSearchPriority} onChange={(event) => setPublicationSearchPriority(event.target.value)} /><small>Quanto maior o valor, maior a prioridade entre perfis com o mesmo filtro. Planos em destaque aparecem antes dos demais.</small></label>
             <label>Estilo do perfil<select value={publicationTheme} onChange={(event) => setPublicationTheme(event.target.value as "standard" | "highlighted" | "premium")}><option value="standard">Padrão</option><option value="highlighted">Destaque visual</option><option value="premium">Premium</option></select></label>
-            <label>Limite de itens na galeria (opcional)<input type="number" min={1} max={500} step={1} value={publicationMaxGalleryItems} onChange={(event) => setPublicationMaxGalleryItems(event.target.value)} placeholder="Sem limite adicional" /><small>Deixe vazio para não aplicar limite específico. Valores permitidos: 1 a 500 itens.</small></label>
+            <label>Limite total de itens na galeria (opcional)<input type="number" min={1} max={500} step={1} value={publicationMaxGalleryItems} onChange={(event) => setPublicationMaxGalleryItems(event.target.value)} placeholder="Sem limite adicional" /><small>Limite geral adicional para fotos e vídeos marcados para a galeria. Deixe vazio para não aplicar limite total.</small></label>
+            <section className="premiumEntitlementEditor" aria-label="Recursos incluídos no plano">
+              <div className="eyebrow">RECURSOS DE PERFIL E CONTEÚDO</div>
+              <p className="fieldNote">Essas opções ficam salvas no plano. Limites individuais de fotos e vídeos são independentes do limite total da galeria.</p>
+              <label className="premiumFeatureToggle"><input type="checkbox" checked={publicationFeatures.photo_gallery} onChange={(event) => setPublicationFeatures((old) => ({ ...old, photo_gallery: event.target.checked }))} /><span><strong>Galeria de fotos</strong><small>Permite disponibilizar fotos na galeria pública do perfil.</small></span></label>
+              <label className="premiumFeatureToggle"><input type="checkbox" checked={publicationFeatures.video_gallery} onChange={(event) => { const checked = event.target.checked; setPublicationFeatures((old) => ({ ...old, video_gallery: checked })); setPublicationHasVideo(checked); }} /><span><strong>Galeria de vídeos</strong><small>Permite vídeos no perfil, respeitando a validação de mídia.</small></span></label>
+              <div className="pillars">
+                <label>Limite de fotos<input type="number" min={1} max={500} step={1} value={publicationFeatures.max_photos ?? ""} onChange={(event) => setPublicationFeatures((old) => ({ ...old, max_photos: event.target.value === "" ? null : Number(event.target.value) }))} placeholder="Sem limite específico" /><small>Vazio = sem limite individual.</small></label>
+                <label>Limite de vídeos<input type="number" min={1} max={200} step={1} value={publicationFeatures.max_videos ?? ""} onChange={(event) => setPublicationFeatures((old) => ({ ...old, max_videos: event.target.value === "" ? null : Number(event.target.value) }))} placeholder="Sem limite específico" /><small>Vazio = sem limite individual.</small></label>
+              </div>
+              <label className="premiumFeatureToggle"><input type="checkbox" checked={publicationFeatures.featured_photo} onChange={(event) => setPublicationFeatures((old) => ({ ...old, featured_photo: event.target.checked }))} /><span><strong>Foto destacada no perfil</strong><small>Permite selecionar uma foto principal com destaque.</small></span></label>
+              <label className="premiumFeatureToggle"><input type="checkbox" checked={publicationFeatures.featured_video} onChange={(event) => setPublicationFeatures((old) => ({ ...old, featured_video: event.target.checked }))} /><span><strong>Vídeo destacado no perfil</strong><small>Permite selecionar um vídeo principal com destaque.</small></span></label>
+              <label className="premiumFeatureToggle"><input type="checkbox" checked={publicationFeatures.highlight_card_photo} onChange={(event) => setPublicationFeatures((old) => ({ ...old, highlight_card_photo: event.target.checked }))} /><span><strong>Foto para cards de destaque</strong><small>Permite usar uma imagem própria nos cards especiais e resultados promovidos.</small></span></label>
+              <label className="premiumFeatureToggle"><input type="checkbox" checked={publicationFeatures.advertiser_gallery} onChange={(event) => setPublicationFeatures((old) => ({ ...old, advertiser_gallery: event.target.checked }))} /><span><strong>Aparecer na galeria pública de anunciantes</strong><small>Controla a inclusão do perfil na galeria pública de anunciantes.</small></span></label>
+              <label className="premiumFeatureToggle"><input type="checkbox" checked={publicationFeatures.profile_audio} onChange={(event) => setPublicationFeatures((old) => ({ ...old, profile_audio: event.target.checked }))} /><span><strong>Áudio no perfil</strong><small>Permite disponibilizar áudio de apresentação no perfil.</small></span></label>
+              <label className="premiumFeatureToggle"><input type="checkbox" checked={publicationFeatures.allow_reviews} onChange={(event) => setPublicationFeatures((old) => ({ ...old, allow_reviews: event.target.checked }))} /><span><strong>Permitir avaliações</strong><small>Habilita o recurso de avaliações para o perfil.</small></span></label>
+              <label className="premiumFeatureToggle"><input type="checkbox" checked={publicationFeatures.allow_gifts} onChange={(event) => setPublicationFeatures((old) => ({ ...old, allow_gifts: event.target.checked }))} /><span><strong>Permitir presentes</strong><small>Habilita o recebimento de presentes conforme as regras da plataforma.</small></span></label>
+            </section>
             <label className="premiumAdminCheck"><input type="checkbox" checked={publicationFree} onChange={(event) => { setPublicationFree(event.target.checked); if (event.target.checked) setPublicationPrice("0,00"); else if (publicationPrice === "0,00") setPublicationPrice(""); }} /> Plano gratuito</label>
             <label className="premiumAdminCheck"><input type="checkbox" checked={publicationActive} onChange={(event) => setPublicationActive(event.target.checked)} /> Plano ativo</label>
             <label className="premiumAdminCheck"><input type="checkbox" checked={publicationFeatured} onChange={(event) => setPublicationFeatured(event.target.checked)} /> Card especial com destaque visual</label>
@@ -346,7 +448,7 @@ export default function AdminCustomerPremiumPage() {
         </section>
         <section className="card premiumAdminCatalog" id="catalogo-publicacao">
           <div className="premiumAdminSectionHeader"><h2>Planos de acompanhantes e vendedores</h2><button type="button" className="secondaryButton" disabled={loadingPlans} onClick={() => void load()}>{loadingPlans ? "Atualizando…" : "Atualizar catálogo"}</button></div>
-          {publicationPlans.length === 0 ? <p className="fieldNote">Nenhum plano de publicação cadastrado. Crie o primeiro plano acima.</p> : <div className="financeHistory">{publicationPlans.map((plan) => <article key={plan.id}><div><strong>{plan.name}</strong><small>{plan.audience === "companion" ? "Acompanhantes" : plan.audience === "content_seller" ? "Vendedores de conteúdo" : "Ambos os públicos"} · {plan.duration_days} dias · {plan.free ? "Gratuito" : Number(plan.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</small><small>{plan.featured_card ? "Card especial" : "Card padrão"} · prioridade {plan.search_priority} · perfil {plan.profile_theme === "premium" ? "Premium" : plan.profile_theme === "highlighted" ? "Destaque" : "padrão"}{plan.show_premium_badge ? " · selo Premium" : ""}{plan.has_video ? " · vídeo habilitado" : ""}{plan.max_gallery_items != null ? ` · galeria até ${plan.max_gallery_items} itens` : ""}</small><small>{plan.description || "Sem descrição"}</small>{(plan.free && Number(plan.price) !== 0) || (!plan.free && Number(plan.price) <= 0) ? <small style={{ color: "#fca5a5", fontWeight: 800 }}>Configuração comercial inválida: ajuste o preço ou marque como gratuito antes de disponibilizar.</small> : null}</div><span className="financeStatus">{plan.active ? "Ativo" : "Inativo"}</span><button className="secondaryButton" type="button" onClick={() => editPublication(plan)}>Editar</button></article>)}</div>}
+          {publicationPlans.length === 0 ? <p className="fieldNote">Nenhum plano de publicação cadastrado. Crie o primeiro plano acima.</p> : <div className="financeHistory">{publicationPlans.map((plan) => <article key={plan.id}><div><strong>{plan.name}</strong><small>{plan.audience === "companion" ? "Acompanhantes" : plan.audience === "content_seller" ? "Vendedores de conteúdo" : "Ambos os públicos"} · {plan.duration_days} dias · {plan.free ? "Gratuito" : Number(plan.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</small><small>{plan.featured_card ? "Card especial" : "Card padrão"} · prioridade {plan.search_priority} · perfil {plan.profile_theme === "premium" ? "Premium" : plan.profile_theme === "highlighted" ? "Destaque" : "padrão"}{plan.show_premium_badge ? " · selo Premium" : ""}{plan.has_video ? " · vídeo habilitado" : ""}{plan.max_gallery_items != null ? ` · galeria até ${plan.max_gallery_items} itens` : ""}{plan.features?.photo_gallery === true ? " · galeria de fotos" : ""}{plan.features?.video_gallery === true ? " · galeria de vídeos" : ""}{typeof plan.features?.max_photos === "number" ? ` · ${plan.features.max_photos} fotos` : ""}{typeof plan.features?.max_videos === "number" ? ` · ${plan.features.max_videos} vídeos` : ""}{plan.features?.featured_photo === true ? " · foto destacada" : ""}{plan.features?.featured_video === true ? " · vídeo destacado" : ""}{plan.features?.highlight_card_photo === true ? " · foto de card" : ""}{plan.features?.profile_audio === true ? " · áudio" : ""}{plan.features?.allow_reviews === true ? " · avaliações" : ""}{plan.features?.allow_gifts === true ? " · presentes" : ""}</small><small>{plan.description || "Sem descrição"}</small>{(plan.free && Number(plan.price) !== 0) || (!plan.free && Number(plan.price) <= 0) ? <small style={{ color: "#fca5a5", fontWeight: 800 }}>Configuração comercial inválida: ajuste o preço ou marque como gratuito antes de disponibilizar.</small> : null}</div><span className="financeStatus">{plan.active ? "Ativo" : "Inativo"}</span><button className="secondaryButton" type="button" onClick={() => editPublication(plan)}>Editar</button></article>)}</div>}
         </section>
         </>}
         {managementArea === "customer" && <>
@@ -358,14 +460,15 @@ export default function AdminCustomerPremiumPage() {
         <section className="premiumAdminCustomerPlans">
         <section className="card premiumAdminEditor" id="editor">
           <h2>{editingId ? "Editar plano" : "Cadastrar novo plano"}</h2>
-          <div className="premiumAudienceTabs" role="group" aria-label="Público do plano">{([{value:"customer",label:"Clientes Premium"},{value:"companion",label:"Acompanhantes"},{value:"content_creator",label:"Vendedores de conteúdo"}] as const).map((item) => <button key={item.value} type="button" className={audience === item.value ? "primaryButton" : "secondaryButton"} onClick={() => { if (audience !== item.value) { setAudience(item.value); setFeatureFlags(defaultFeatures(item.value)); } }} aria-pressed={audience === item.value}>{item.label}</button>)}</div>
+          <div className="premiumAudienceTabs" role="group" aria-label="Público do plano">{([{value:"customer",label:"Clientes Premium"},{value:"companion",label:"Acompanhantes"},{value:"content_creator",label:"Vendedores de conteúdo"}] as const).map((item) => <button key={item.value} type="button" className={audience === item.value ? "primaryButton" : "secondaryButton"} onClick={() => { if (audience !== item.value) { setAudience(item.value); setFeatureFlags(defaultFeatures(item.value)); if (item.value === "customer") { const suggested = suggestedCustomerPrice(Number(durationDays), Number(discountPercent)); if (suggested !== null) setPrice(suggested); } else { setDiscountPercent("0"); } } }} aria-pressed={audience === item.value}>{item.label}</button>)}</div>
           <form onSubmit={(event) => void save(event)} style={{ display: "grid", gap: 14 }}>
             <label>Chave única do plano<input required minLength={2} maxLength={50} pattern="[a-z0-9][a-z0-9_-]{1,49}" value={planKey} onChange={(event) => setPlanKey(event.target.value)} placeholder="premium-mensal" /></label>
             <label>Nome comercial<input required minLength={3} maxLength={100} value={name} onChange={(event) => setName(event.target.value)} placeholder={audience === "customer" ? "Premium mensal" : audience === "companion" ? "Destaque para acompanhante" : "Perfil Creator Premium"} /></label>
             <label>Descrição<textarea rows={2} maxLength={500} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Explique a proposta do plano." /></label>
             <div className="pillars">
-              <label>Preço em reais<input required inputMode="decimal" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="19,90" /></label>
-              <label>Periodicidade da assinatura<select required value={durationDays} onChange={(event) => setDurationDays(event.target.value)}><option value="30">Mensal · 30 dias</option><option value="90">Trimestral · 90 dias</option><option value="180">Semestral · 180 dias</option><option value="365">Anual · 365 dias</option></select></label>
+              <label>Preço final em reais<input required inputMode="decimal" value={price} disabled={audience === "customer" && Number(durationDays) !== 30 && suggestedCustomerPrice(Number(durationDays), Number(discountPercent)) !== null} onChange={(event) => setPrice(event.target.value)} placeholder="19,90" /><small>{audience === "customer" && Number(durationDays) !== 30 ? "Calculado sobre o plano mensal cadastrado, aplicando o desconto selecionado." : "Para clientes, este é o preço-base mensal. Os períodos maiores usam esse valor proporcional com desconto."}</small></label>
+              <label>Periodicidade da assinatura<select required value={durationDays} onChange={(event) => changeCustomerDuration(event.target.value)}><option value="30">Mensal · 30 dias</option><option value="90">Trimestral · 90 dias</option><option value="180">Semestral · 180 dias</option><option value="365">Anual · 365 dias</option></select></label>
+              {audience === "customer" && <label>Desconto sobre o preço proporcional mensal (%)<input required type="number" min={0} max={80} step={0.5} value={discountPercent} disabled={Number(durationDays) === 30} onChange={(event) => changeCustomerDiscount(event.target.value)} /><small>Mensal = 0%. Trimestral, semestral e anual devem usar descontos progressivos. O preço final é recalculado a partir do plano mensal existente.</small></label>}
             </div>
             <label>Detalhamento comercial dos diferenciais (um por linha)<textarea rows={4} maxLength={5000} value={benefitsText} onChange={(event) => setBenefitsText(event.target.value)} placeholder={audience === "customer" ? "Contato privado com vendedores de conteúdo\nAcesso durante o período contratado" : "Card com destaque visual\nPrioridade no catálogo de descoberta"} /></label>
             <p className="fieldNote">Texto livre é apenas descritivo. Somente os diferenciais operacionais habilitados abaixo são concedidos pela plataforma.</p>
@@ -394,7 +497,7 @@ export default function AdminCustomerPremiumPage() {
             <select aria-label="Filtrar por status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "all" | "active" | "inactive")} style={{ minWidth: 0, background: "#0b0d12", color: "#f6f7fb", border: "1px solid rgba(255,255,255,.14)", borderRadius: 10, padding: "12px" }}><option value="all">Todos os status</option><option value="active">Publicados</option><option value="inactive">Inativos</option></select>
           </div>
           {filteredPlans.length === 0 ? <div className="fieldNote" style={{ padding: "20px 0" }}><strong>{plans.length ? "Nenhum plano corresponde aos filtros." : "Nenhum plano configurado."}</strong><p>{plans.length ? "Altere a busca ou o status selecionado." : "Cadastre preço, duração e benefícios antes de disponibilizar a contratação."}</p>{(search || statusFilter !== "all") && <button type="button" className="secondaryButton" onClick={() => { setSearch(""); setStatusFilter("all"); }}>Limpar filtros</button>}</div> : <div className="financeHistory">{filteredPlans.map((plan) => <article key={plan.id}>
-            <div><strong>{plan.name}</strong><small>{plan.plan_key} · {plan.duration_days === 30 ? "Mensal" : plan.duration_days === 90 ? "Trimestral" : plan.duration_days === 180 ? "Semestral" : plan.duration_days === 365 ? "Anual" : `${plan.duration_days} dias`} · {Number(plan.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</small><small>{plan.description || "Sem descrição"}</small>{plan.benefits?.length ? <small style={{ display: "block", marginTop: 8, lineHeight: 1.6 }}>Benefícios: {plan.benefits.slice(0, 3).join(" · ")}{plan.benefits.length > 3 ? " · +" + (plan.benefits.length - 3) : ""}</small> : <small style={{ display: "block", marginTop: 8 }}>Sem benefícios cadastrados</small>}</div>
+            <div><strong>{plan.name}</strong><small>{plan.plan_key} · {plan.duration_days === 30 ? "Mensal" : plan.duration_days === 90 ? "Trimestral" : plan.duration_days === 180 ? "Semestral" : plan.duration_days === 365 ? "Anual" : `${plan.duration_days} dias`} · {Number(plan.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}{plan.audience === "customer" ? ` · desconto ${Number(plan.discount_percent ?? 0).toLocaleString("pt-BR")}%` : ""}</small><small>{plan.description || "Sem descrição"}</small>{plan.benefits?.length ? <small style={{ display: "block", marginTop: 8, lineHeight: 1.6 }}>Benefícios: {plan.benefits.slice(0, 3).join(" · ")}{plan.benefits.length > 3 ? " · +" + (plan.benefits.length - 3) : ""}</small> : <small style={{ display: "block", marginTop: 8 }}>Sem benefícios cadastrados</small>}</div>
             <span className="financeStatus">{plan.active ? "Publicado" : "Inativo"}</span>
             <button className="secondaryButton" type="button" onClick={() => edit(plan)}>Editar</button>
           </article>)}</div>}
