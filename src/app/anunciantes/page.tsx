@@ -168,36 +168,11 @@ export default function AcompanhantesPage() {
     (async () => {
       try {
         const s = createClient();
-        const now = new Date().toISOString();
-        const { data: assignments, error: assignmentError } = await s.from("profile_publications")
-          .select("profile_id,plan_id,starts_at,ends_at,status")
-          .in("profile_id", ids).eq("status", "published").lte("starts_at", now).gt("ends_at", now);
-        if (assignmentError) throw assignmentError;
-        const rows = (assignments ?? []) as ProfilePublicationAssignment[];
-        const planIds = [...new Set(rows.map((item) => item.plan_id))];
-        if (!planIds.length) { if (active) setPlanPresentation({}); return; }
-        const [{ data: plans, error: planError }, { data: creatorRows, error: creatorError }] = await Promise.all([
-          s.from("publication_plans").select("id,audience,featured_card,show_premium_badge,profile_theme,search_priority").in("id", planIds).eq("active", true),
-          s.from("fans_creators").select("advertiser_profile_id").in("advertiser_profile_id", ids).eq("status", "active"),
-        ]);
+        const { data, error: planError } = await s.rpc("get_public_profile_plan_features", { p_profile_ids: ids });
         if (planError) throw planError;
-        if (creatorError) throw creatorError;
-        const creatorIds = new Set((creatorRows ?? []).map((item) => item.advertiser_profile_id).filter(Boolean));
-        const planMap = new Map(((plans ?? []) as PublicationPlanPresentation[]).map((plan) => [plan.id, plan]));
         const next: Record<string, { featured: boolean; badge: boolean; theme: "standard" | "highlighted" | "premium" }> = {};
-        for (const assignment of rows) {
-          if (!assignment.starts_at || !assignment.ends_at || new Date(assignment.starts_at).getTime() > Date.now() || new Date(assignment.ends_at).getTime() <= Date.now()) continue;
-          const plan = planMap.get(assignment.plan_id);
-          if (!plan) continue;
-          const isContentSeller = creatorIds.has(assignment.profile_id);
-          if (plan.audience !== "both" && plan.audience !== (isContentSeller ? "content_seller" : "companion")) continue;
-          const current = next[assignment.profile_id];
-          const theme = plan.profile_theme;
-          next[assignment.profile_id] = {
-            featured: Boolean(current?.featured || plan.featured_card),
-            badge: Boolean(current?.badge || plan.show_premium_badge),
-            theme: !current || (theme === "premium" || (theme === "highlighted" && current.theme === "standard")) ? theme : current.theme,
-          };
+        for (const item of (data ?? []) as Array<{ profile_id: string; featured_card: boolean; show_premium_badge: boolean; profile_theme: "standard" | "highlighted" | "premium" }>) {
+          next[item.profile_id] = { featured: item.featured_card, badge: item.show_premium_badge, theme: item.profile_theme };
         }
         if (active) setPlanPresentation(next);
       } catch (error) {
