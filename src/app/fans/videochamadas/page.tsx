@@ -32,14 +32,26 @@ export default function MyFansCallsPage(){
  async function load(){
   const s=createClient();
   const {data:{user}}=await s.auth.getUser();
-  if(!user){window.location.href="/login?next=/fans/videochamadas";return;}
+  if(!user){window.location.assign("/login?next=/fans/videochamadas");return;}
   const {data,error}=await s.from("fans_live_sessions").select("id,title,duration_minutes,amount,currency,status,scheduled_for,confirmed_at,created_at,creator_id,rejection_reason,paid_at,started_at,ended_at,ended_reason,commercial_outcome,refund_status,refund_amount,refund_reason,refund_requested_at,refund_processed_at").eq("buyer_user_id",user.id).order("created_at",{ascending:false});
   if(error)setError("Não foi possível carregar suas videochamadas.");
   else setSessions((data??[]) as Session[]);
   setLoading(false);
  }
 
- useEffect(()=>{void load()},[]);
+ useEffect(()=>{
+  let active=true;
+  void (async()=>{
+   const s=createClient();
+   const {data:{user}}=await s.auth.getUser();
+   if(!user){window.location.assign("/login?next=/fans/videochamadas");return;}
+   const {data,error}=await s.from("fans_live_sessions").select("id,title,duration_minutes,amount,currency,status,scheduled_for,confirmed_at,created_at,creator_id,rejection_reason,paid_at,started_at,ended_at,ended_reason,commercial_outcome,refund_status,refund_amount,refund_reason,refund_requested_at,refund_processed_at").eq("buyer_user_id",user.id).order("created_at",{ascending:false});
+   if(!active)return;
+   if(error)setError("Não foi possível carregar suas videochamadas.");else setSessions((data??[]) as Session[]);
+   setLoading(false);
+  })();
+  return()=>{active=false};
+ },[]);
 
  useEffect(()=>{
   let channel: ReturnType<ReturnType<typeof createClient>["channel"]>|null=null;

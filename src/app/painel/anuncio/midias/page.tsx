@@ -21,7 +21,7 @@ export default function AdvertiserMediaManager() {
   async function load() {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { window.location.href = "/login"; return; }
+    if (!user) { window.location.assign("/login"); return; }
     const { data: profile, error: profileError } = await supabase.from("advertiser_profiles").select("id").eq("user_id", user.id).maybeSingle();
     if (profileError || !profile) { setError("Crie ou salve seu anúncio antes de gerenciar as mídias."); return; }
     setProfileId(profile.id);
@@ -40,7 +40,29 @@ export default function AdvertiserMediaManager() {
     }
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { window.location.assign("/login"); return; }
+      const { data: profile, error: profileError } = await supabase.from("advertiser_profiles").select("id").eq("user_id", user.id).maybeSingle();
+      if (!active) return;
+      if (profileError || !profile) { setError("Crie ou salve seu anúncio antes de gerenciar as mídias."); return; }
+      const { data, error: mediaError } = await supabase.from("profile_media").select("id,kind,storage_bucket,storage_path,preview_storage_bucket,preview_storage_path,width,height,mime_type,original_filename,access_type,price,currency,is_public,is_primary,is_featured,show_in_cards,show_in_gallery,moderation_status,sort_order").eq("profile_id", profile.id).order("sort_order");
+      if (!active) return;
+      if (mediaError) { setError(mediaError.message); return; }
+      const rows = (data || []) as Media[];
+      const withPreviews = await Promise.all(rows.map(async (item) => {
+        const previewBucket = item.preview_storage_bucket || item.storage_bucket;
+        const previewPath = item.preview_storage_path || item.storage_path;
+        const { data: signed } = await supabase.storage.from(previewBucket).createSignedUrl(previewPath, 600);
+        return { ...item, previewUrl: signed?.signedUrl || null };
+      }));
+      if (active) { setProfileId(profile.id); setMedia(withPreviews); }
+    })();
+    return () => { active = false; };
+  }, []);
 
   async function upload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || []); if (!files.length || !profileId) return;

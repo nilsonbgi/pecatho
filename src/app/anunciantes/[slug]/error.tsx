@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect } from "react";
 
 export default function PublicAdvertiserProfileError({
@@ -26,9 +27,9 @@ export default function PublicAdvertiserProfileError({
           <button type="button" className="primaryButton" onClick={() => reset()}>
             Tentar novamente
           </button>
-          <a className="secondaryButton" href="/anunciantes">
+          <Link className="secondaryButton" href="/anunciantes">
             Voltar aos anunciantes
-          </a>
+          </Link>
         </div>
       </div>
     </main>

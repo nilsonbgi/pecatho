@@ -132,7 +132,7 @@ export default function MinhasComprasClient() {
     owner_name: string;
     owner_slug: string;
   }>>([]);
-  const [discoveryLoading, setDiscoveryLoading] = useState(false);
+  const [discoveryLoadedFor, setDiscoveryLoadedFor] = useState("");
 
   const sellerOptions = useMemo(() => {
     const map = new Map<string, string>();
@@ -166,17 +166,16 @@ export default function MinhasComprasClient() {
     () => purchases.find((purchase) => purchase.id === selectedSale) ?? null,
     [purchases, selectedSale],
   );
+  const discoveryLoading = Boolean(selectedPurchase?.product.owner_id && discoveryLoadedFor !== selectedPurchase.product.owner_id);
+  const visibleDiscoveryProducts = discoveryLoadedFor === selectedPurchase?.product.owner_id ? discoveryProducts : [];
 
   useEffect(() => {
     const owner = selectedPurchase?.product;
     if (!owner?.owner_type || !owner.owner_id) {
-      setDiscoveryProducts([]);
       return;
     }
 
     let cancelled = false;
-    setDiscoveryLoading(true);
-
     fetch(
       `/api/conteudos/public?owner_type=${encodeURIComponent(owner.owner_type)}&owner_id=${encodeURIComponent(owner.owner_id)}`,
       { cache: "no-store" },
@@ -196,7 +195,7 @@ export default function MinhasComprasClient() {
         if (!cancelled) setDiscoveryProducts([]);
       })
       .finally(() => {
-        if (!cancelled) setDiscoveryLoading(false);
+        if (!cancelled) setDiscoveryLoadedFor(owner.owner_id);
       });
 
     return () => {
@@ -593,9 +592,9 @@ export default function MinhasComprasClient() {
                       <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-xs text-white/40">
                         Carregando recomendações…
                       </div>
-                    ) : discoveryProducts.length > 0 ? (
+                    ) : visibleDiscoveryProducts.length > 0 ? (
                       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                        {discoveryProducts.map((product) => (
+                        {visibleDiscoveryProducts.map((product) => (
                           <Link
                             key={product.id}
                             href={`/conteudos/${product.id}`}

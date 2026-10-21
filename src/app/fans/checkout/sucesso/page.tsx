@@ -47,19 +47,21 @@ function CheckoutSuccessContent() {
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState("");
 
-  const checkStatus = useCallback(async () => {
+  const fetchStatus = useCallback(async (): Promise<CheckoutStatus> => {
     if (!orderId) {
-      setError("Pedido não informado.");
-      setLoading(false);
-      return;
+      throw new Error("Pedido não informado.");
     }
 
+    const response = await fetch(`/api/fans/checkout/status?order=${encodeURIComponent(orderId)}`, { cache: "no-store" });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || "Não foi possível consultar o pagamento.");
+    return body as CheckoutStatus;
+  }, [orderId]);
+
+  const checkStatus = useCallback(async () => {
     setChecking(true);
     try {
-      const response = await fetch(`/api/fans/checkout/status?order=${encodeURIComponent(orderId)}`, { cache: "no-store" });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.error || "Não foi possível consultar o pagamento.");
-      setData(body as CheckoutStatus);
+      setData(await fetchStatus());
       setError("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível consultar o pagamento.");
@@ -67,11 +69,16 @@ function CheckoutSuccessContent() {
       setLoading(false);
       setChecking(false);
     }
-  }, [orderId]);
+  }, [fetchStatus]);
 
   useEffect(() => {
-    void checkStatus();
-  }, [checkStatus]);
+    let active = true;
+    fetchStatus()
+      .then((status) => { if (active) setData(status); })
+      .catch((err: unknown) => { if (active) setError(err instanceof Error ? err.message : "Não foi possível consultar o pagamento."); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [fetchStatus]);
 
   useEffect(() => {
     if (!data || data.entitlement.entitled) return;

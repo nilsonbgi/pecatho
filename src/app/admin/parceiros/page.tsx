@@ -4,18 +4,17 @@ import Link from "next/link";
 import {createClient} from "@/lib/supabase/browser";
 
 const labels:Record<string,string>={nightclub:"Casa noturna",club:"Boate / clube",bar:"Bar",lounge:"Lounge",event_space:"Espaço para eventos",other:"Outro"};
+type PartnerVenue = { id: string; name: string; slug: string; venue_type: string; description: string | null; phone: string | null; rejection_reason: string | null; status: string };
 
 export default function AdminParceiros(){
- const [items,setItems]=useState<any[]>([]);
+ const [items,setItems]=useState<PartnerVenue[]>([]);
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState("");
 
  async function load(){
-  setLoading(true);
-  setError("");
   const s=createClient();
   const {data:{user}}=await s.auth.getUser();
-  if(!user){location.href="/login";return}
+  if(!user){window.location.assign("/login");return}
   const response=await s.from("partner_venues").select("id,name,slug,venue_type,description,phone,website_url,instagram_url,status,rejection_reason,created_at").in("status",["pending_review","published","rejected","paused"]).order("created_at",{ascending:false});
   const data=response.data;
   const e=response.error;
@@ -24,7 +23,20 @@ export default function AdminParceiros(){
   setLoading(false);
  }
 
- useEffect(()=>{void load()},[]);
+ useEffect(()=>{
+  let active=true;
+  void (async()=>{
+   const s=createClient();
+   const {data:{user}}=await s.auth.getUser();
+   if(!user){window.location.assign("/login");return}
+   const response=await s.from("partner_venues").select("id,name,slug,venue_type,description,phone,website_url,instagram_url,status,rejection_reason,created_at").in("status",["pending_review","published","rejected","paused"]).order("created_at",{ascending:false});
+   if(!active)return;
+   if(response.error)setError(response.error.message);
+   setItems((response.data||[]) as PartnerVenue[]);
+   setLoading(false);
+  })();
+  return()=>{active=false};
+ },[]);
 
  async function moderate(id:string,action:string){
   const reason=action==="reject"?window.prompt("Motivo da rejeição:"):"";

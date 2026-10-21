@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/browser";
 import { optimizeImage } from "@/lib/media/optimize-image";
 import { createShortVideoPreview, readDigitalMediaMetadata } from "@/lib/media/digital-media-metadata";
@@ -56,7 +57,6 @@ export default function DigitalContentManager({ownerType}:{ownerType:OwnerType})
  const [catalogLoading,setCatalogLoading]=useState(true);const [catalogLoadError,setCatalogLoadError]=useState("");const [catalogSearch,setCatalogSearch]=useState("");const [catalogStatus,setCatalogStatus]=useState<"all"|"published"|"archived"|"draft">("all");const [catalogType,setCatalogType]=useState<"all"|"package"|"single_image"|"single_video">("all");const [catalogQuality,setCatalogQuality]=useState<"all"|"missing-description">("all");const [catalogSort,setCatalogSort]=useState<"newest"|"oldest"|"price-asc"|"price-desc"|"title">("newest");const [productMediaSummary,setProductMediaSummary]=useState<Record<string,ProductMediaSummary>>({});const [productMediaLoadError,setProductMediaLoadError]=useState("");const [selectedProductIds,setSelectedProductIds]=useState<string[]>([]);const [editingProduct,setEditingProduct]=useState<string|null>(null);const [editTitle,setEditTitle]=useState("");const [editDescription,setEditDescription]=useState("");const [editPrice,setEditPrice]=useState("");
 
  async function load(){
-  setCatalogLoading(true);setCatalogLoadError("");setProductMediaLoadError("");setError("");
   try{
    const {data:{user},error:authError}=await supabase.auth.getUser();
    if(authError)throw new Error("Não foi possível validar sua sessão.");
@@ -82,13 +82,48 @@ export default function DigitalContentManager({ownerType}:{ownerType:OwnerType})
    setCatalogLoadError(reason);setError(reason);
   }finally{setCatalogLoading(false);}
  }
- async function loadMetrics(){setSalesLoading(true);setSalesLoadError("");try{const response=await fetch("/api/conteudos/sales?owner_type="+encodeURIComponent(ownerType),{cache:"no-store"});const data=await response.json().catch(()=>null);if(!response.ok){setSalesLoadError(typeof data?.error==="string"?data.error:"Não foi possível carregar as vendas.");return;}setMetrics({sales:Number(data?.sales||0),gross:Number(data?.gross||0),ownerAmount:Number(data?.ownerAmount||0),last30Sales:Number(data?.last30Sales||0),last30Gross:Number(data?.last30Gross||0)});setSales(Array.isArray(data?.rows)?data.rows:[]);}catch(e){console.error("Falha ao consultar o painel de vendas:",e);setSalesLoadError("Não foi possível conectar ao serviço de vendas. Verifique sua conexão e tente novamente.");}finally{setSalesLoading(false);}}
- useEffect(()=>{void load();void loadMetrics()},[]);
+ async function loadMetrics(){try{const response=await fetch("/api/conteudos/sales?owner_type="+encodeURIComponent(ownerType),{cache:"no-store"});const data=await response.json().catch(()=>null);if(!response.ok){setSalesLoadError(typeof data?.error==="string"?data.error:"Não foi possível carregar as vendas.");return;}setMetrics({sales:Number(data?.sales||0),gross:Number(data?.gross||0),ownerAmount:Number(data?.ownerAmount||0),last30Sales:Number(data?.last30Sales||0),last30Gross:Number(data?.last30Gross||0)});setSales(Array.isArray(data?.rows)?data.rows:[]);}catch(e){console.error("Falha ao consultar o painel de vendas:",e);setSalesLoadError("Não foi possível conectar ao serviço de vendas. Verifique sua conexão e tente novamente.");}finally{setSalesLoading(false);}}
+ useEffect(()=>{
+  let active=true;
+  async function initializeCatalog(){
+   try{
+    const {data:{user},error:authError}=await supabase.auth.getUser();
+    if(!active)return;
+    if(authError)throw new Error("Não foi possível validar sua sessão.");
+    if(!user){setOwnerId("");setOwnerUserId("");setProducts([]);setProductMediaSummary({});setCatalogLoadError("Sua sessão expirou. Entre novamente para carregar seu catálogo.");setError("Sessão expirada.");return;}
+    const table=ownerType==="creator"?"fans_creators":"advertiser_profiles";
+    const {data:owner,error:ownerError}=await supabase.from(table).select("id").eq("user_id",user.id).maybeSingle();
+    if(!active)return;
+    if(ownerError)throw new Error("Não foi possível validar seu perfil para carregar o catálogo.");
+    setOwnerUserId(user.id);
+    if(!owner){setOwnerId("");setProducts([]);setProductMediaSummary({});const setupMessage=ownerType==="creator"?"Ative o Pecatho Fans antes de criar conteúdos.":"Crie seu anúncio antes de criar conteúdos.";setCatalogLoadError(setupMessage);setError(setupMessage);return;}
+    const {data:list,error:listError}=await supabase.from("digital_content_products").select("id,title,description,product_type,price,status,created_at").eq("owner_user_id",user.id).eq("owner_type",ownerType).order("created_at",{ascending:false});
+    if(!active)return;
+    if(listError)throw new Error("Não foi possível carregar seu catálogo. Tente novamente.");
+    const loadedProducts=(list??[]) as Product[];setOwnerId(owner.id);setProducts(loadedProducts);
+    if(!loadedProducts.length){setProductMediaSummary({});setProductMediaLoadError("");return;}
+    const {data:mediaItems,error:mediaError}=await supabase.from("digital_content_product_items").select("product_id,media_type,size_bytes,width,height,duration_seconds,video_processing_status").eq("owner_user_id",user.id).in("product_id",loadedProducts.map(product=>product.id));
+    if(!active)return;
+    if(mediaError){setProductMediaSummary({});setProductMediaLoadError("Não foi possível carregar a quantidade e o tamanho dos arquivos. Seus produtos não foram alterados.");return;}
+    const summary:Record<string,ProductMediaSummary>={};
+    for(const item of (mediaItems??[]) as ProductMediaItem[]){const current=summary[item.product_id]??{count:0,images:0,videos:0,audio:0,documents:0,bytes:0,formats:{},videoProcessingPending:0};current.count+=1;current.bytes+=Math.max(0,Number(item.size_bytes)||0);if(item.media_type==="image")current.images+=1;else if(item.media_type==="video"){current.videos+=1;if(item.video_processing_status==="not_configured"||item.video_processing_status==="queued"||item.video_processing_status==="processing")current.videoProcessingPending+=1;}else if(item.media_type==="audio")current.audio+=1;else current.documents+=1;if(item.width&&item.height){const ratio=Number(item.width)/Number(item.height);const candidates=[{label:"9:16",ratio:9/16},{label:"2:3",ratio:2/3},{label:"1:1",ratio:1},{label:"16:9",ratio:16/9}];let closest=candidates[0];for(const candidate of candidates){if(Math.abs(Math.log(ratio/candidate.ratio))<Math.abs(Math.log(ratio/closest.ratio)))closest=candidate;}const label=Math.abs(Math.log(ratio/closest.ratio))<=Math.log(1.18)?closest.label:"original";current.formats[label]=(current.formats[label]||0)+1;}summary[item.product_id]=current;}
+    setProductMediaSummary(summary);
+   }catch(e){if(active){const reason=e instanceof Error?e.message:"Não foi possível carregar seu catálogo. Tente novamente.";setCatalogLoadError(reason);setError(reason);}}
+   finally{if(active)setCatalogLoading(false);}
+  }
+  async function initializeMetrics(){
+   try{const response=await fetch("/api/conteudos/sales?owner_type="+encodeURIComponent(ownerType),{cache:"no-store"});const data=await response.json().catch(()=>null);if(!response.ok)throw new Error(typeof data?.error==="string"?data.error:"Não foi possível carregar as vendas.");if(active){setMetrics({sales:Number(data?.sales||0),gross:Number(data?.gross||0),ownerAmount:Number(data?.ownerAmount||0),last30Sales:Number(data?.last30Sales||0),last30Gross:Number(data?.last30Gross||0)});setSales(Array.isArray(data?.rows)?data.rows:[]);}}
+   catch(e){if(active){console.error("Falha ao consultar o painel de vendas:",e);setSalesLoadError("Não foi possível conectar ao serviço de vendas. Verifique sua conexão e tente novamente.");}}
+   finally{if(active)setSalesLoading(false);}
+  }
+  void initializeCatalog();void initializeMetrics();
+  return()=>{active=false};
+ },[ownerType,supabase]);
 
  async function createProduct(){
   setBusy(true);setError("");setMessage("");
   let createdProductId:string|null=null;
-  let uploadedPaths:string[]=[];
+  const uploadedPaths:string[]=[];
   let ownerUserIdForCleanup:string|null=null;
   try{
    if(!ownerId)throw new Error("Proprietário não identificado.");
@@ -167,7 +202,7 @@ export default function DigitalContentManager({ownerType}:{ownerType:OwnerType})
   <div className="digitalManagerInner">
    <header className="digitalHeader">
     <div><div className="digitalKicker">PECATHO · {label} · CONTEÚDO DIGITAL</div><h1>Sua loja de conteúdo.</h1><p>Publique fotos, vídeos e pacotes com preço definido por você. O arquivo original fica privado e o comprador só recebe acesso após o pagamento confirmado.</p></div>
-    <div className="digitalHeaderActions"><a href={ownerType==="creator"?"/fans/gerenciar/perfil":"/painel/anuncio"}>← Voltar ao perfil</a><a className="digitalPrimaryLink" href="/conteudos/minhas-compras">Minhas compras</a></div>
+    <div className="digitalHeaderActions"><a href={ownerType==="creator"?"/fans/gerenciar/perfil":"/painel/anuncio"}>← Voltar ao perfil</a><Link className="digitalPrimaryLink" href="/conteudos/minhas-compras">Minhas compras</Link></div>
    </header>
 
    <section className="digitalStats">

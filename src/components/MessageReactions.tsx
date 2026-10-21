@@ -23,8 +23,11 @@ export default function MessageReactions({ messageId, userId }: { messageId: str
   }
 
   useEffect(() => {
-    void load();
+    let active = true;
     const supabase = createClient();
+    void supabase.from("message_reactions").select("id,user_id,emoji").eq("message_id", messageId).order("created_at", { ascending: true }).then(({ data, error }) => {
+      if (active && !error) setReactions((data ?? []) as Reaction[]);
+    });
     const channel = supabase
       .channel("message-reactions-" + messageId)
       .on("postgres_changes", { event: "*", schema: "public", table: "message_reactions", filter: "message_id=eq." + messageId }, () => {
@@ -32,7 +35,7 @@ export default function MessageReactions({ messageId, userId }: { messageId: str
       })
       .subscribe();
 
-    return () => { void supabase.removeChannel(channel); };
+    return () => { active = false; void supabase.removeChannel(channel); };
   }, [messageId]);
 
   async function toggle(emoji: string) {

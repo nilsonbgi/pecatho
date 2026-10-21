@@ -48,7 +48,19 @@ export default function FinanceiroPage() {
     }
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    let active = true;
+    fetch("/api/painel/financeiro", { cache: "no-store" })
+      .then(async (response) => {
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Não foi possível carregar o financeiro.");
+        return payload as { summary: Summary; payouts: Payout[]; movements: Movement[] };
+      })
+      .then((payload) => { if (active) { setSummary(payload.summary); setPayouts(payload.payouts || []); setMovements(payload.movements || []); } })
+      .catch((cause: unknown) => { if (active) setError(cause instanceof Error ? cause.message : "Não foi possível carregar o financeiro."); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
 
   async function requestPayout(event: FormEvent) {
     event.preventDefault();

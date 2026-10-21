@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
@@ -32,8 +32,7 @@ export default function FansLiveRoomPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const sessionId = params.id;
-  const supabaseRef = useRef(createClient());
-  const supabase = supabaseRef.current;
+  const supabase = useMemo(() => createClient(), []);
 
   const [access, setAccess] = useState<Access | null>(null);
   const [loading, setLoading] = useState(true);
@@ -170,6 +169,19 @@ export default function FansLiveRoomPage() {
     }
   }, []);
 
+  const restartIceOffer = useCallback(async (pc: RTCPeerConnection) => {
+    if (pcRef.current !== pc || accessRef.current?.role !== "creator") return;
+    try {
+      pc.restartIce();
+      const offer = await pc.createOffer({ iceRestart: true });
+      await pc.setLocalDescription(offer);
+      await sendSignal("offer", { sdp: offer.sdp, type: offer.type });
+      setConnection("Reconectando...");
+    } catch {
+      setError("Não foi possível restabelecer a conexão de vídeo.");
+    }
+  }, [sendSignal]);
+
   const createPeer = useCallback(async (role: Access["role"]) => {
     const pc = new RTCPeerConnection({
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
@@ -227,20 +239,7 @@ export default function FansLiveRoomPage() {
     }
 
     return pc;
-  }, [sendSignal]);
-
-  const restartIceOffer = useCallback(async (pc: RTCPeerConnection) => {
-    if (pcRef.current !== pc || accessRef.current?.role !== "creator") return;
-    try {
-      pc.restartIce();
-      const offer = await pc.createOffer({ iceRestart: true });
-      await pc.setLocalDescription(offer);
-      await sendSignal("offer", { sdp: offer.sdp, type: offer.type });
-      setConnection("Reconectando...");
-    } catch {
-      setError("Não foi possível restabelecer a conexão de vídeo.");
-    }
-  }, [sendSignal]);
+  }, [sendSignal, restartIceOffer]);
 
   const createOffer = useCallback(async (restartIce = false) => {
     const pc = pcRef.current;

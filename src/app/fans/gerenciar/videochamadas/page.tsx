@@ -45,7 +45,23 @@ export default function LiveOffersPage() {
     setLoading(false);
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { window.location.assign("/login?redirect=/fans/gerenciar/videochamadas"); return; }
+      const { data: creator, error: creatorError } = await supabase.from("fans_creators").select("id").eq("user_id", user.id).maybeSingle();
+      if (!active) return;
+      if (creatorError || !creator) { setError("Espaço Fans não encontrado."); setLoading(false); return; }
+      setCreatorId(creator.id);
+      const { data, error: offerError } = await supabase.from("fans_live_offers").select("id,title,description,duration_minutes,price,currency,status").eq("creator_id", creator.id).order("created_at", { ascending: false });
+      if (!active) return;
+      if (offerError) setError("Não foi possível carregar as ofertas."); else setOffers((data ?? []) as Offer[]);
+      setLoading(false);
+    })();
+    return () => { active = false; };
+  }, []);
 
   async function createOffer(event: FormEvent) {
     event.preventDefault();

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { isTimestampInFuture, isTimestampPastOrCurrent } from "@/lib/time-comparisons";
 
 export const dynamic = "force-dynamic";
 
@@ -74,9 +75,8 @@ export default async function FansPublicationsPage() {
   const boostPlansLoadError = Boolean(plansError);
 
   const planById = new Map((plans ?? []).map((plan) => [plan.id, plan]));
-  const now = Date.now();
   const activeBoosts = (boostRows ?? []).filter((boost) =>
-    boost.status === "active" && new Date(boost.starts_at).getTime() <= now && new Date(boost.ends_at).getTime() > now
+    boost.status === "active" && isTimestampPastOrCurrent(boost.starts_at) && isTimestampInFuture(boost.ends_at)
   );
   const activeBoostByPost = new Map<string, (typeof activeBoosts)[number]>();
   for (const boost of activeBoosts) {

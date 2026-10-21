@@ -40,7 +40,6 @@ export default function AdminConsole({ role }: { role: string }) {
   const [advertiserForm, setAdvertiserForm] = useState({ user_id: "", title: "", display_name: "", category_id: "", state_id: "", city_id: "" });
 
   async function loadAll() {
-    setLoading(true); setError("");
     const [cat, st, ci, adv, prof, pl] = await Promise.all([
       supabase.from("categories").select("id,name,zone,display,featured,sort_order").order("sort_order").order("name"),
       supabase.from("states").select("id,uf,name").order("name"),
@@ -54,7 +53,23 @@ export default function AdminConsole({ role }: { role: string }) {
     setCategories((cat.data || []) as Category[]); setStates((st.data || []) as State[]); setCities((ci.data || []) as City[]); setAdvertisers((adv.data || []) as Advertiser[]); setProfiles((prof.data || []) as Profile[]); setPlans((pl.data || []) as Plan[]); setLoading(false);
   }
 
-  useEffect(() => { loadAll(); }, []);
+  useEffect(() => {
+    let active = true;
+    void Promise.all([
+      supabase.from("categories").select("id,name,zone,display,featured,sort_order").order("sort_order").order("name"),
+      supabase.from("states").select("id,uf,name").order("name"),
+      supabase.from("cities").select("id,state_id,name,ibge_code").order("name").limit(10000),
+      supabase.from("advertiser_profiles").select("id,user_id,title,display_name,status,verification_status,category_id,state_id,city_id").order("created_at", { ascending: false }),
+      supabase.from("profiles").select("id,email,display_name,username").order("display_name").limit(1000),
+      supabase.from("publication_plans").select("id,name,description,duration_days,price,active,free,audience,has_video,featured_card,search_priority,show_premium_badge,profile_theme,max_gallery_items,features").order("price"),
+    ]).then(([cat, st, ci, adv, prof, pl]) => {
+      if (!active) return;
+      const firstError = [cat, st, ci, adv, prof, pl].find((result) => result.error)?.error;
+      if (firstError) setError(firstError.message);
+      setCategories((cat.data || []) as Category[]); setStates((st.data || []) as State[]); setCities((ci.data || []) as City[]); setAdvertisers((adv.data || []) as Advertiser[]); setProfiles((prof.data || []) as Profile[]); setPlans((pl.data || []) as Plan[]); setLoading(false);
+    });
+    return () => { active = false; };
+  }, [supabase]);
 
   function clearFeedback() { setMessage(""); setError(""); }
   function nextId(rows: { id: number }[]) { return rows.length ? Math.max(...rows.map((r) => Number(r.id))) + 1 : 1; }

@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import GiftButton from "@/components/GiftButton";
 import MessageReactions from "@/components/MessageReactions";
 
@@ -82,7 +83,7 @@ export default function ConversationPage() {
   const [otherOnline, setOtherOnline] = useState(false);
   const [otherTyping, setOtherTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const channelRef = useRef<ReturnType<typeof createClient> extends never ? never : any>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
   const userIdRef = useRef<string | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -155,7 +156,7 @@ export default function ConversationPage() {
     const supabase = createClient();
     const { data: authData } = await supabase.auth.getUser();
     if (!authData.user) {
-      window.location.href = `/login?redirect=/painel/mensagens/${params.id}`;
+      window.location.assign(`/login?redirect=/painel/mensagens/${params.id}`);
       return;
     }
     setUserId(authData.user.id);
@@ -358,7 +359,7 @@ export default function ConversationPage() {
         setCommercialError(providerResult?.error || "Não foi possível abrir o checkout do pagamento.");
         return;
       }
-      window.location.href = providerResult.checkout_url;
+      window.location.assign(providerResult.checkout_url);
     } catch (err) {
       console.error(err);
       setCommercialError("Não foi possível iniciar o pagamento.");
@@ -382,7 +383,7 @@ export default function ConversationPage() {
         setCommercialError(providerResult?.error || "Não foi possível retomar o pagamento.");
         return;
       }
-      window.location.href = providerResult.checkout_url;
+      window.location.assign(providerResult.checkout_url);
     } catch (err) {
       console.error(err);
       setCommercialError("Não foi possível retomar o pagamento.");
@@ -423,7 +424,7 @@ export default function ConversationPage() {
         setCommercialError(providerResult?.error || "Não foi possível abrir o checkout da gorjeta.");
         return;
       }
-      window.location.href = providerResult.checkout_url;
+      window.location.assign(providerResult.checkout_url);
     } catch (err) {
       console.error(err);
       setCommercialError("Não foi possível iniciar a gorjeta.");

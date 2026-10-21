@@ -14,10 +14,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     let active = true;
-    let supabase;
-    try { supabase = createClient(); }
-    catch (err) { setError(err instanceof Error ? err.message : "Configuração do Supabase indisponível."); setState("error"); return () => { active = false; }; }
-    (async () => {
+    void Promise.resolve().then(() => createClient()).then(async (supabase) => {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (!active) return;
       if (authError?.message === "Auth session missing!" || !user) { router.replace("/login"); return; }
@@ -26,7 +23,7 @@ export default function AdminPage() {
       if (!active) return;
       if (roleError) { setError(roleError.message); setState("error"); return; }
       if (roleRow?.role) { setRole(String(roleRow.role)); setState("admin"); } else if (user.email?.trim().toLowerCase() === "nilson.umasno@gmail.com") { setState("bootstrap"); } else { router.replace("/painel"); return; }
-    })().catch((err: unknown) => { if (!active) return; setError(err instanceof Error ? err.message : "Erro inesperado ao carregar a administração."); setState("error"); });
+    }).catch((err: unknown) => { if (!active) return; setError(err instanceof Error ? err.message : "Configuração do Supabase indisponível."); setState("error"); });
     return () => { active = false; };
   }, [router]);
 

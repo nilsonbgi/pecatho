@@ -23,7 +23,7 @@ export default function ParceiroProdutos(){
   if(listError){setError("Não foi possível carregar a vitrine. Confirme se a migration de produtos externos foi aplicada.");return;}
   setItems((data||[]) as StoreProduct[]);
  }
- useEffect(()=>{void load();},[]);
+ useEffect(()=>{let active=true;void(async()=>{const {data:{user},error:authError}=await supabase.auth.getUser();if(authError||!user){if(active)setError("Entre novamente para gerenciar sua vitrine.");return}const {data:venue,error:venueError}=await supabase.from("partner_venues").select("id").eq("owner_user_id",user.id).maybeSingle();if(venueError||!venue){if(active)setError("Cadastre primeiro o perfil de parceiro.");return}const {data,error:listError}=await supabase.from("partner_store_products").select("*").eq("venue_id",venue.id).order("category").order("sort_order").order("created_at",{ascending:false});if(!active)return;if(listError){setError("Não foi possível carregar a vitrine. Confirme se a migration de produtos externos foi aplicada.");return}setUserId(user.id);setVenueId(venue.id);setItems((data||[]) as StoreProduct[])})();return()=>{active=false}},[supabase]);
  function edit(item:StoreProduct){setEditing(item.id);setForm({title:item.title,description:item.description||"",category:item.category,external_url:item.external_url,image_url:item.image_url||"",price_label:item.price_label||"",is_published:item.is_published});setMessage("");setError("");}
  function reset(){setEditing(null);setForm(emptyForm);}
  async function save(event:FormEvent){

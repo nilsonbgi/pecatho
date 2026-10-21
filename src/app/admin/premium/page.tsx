@@ -393,11 +393,11 @@ export default function AdminCustomerPremiumPage() {
 
   return (
     <main className="shell advertiserDashboard premiumAdminDashboard">
-      <nav className="topbar"><div className="brand"><span className="brandMark">P</span><span>Pecatho</span></div><div className="navLinks"><Link href="/admin">Administração</Link><Link href="/painel/cliente">Painel do cliente</Link></div></nav>
+      <nav className="topbar"><div className="brand"><span className="brandMark">P</span><span>Pecatho</span></div><div className="navLinks"><Link href="/admin">Administração</Link><Link href="/admin/premium/profissionais">Planos profissionais</Link><Link href="/painel/cliente">Painel do cliente</Link></div></nav>
       <section className="hero premiumAdminHero">
         <div className="eyebrow">SUPERADMIN · GESTÃO COMERCIAL</div>
         <h1>Planos <em>Premium</em></h1>
-        <p className="heroCopy">Configure preço, duração e benefícios antes de publicar. Planos inativos não são exibidos aos clientes. A ativação da assinatura depende exclusivamente da confirmação de pagamento recebida e validada pelo webhook do Mercado Pago.</p>
+        <p className="heroCopy">Gerencie catálogos separados para clientes Premium, acompanhantes e vendedores de conteúdo. Diferenciais marcados como operacionais só são concedidos durante uma assinatura paga e vigente; o texto de benefícios serve como descrição comercial e não substitui as regras do sistema.</p>
         {error && <p role="alert" className="fieldNote" style={{ border: "1px solid rgba(239,68,68,.35)", padding: 12, borderRadius: 12 }}>{error}</p>}
         {message && <p role="status" className="fieldNote" style={{ border: "1px solid rgba(34,197,94,.35)", padding: 12, borderRadius: 12 }}>{message}</p>}
         <nav className="premiumAdminTabs" aria-label="Categorias de planos">

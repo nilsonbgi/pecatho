@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 type Audience = "companion" | "content_creator";
 type FeatureFlags = { featured_card?: boolean; search_priority?: boolean; premium_profile?: boolean; profile_badge?: boolean };
@@ -43,8 +43,8 @@ export default function ProfessionalPremiumPlans() {
     return () => { mounted = false; };
   }, []);
 
-  const current = useMemo(() => (data?.current ?? []).filter((item) => item.audience === audience), [data, audience]);
-  const plans = useMemo(() => (data?.plans ?? []).filter((plan) => plan.audience === audience).sort((a, b) => a.sort_order - b.sort_order || Number(a.price) - Number(b.price)), [data, audience]);
+  const current = (data?.current ?? []).filter((item) => item.audience === audience);
+  const plans = (data?.plans ?? []).filter((plan) => plan.audience === audience).sort((a, b) => a.sort_order - b.sort_order || Number(a.price) - Number(b.price));
   const statusAllowsPurchase = audience === "companion" ? data?.profile_status === "published" : data?.creator_status === "active";
 
   async function subscribe(plan: Plan) {

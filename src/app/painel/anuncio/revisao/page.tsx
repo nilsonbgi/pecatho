@@ -8,6 +8,12 @@ type JsonObject = Record<string, unknown>;
 type Media = { id: string; kind: string; original_filename: string | null; storage_bucket: string; storage_path: string; moderation_status: string; access_type: string; is_public: boolean; is_primary: boolean; is_featured: boolean; price: number | null; preview_url?: string };
 type Attribute = { id: string; name: string; slug: string; value: unknown };
 type Service = { id: string; name: string; selected: boolean; notes: string | null };
+type AdvertiserProfile = { id: string; user_id: string; title: string | null; display_name: string | null; summary: string | null; description: string | null; state_id: number | null; city_id: number | null; category_id: number | null; neighborhood_id: number | null; birth_date: string | null; height_cm: number | null; weight_kg: number | null; availability: string | null; phone: string | null; whatsapp: string | null; phone_secondary: string | null; pricing: JsonObject | null; service_options: JsonObject | null; payment_options: JsonObject | null; social_links: JsonObject | null; positioning: string | null; primary_media_id: string | null; status: string; verification_status: string | null };
+type Account = { display_name: string | null; legal_name: string | null; email: string | null; phone: string | null; cpf: string | null; birth_date: string | null; status: string | null; verification_status: string | null };
+type Address = { zipcode: string | null; street: string | null; number: string | null; complement: string | null; neighborhood_id: number | null; city_id: number | null; state_id: number | null; latitude: number | null; longitude: number | null; location_visibility: string | null; public_latitude: number | null; public_longitude: number | null };
+type AttributeJoin = { attribute_id: string; value: unknown; category_attributes: { name: string | null; slug: string | null } | Array<{ name: string | null; slug: string | null }> | null };
+type ServiceJoin = { service_id: string; selected: boolean; notes: string | null; category_services: { name: string | null } | Array<{ name: string | null }> | null };
+type PricingPeriod = { minutes?: number; price?: number | string };
 
 function object(value: unknown): JsonObject { return value && typeof value === "object" && !Array.isArray(value) ? value as JsonObject : {}; }
 function text(value: unknown): string { return value == null ? "" : typeof value === "string" ? value : JSON.stringify(value); }
@@ -21,8 +27,8 @@ function age(date: string | null) {
 
 export default function AnuncioReviewPage() {
   const [loading, setLoading] = useState(true); const [busy, setBusy] = useState(false); const [message, setMessage] = useState(""); const [error, setError] = useState("");
-  const [profile, setProfile] = useState<any>(null); const [account, setAccount] = useState<any>(null); const [address, setAddress] = useState<any>(null);
-  const [category, setCategory] = useState<any>(null); const [state, setState] = useState<any>(null); const [city, setCity] = useState<any>(null); const [neighborhood, setNeighborhood] = useState<any>(null);
+  const [profile, setProfile] = useState<AdvertiserProfile | null>(null); const [account, setAccount] = useState<Account | null>(null); const [address, setAddress] = useState<Address | null>(null);
+  const [category, setCategory] = useState<{ id: number; name: string } | null>(null); const [state, setState] = useState<{ id: number; uf: string; name: string } | null>(null); const [city, setCity] = useState<{ id: number; name: string } | null>(null); const [neighborhood, setNeighborhood] = useState<{ id: number; name: string } | null>(null);
   const [attributes, setAttributes] = useState<Attribute[]>([]); const [services, setServices] = useState<Service[]>([]); const [media, setMedia] = useState<Media[]>([]);
 
   useEffect(() => {
@@ -46,9 +52,9 @@ export default function AnuncioReviewPage() {
           supabase.from("profile_media").select("id,kind,original_filename,storage_bucket,storage_path,moderation_status,access_type,is_public,is_primary,price").eq("profile_id", p.id).order("sort_order"),
         ]);
         if (!alive) return;
-        setProfile(p); setAccount(a.data); setAddress(addr.data); setCategory(cat.data); setState(st.data); setCity(ci.data); setNeighborhood(nb.data);
-        setAttributes((attrs.data || []).map((r: any) => ({ id: String(r.attribute_id), name: r.category_attributes?.name || "Característica", slug: r.category_attributes?.slug || "", value: r.value })));
-        setServices((svcs.data || []).map((r: any) => ({ id: String(r.service_id), name: r.category_services?.name || "Serviço", selected: r.selected === true, notes: r.notes || null })));
+        setProfile(p as AdvertiserProfile); setAccount(a.data as Account | null); setAddress(addr.data as Address | null); setCategory(cat.data); setState(st.data); setCity(ci.data); setNeighborhood(nb.data);
+        setAttributes(((attrs.data || []) as AttributeJoin[]).map((r) => { const related = Array.isArray(r.category_attributes) ? r.category_attributes[0] : r.category_attributes; return { id: String(r.attribute_id), name: related?.name || "Característica", slug: related?.slug || "", value: r.value }; }));
+        setServices(((svcs.data || []) as ServiceJoin[]).map((r) => { const related = Array.isArray(r.category_services) ? r.category_services[0] : r.category_services; return { id: String(r.service_id), name: related?.name || "Serviço", selected: r.selected === true, notes: r.notes || null }; }));
         const rows = (med.data || []) as Media[];
         const withUrls = await Promise.all(rows.map(async (m) => { const signed = await supabase.storage.from(m.storage_bucket).createSignedUrl(m.storage_path, 600); return { ...m, preview_url: signed.data?.signedUrl }; }));
         setMedia(withUrls);
@@ -73,7 +79,7 @@ export default function AnuncioReviewPage() {
 
   async function submitReview() {
     setBusy(true); setMessage(""); setError("");
-    try { const response = await fetch("/api/painel/anuncio/enviar-analise", { method: "POST" }); const data = await response.json(); if (!response.ok) throw new Error(data.error || "Não foi possível enviar para análise."); setMessage("Anúncio enviado para análise."); setProfile((p: any) => p ? { ...p, status: "pending_review" } : p); }
+    try { const response = await fetch("/api/painel/anuncio/enviar-analise", { method: "POST" }); const data = await response.json(); if (!response.ok) throw new Error(data.error || "Não foi possível enviar para análise."); setMessage("Anúncio enviado para análise."); setProfile((p) => p ? { ...p, status: "pending_review" } : p); }
     catch (e) { setError(e instanceof Error ? e.message : "Não foi possível enviar para análise."); }
     finally { setBusy(false); }
   }
@@ -91,7 +97,7 @@ export default function AnuncioReviewPage() {
         <article className="card"><h2>Características</h2><p>Altura: {profile?.height_cm ? `${profile.height_cm} cm` : "—"} · Peso: {profile?.weight_kg ? `${profile.weight_kg} kg` : "—"}</p>{attributes.length ? attributes.map((a) => <p key={a.id}><strong>{a.name}:</strong> {text(a.value)}</p>) : <p className="fieldNote">Nenhuma característica adicional cadastrada.</p>}</article>
         <article className="card"><h2>Serviços selecionados</h2>{selectedServices.length ? selectedServices.map((s) => <p key={s.id}>✓ {s.name}{s.notes ? ` — ${s.notes}` : ""}</p>) : <p className="fieldNote">Nenhum serviço selecionado.</p>}</article>
         <article className="card"><h2>Localização</h2><p>{state?.name || "—"} · {city?.name || "—"}{neighborhood?.name ? ` · ${neighborhood.name}` : ""}</p><p>{address?.zipcode || "—"} · {address?.street || "—"}{address?.number ? `, ${address.number}` : ""}</p><p>Visibilidade: {address?.location_visibility || "—"}</p>{address?.public_latitude != null && <p>Coordenadas públicas aproximadas disponíveis.</p>}</article>
-        <article className="card"><h2>Disponibilidade e preços</h2><p>Disponibilidade: {profile?.availability || "Configuração operacional"}</p><p>Preço de referência: {pricing.price != null ? `R$ ${String(pricing.price)}` : "—"}</p>{Array.isArray(pricing.periods) && pricing.periods.map((x: any, i: number) => <p key={i}>{x.minutes || "—"} min · R$ {x.price || "—"}</p>)}</article>
+        <article className="card"><h2>Disponibilidade e preços</h2><p>Disponibilidade: {profile?.availability || "Configuração operacional"}</p><p>Preço de referência: {pricing.price != null ? `R$ ${String(pricing.price)}` : "—"}</p>{Array.isArray(pricing.periods) && (pricing.periods as PricingPeriod[]).map((x, i) => <p key={i}>{x.minutes || "—"} min · R$ {x.price || "—"}</p>)}</article>
         <article className="card"><h2>Pagamentos e contato</h2><p>Pagamento configurado: {Object.keys(payments).length ? "Sim" : "Não"}</p><p>Telefone: {profile?.phone || account?.phone || "—"}</p><p>WhatsApp: {profile?.whatsapp || "—"}</p><p>Contato secundário: {profile?.phone_secondary || "—"}</p>{Object.keys(social).length > 0 && <p>Redes sociais: configuradas</p>}</article>
       </section>
       <section className="card" style={{marginTop:20}}><div style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"center",flexWrap:"wrap"}}><div><h2>Mídias e estado de moderação</h2><p className="fieldNote">A imagem principal precisa estar aprovada para que o anúncio avance com segurança para a publicação.</p></div><Link className="secondaryButton" href="/painel/anuncio/midias">Gerenciar mídias</Link></div><p>{media.length} arquivo(s) · {approvedMedia.length} aprovado(s).</p><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:12}}>{media.map((m) => <div key={m.id} style={{border:"1px solid rgba(127,127,127,.25)",borderRadius:12,padding:10}}>{m.preview_url && m.kind === "image" ? <img src={m.preview_url} alt={m.original_filename || "Mídia"} style={{width:"100%",aspectRatio:"1",objectFit:"cover",borderRadius:8}} /> : m.preview_url && m.kind === "video" ? <video src={m.preview_url} controls style={{width:"100%",aspectRatio:"1",objectFit:"cover",borderRadius:8}} /> : <div style={{aspectRatio:"1",display:"grid",placeItems:"center"}}>Prévia protegida</div>}<p>{m.original_filename || "Arquivo"}</p><small>{m.moderation_status} · {m.access_type === "paid" ? "pago" : m.is_public ? "público" : "protegido"}{m.is_primary ? " · principal" : ""}</small></div>)}</div></section>

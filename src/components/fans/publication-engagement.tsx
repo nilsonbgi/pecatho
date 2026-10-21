@@ -42,10 +42,28 @@ export default function PublicationEngagement({ postId, creatorName }: Props) {
 
   useEffect(() => {
     let active = true;
-    load().then(() => { if (!active) return; }).catch(() => {
-      if (active) setMessage("Não foi possível carregar as interações.");
-      setLoading(false);
-    });
+    void (async () => {
+      try {
+        const [{ data: likeSummary }, { data: commentRows }, { data: reactionRows }, { data: auth }] = await Promise.all([
+          supabase.rpc("get_public_fans_like_summary", { p_post_id: postId }),
+          supabase.rpc("get_public_fans_comments", { p_post_id: postId }),
+          supabase.rpc("get_public_fans_post_reaction_summary", { p_post_id: postId }),
+          supabase.auth.getUser(),
+        ]);
+        if (!active) return;
+        const currentUserId = auth.user?.id ?? null;
+        const likeSummaryRow = Array.isArray(likeSummary) ? likeSummary[0] : null;
+        setUserId(currentUserId);
+        setLikes(Number(likeSummaryRow?.likes_count ?? 0));
+        setLiked(currentUserId ? Boolean(likeSummaryRow?.viewer_liked) : false);
+        setComments((commentRows ?? []) as Comment[]);
+        setReactions((reactionRows ?? []) as ReactionSummary[]);
+      } catch {
+        if (active) setMessage("Não foi possível carregar as interações.");
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
     return () => { active = false; };
   }, [postId]);
 

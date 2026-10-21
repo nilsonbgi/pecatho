@@ -37,7 +37,7 @@ export async function createMercadoPagoPreference(input: MercadoPagoPreferenceIn
             ? "pecatho_publication_plan"
             : productType === "creator_publication_plan"
               ? "pecatho_creator_publication_plan"
-              : input.creatorId ? "pecatho_fans" : "pecatho_digital_content";
+                : input.creatorId ? "pecatho_fans" : "pecatho_digital_content";
 
   const successUrl = productType === "premium_subscription"
     ? `${baseUrl}/painel/cliente?premium=aguardando&order=${encodeURIComponent(input.orderId)}`

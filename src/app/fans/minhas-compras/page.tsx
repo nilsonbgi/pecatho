@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isTimestampCurrentOrFuture } from "@/lib/time-comparisons";
 
 export const dynamic = "force-dynamic";
 
@@ -171,7 +172,7 @@ export default async function MyFansPurchasesPage() {
             </div>
           ) : rows.map((row) => {
             const status = row.purchaseStatus || row.paymentStatus || row.orderStatus;
-            const activeAccess = row.kind === "subscription" && row.purchaseStatus === "paid" && row.accessEndsAt && new Date(row.accessEndsAt).getTime() >= Date.now();
+            const activeAccess = row.kind === "subscription" && row.purchaseStatus === "paid" && isTimestampCurrentOrFuture(row.accessEndsAt);
             return (
               <article key={row.id} className="rounded-2xl border bg-white p-6 shadow-sm sm:p-7">
                 <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">

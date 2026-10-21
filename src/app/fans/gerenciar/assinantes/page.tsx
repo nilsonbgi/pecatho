@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isTimestampCurrentOrFuture } from "@/lib/time-comparisons";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,7 @@ function maskUserId(value: string) {
 }
 
 function statusLabel(status: string, endsAt: string | null) {
-  if (status === "active" && endsAt && new Date(endsAt).getTime() < Date.now()) return "Expirado";
+  if (status === "active" && endsAt && !isTimestampCurrentOrFuture(endsAt)) return "Expirado";
   if (status === "active") return "Ativo";
   if (status === "pending") return "Pendente";
   if (status === "expired") return "Expirado";
@@ -75,8 +76,8 @@ export default async function FansSubscribersPage() {
     purchaseBySubscription.set(purchase.subscription_id, rows);
   }
 
-  const active = subscriptions.filter(subscription => subscription.status === "active" && (!subscription.ends_at || new Date(subscription.ends_at).getTime() >= Date.now()));
-  const expired = subscriptions.filter(subscription => subscription.status === "expired" || (subscription.status === "active" && !!subscription.ends_at && new Date(subscription.ends_at).getTime() < Date.now()));
+  const active = subscriptions.filter(subscription => subscription.status === "active" && (!subscription.ends_at || isTimestampCurrentOrFuture(subscription.ends_at)));
+  const expired = subscriptions.filter(subscription => subscription.status === "expired" || (subscription.status === "active" && !!subscription.ends_at && !isTimestampCurrentOrFuture(subscription.ends_at)));
   const pending = subscriptions.filter(subscription => subscription.status === "pending");
   const uniqueActiveSubscribers = new Set(active.map(subscription => subscription.subscriber_user_id)).size;
   const recurring = active.filter(subscription => subscription.auto_renew).length;
