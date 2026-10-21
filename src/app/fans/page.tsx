@@ -29,6 +29,10 @@ type PublicFansCreator = {
   positive_likes?: number;
   visible_comments?: number;
   positive_reactions?: number;
+  plan_featured_card?: boolean;
+  plan_premium_badge?: boolean;
+  plan_profile_theme?: "standard" | "highlighted" | "premium";
+  plan_search_priority?: number;
 };
 
 function summarizeCreatorBio(value: string | null, maxLength = 132): string {
@@ -71,6 +75,31 @@ export default async function FansPage() {
 
   const publicCreators = (creators ?? []) as PublicFansCreator[];
   const creatorIds = publicCreators.map((item) => item.id);
+  let creatorPresentationRows: Array<{ creator_id: string; featured_card: boolean; show_premium_badge: boolean; profile_theme: "standard" | "highlighted" | "premium"; search_priority: number }> = [];
+  if (creatorIds.length) {
+    try {
+      const { data } = await createAdminClient().rpc("get_public_fans_creator_plan_features", { p_creator_ids: creatorIds });
+      creatorPresentationRows = (data ?? []) as typeof creatorPresentationRows;
+    } catch {
+      creatorPresentationRows = [];
+    }
+  }
+  const creatorPresentationMap = new Map(creatorPresentationRows.map((item) => [item.creator_id, item]));
+  for (let index = 0; index < publicCreators.length; index++) {
+    const item = publicCreators[index];
+    const presentation = creatorPresentationMap.get(item.id);
+    publicCreators[index] = {
+      ...item,
+      plan_featured_card: presentation?.featured_card === true,
+      plan_premium_badge: presentation?.show_premium_badge === true,
+      plan_profile_theme: presentation?.profile_theme ?? "standard",
+      plan_search_priority: presentation?.search_priority ?? 0,
+    };
+  }
+  publicCreators.sort((a, b) =>
+    Number(Boolean(b.plan_featured_card)) - Number(Boolean(a.plan_featured_card)) ||
+    Number(b.plan_search_priority || 0) - Number(a.plan_search_priority || 0)
+  );
   const planMap = new Map<string, number>();
   const offerMap = new Map<string, number>();
 
@@ -361,9 +390,9 @@ export default async function FansPage() {
           </div>
 
           {discoveryCreators.length === 0 ? <div className="fansEmpty">Ainda não há criadores ativos publicados no Fans.</div> : <div className="fansCreatorGrid">
-            {discoveryCreators.map((item) => <Link key={item.id} href={"/fans/" + item.slug} className="fansCreatorCard">
+            {discoveryCreators.map((item) => <Link key={item.id} href={"/fans/" + item.slug} className={`fansCreatorCard ${item.plan_featured_card ? "fansPlanFeatured" : ""} ${item.plan_profile_theme === "premium" ? "fansPlanPremium" : item.plan_profile_theme === "highlighted" ? "fansPlanHighlighted" : ""}`}>
               <div className="fansCreatorAvatar">{item.avatar_url ? <img src={item.avatar_url} alt={item.display_name} /> : item.display_name.slice(0, 1).toUpperCase()}</div>
-              <div style={{minWidth:0,flex:1}}><strong>{item.display_name}</strong><div className="fansCreatorMeta"><span className="fansOnline" />{planMap.get(item.id) || 0} plano(s) · {offerMap.get(item.id) || 0} experiência(s) privada(s)</div><div className="fansReputationBadge" style={{marginTop:8}}>🏆 {item.reputation_level || "Iniciante"} · {Number(item.reputation_score || 0).toLocaleString("pt-BR")} pontos</div><div className="fansCreatorBio">{summarizeCreatorBio(item.bio)}</div></div>
+              <div style={{minWidth:0,flex:1}}><strong>{item.display_name}</strong>{item.plan_premium_badge && <span className="fansPublicationPremiumBadge">✦ PERFIL PREMIUM</span>}<div className="fansCreatorMeta"><span className="fansOnline" />{planMap.get(item.id) || 0} plano(s) · {offerMap.get(item.id) || 0} experiência(s) privada(s)</div><div className="fansReputationBadge" style={{marginTop:8}}>🏆 {item.reputation_level || "Iniciante"} · {Number(item.reputation_score || 0).toLocaleString("pt-BR")} pontos</div><div className="fansCreatorBio">{summarizeCreatorBio(item.bio)}</div></div>
               <span className="fansCreatorArrow">›</span>
             </Link>)}
           </div>}
