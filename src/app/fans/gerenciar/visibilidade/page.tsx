@@ -32,7 +32,7 @@ export default function FansVisibilityPlansPage() {
       setCreatorName(creator.display_name || "Seu perfil Fans");
       setPlans(((data ?? []) as Plan[]).filter((plan) =>
         (plan.free ? Number(plan.price) === 0 : Number(plan.price) > 0) &&
-        (plan.audience === "both" || plan.audience === "content_seller)
+        (plan.audience === "both" || plan.audience === "content_seller")
       ));
     } catch (cause) {
       console.error(cause);
