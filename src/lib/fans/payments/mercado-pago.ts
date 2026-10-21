@@ -5,7 +5,7 @@ type MercadoPagoPreferenceInput = {
   amount: number;
   buyerEmail: string;
   creatorId?: string;
-  productType?: "digital_content" | "profile_media" | "gift" | "premium_subscription" | "fans_boost" | "publication_plan" | "creator_publication_plan";
+  productType?: "digital_content" | "profile_media" | "gift" | "premium_subscription" | "professional_premium_subscription" | "fans_boost" | "publication_plan" | "creator_publication_plan";
 };
 
 type MercadoPagoPreference = {
