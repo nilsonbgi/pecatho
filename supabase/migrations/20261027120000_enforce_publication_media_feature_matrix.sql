@@ -14,6 +14,11 @@ declare
   v_max_videos integer;
   v_media_count integer := 0;
 begin
+  -- Private/paid media is not part of the public profile gallery entitlement.
+  if not coalesce(new.show_in_gallery, false) then
+    return new;
+  end if;
+
   with active_entitlements as (
     select
       coalesce(nullif(pub.plan_features_snapshot->>'photo_gallery','')::boolean,
