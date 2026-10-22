@@ -85,10 +85,69 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Não foi possível validar a origem desta contratação Premium." }, { status: 409 });
     }
   }
-  const { data: intent, error: intentError } = await client.rpc("create_pecatho_customer_premium_checkout", {
-    p_plan_id: planId,
-    p_creator_id: typeof creatorId === "string" ? creatorId : null,
-  });
+  // Reaproveita uma tentativa pendente compatível antes de criar outro pedido.
+  // Isso também permite repetir a criação da preferência do Mercado Pago após falha de rede,
+  // mantendo o mesmo order_id e a mesma chave de idempotência do provedor.
+  let intent: { order_id: string } | null = null;
+  let intentError: { message?: string } | null = null;
+
+  let pendingQuery = admin.from("pecatho_customer_premium_subscriptions")
+    .select("id,plan_id,order_id,attributed_creator_id,status")
+    .eq("user_id", user.id)
+    .eq("plan_id", planId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+    .limit(10);
+  pendingQuery = typeof creatorId === "string"
+    ? pendingQuery.eq("attributed_creator_id", creatorId)
+    : pendingQuery.is("attributed_creator_id", null);
+  const { data: pendingSubscriptions, error: pendingLookupError } = await pendingQuery;
+
+  if (pendingLookupError) {
+    return NextResponse.json({ error: "Não foi possível verificar uma contratação Premium em andamento. Tente novamente." }, { status: 503 });
+  }
+
+  let reusableOrderId: string | null = null;
+  let paymentInProgress = false;
+  for (const subscription of pendingSubscriptions ?? []) {
+    if (typeof subscription.order_id !== "string") continue;
+    const [{ data: candidateOrder, error: candidateOrderError }, { data: candidatePayment, error: candidatePaymentError }] = await Promise.all([
+      admin.from("orders").select("id,user_id,total,currency,status,metadata")
+        .eq("id", subscription.order_id).eq("user_id", user.id).maybeSingle(),
+      admin.from("payments").select("id,status,provider_payment_id,raw_reference")
+        .eq("order_id", subscription.order_id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    ]);
+    if (candidateOrderError || candidatePaymentError) {
+      return NextResponse.json({ error: "Não foi possível validar a contratação Premium em andamento." }, { status: 503 });
+    }
+    if (!candidateOrder || !candidatePayment || candidateOrder.status !== "awaiting_payment" ||
+        candidateOrder.metadata?.product_type !== "premium_subscription" ||
+        candidateOrder.metadata?.product_id !== planId ||
+        (candidateOrder.metadata?.attributed_creator_id ?? null) !== (typeof creatorId === "string" ? creatorId : null)) {
+      continue;
+    }
+    if (candidatePayment.status === "paid" || candidatePayment.provider_payment_id) {
+      paymentInProgress = true;
+      continue;
+    }
+    if (candidatePayment.status === "pending" && Number(candidateOrder.total) > 0 && candidateOrder.currency === "BRL") {
+      reusableOrderId = candidateOrder.id;
+      break;
+    }
+  }
+
+  if (reusableOrderId) {
+    intent = { order_id: reusableOrderId };
+  } else if (paymentInProgress) {
+    return NextResponse.json({ error: "Já existe um pagamento desta contratação em processamento. Aguarde a confirmação antes de tentar novamente." }, { status: 409 });
+  } else {
+    const result = await client.rpc("create_pecatho_customer_premium_checkout", {
+      p_plan_id: planId,
+      p_creator_id: typeof creatorId === "string" ? creatorId : null,
+    });
+    intent = result.data;
+    intentError = result.error;
+  }
   if (intentError || !intent || typeof intent.order_id !== "string") {
     const message = intentError?.message ?? "";
     const customerRequired = message.includes("CUSTOMER_ACCOUNT_REQUIRED");
