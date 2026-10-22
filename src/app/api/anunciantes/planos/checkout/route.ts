@@ -51,10 +51,45 @@ export async function POST(request: Request) {
     return NextResponse.json({ activated: true, publication: data }, { status: 201 });
   }
 
-  const { data: intent, error: intentError } = await client.rpc("create_pecatho_publication_checkout", {
-    p_plan_id: planId,
-    p_profile_id: profileId,
-  });
+  // Retoma o checkout pendente do mesmo plano/perfil após falha de rede ou retorno ao painel.
+  let intent: { order_id: string } | null = null;
+  let intentError: { message?: string } | null = null;
+  const { data: pendingOrders, error: pendingOrdersError } = await admin.from("orders")
+    .select("id,metadata")
+    .eq("user_id", user.id)
+    .eq("status", "awaiting_payment")
+    .contains("metadata", { product_type: "publication_plan", profile_id: profileId })
+    .order("created_at", { ascending: false })
+    .limit(5);
+  if (pendingOrdersError) {
+    return NextResponse.json({ error: "Não foi possível verificar uma contratação pendente. Tente novamente." }, { status: 503 });
+  }
+  const matchingPendingOrder = (pendingOrders ?? []).find((order) => order.metadata?.product_id === planId) ?? null;
+  if (matchingPendingOrder) {
+    const { data: pendingPayment, error: pendingPaymentError } = await admin.from("payments")
+      .select("status,provider_payment_id")
+      .eq("order_id", matchingPendingOrder.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (pendingPaymentError) {
+      return NextResponse.json({ error: "Não foi possível validar o pagamento pendente." }, { status: 503 });
+    }
+    if (!pendingPayment || pendingPayment.status === "paid" || pendingPayment.provider_payment_id) {
+      return NextResponse.json({ error: "Já existe um pagamento desta contratação em processamento. Aguarde a confirmação antes de tentar novamente." }, { status: 409 });
+    }
+    if (pendingPayment.status !== "pending") {
+      return NextResponse.json({ error: "O pagamento anterior não está disponível para retomada. Atualize o painel e verifique o status da contratação." }, { status: 409 });
+    }
+    intent = { order_id: matchingPendingOrder.id };
+  } else {
+    const result = await client.rpc("create_pecatho_publication_checkout", {
+      p_plan_id: planId,
+      p_profile_id: profileId,
+    });
+    intent = result.data;
+    intentError = result.error;
+  }
   if (intentError || !intent || typeof intent.order_id !== "string") {
     const message = intentError?.message ?? "";
     const status = message.includes("AUTHENTICATION_REQUIRED") ? 401
