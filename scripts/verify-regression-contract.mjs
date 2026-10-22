@@ -38,6 +38,16 @@ const checks = [
     ],
   },
   {
+    file: "supabase/migrations/20261022160000_enforce_customer_premium_checkout_audience.sql",
+    name: "Premium do cliente — bloquear planos de públicos profissionais no checkout",
+    required: [
+      "and audience = 'customer'",
+      "PREMIUM_PLAN_UNAVAILABLE",
+      "revoke all on function public.create_pecatho_customer_premium_checkout(uuid, uuid) from public, anon",
+      "grant execute on function public.create_pecatho_customer_premium_checkout(uuid, uuid) to authenticated, service_role",
+    ],
+  },
+  {
     file: "src/app/api/fans/payments/mercadopago/webhook/route.ts",
     name: "Premium do cliente — conciliação por webhook",
     required: [
