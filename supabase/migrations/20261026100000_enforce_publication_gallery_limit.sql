@@ -1,31 +1,4 @@
--- Snapshot the gallery entitlement when a publication becomes active.
--- Explicit JSON null means unlimited and must not fall back to the mutable plan row.
-create or replace function public.snapshot_publication_gallery_limit()
-returns trigger
-language plpgsql
-security definer
-set search_path = pg_catalog, public
-as $function$
-declare
-  v_limit integer;
-begin
-  select pp.max_gallery_items into v_limit
-  from public.publication_plans pp
-  where pp.id = new.plan_id;
-
-  new.plan_features_snapshot :=
-    jsonb_set(
-      coalesce(new.plan_features_snapshot, '{}'::jsonb),
-      '{max_gallery_items}',
-      coalesce(to_jsonb(v_limit), 'null'::jsonb),
-      true
-    );
-  return new;
-end;
-$function$;
-
-revoke all on function public.snapshot_publication_gallery_limit() from public, anon, authenticated;
-
+-- Attach the full feature-matrix snapshot function defined by the earlier migration.
 drop trigger if exists profile_publications_gallery_limit_snapshot on public.profile_publications;
 create trigger profile_publications_gallery_limit_snapshot
 before insert or update of plan_id
