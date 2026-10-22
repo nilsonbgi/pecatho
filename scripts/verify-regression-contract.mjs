@@ -62,7 +62,7 @@ const checks = [
     ],
   },
   {
-    file: "supabase/migrations/20261024120000_pecatho_affiliate_partial_refunds.sql",
+    file: "supabase/migrations/20261022143400_pecatho_affiliate_partial_refunds.sql",
     name: "Afiliados — reversão proporcional, acumulada e idempotente",
     required: [
       "ADD COLUMN IF NOT EXISTS refunded_amount",
