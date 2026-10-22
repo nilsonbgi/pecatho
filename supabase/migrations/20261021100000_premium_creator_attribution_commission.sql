@@ -12,7 +12,7 @@ create index if not exists pecatho_customer_premium_creator_attribution_idx
 
 drop function if exists public.create_pecatho_customer_premium_checkout(uuid);
 
-create function public.create_pecatho_customer_premium_checkout(
+create or replace function public.create_pecatho_customer_premium_checkout(
   p_plan_id uuid,
   p_creator_id uuid default null
 ) returns jsonb
