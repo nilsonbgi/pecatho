@@ -15,6 +15,7 @@ create index if not exists digital_content_sale_selections_buyer_idx
 alter table public.digital_content_sale_selections enable row level security;
 revoke all on public.digital_content_sale_selections from anon, authenticated;
 grant select on public.digital_content_sale_selections to authenticated;
+drop policy if exists digital_content_sale_selections_buyer_read on public.digital_content_sale_selections;
 create policy digital_content_sale_selections_buyer_read
   on public.digital_content_sale_selections for select to authenticated
   using (buyer_user_id = (select auth.uid()));
