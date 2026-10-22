@@ -1,22 +1,32 @@
 -- Expand publication-plan feature configuration without changing existing prices or plan assignments.
 -- New fields are optional for backward compatibility; old plans retain their current behavior.
-alter table public.publication_plans
-  add constraint publication_plans_feature_gallery_flags_check check (
-    (not (features ? 'photo_gallery') or jsonb_typeof(features->'photo_gallery') = 'boolean')
-    and (not (features ? 'video_gallery') or jsonb_typeof(features->'video_gallery') = 'boolean')
-    and (not (features ? 'featured_photo') or jsonb_typeof(features->'featured_photo') = 'boolean')
-    and (not (features ? 'featured_video') or jsonb_typeof(features->'featured_video') = 'boolean')
-    and (not (features ? 'highlight_card_photo') or jsonb_typeof(features->'highlight_card_photo') = 'boolean')
-    and (not (features ? 'advertiser_gallery') or jsonb_typeof(features->'advertiser_gallery') = 'boolean')
-    and (not (features ? 'profile_audio') or jsonb_typeof(features->'profile_audio') = 'boolean')
-    and (not (features ? 'allow_reviews') or jsonb_typeof(features->'allow_reviews') = 'boolean')
-    and (not (features ? 'allow_gifts') or jsonb_typeof(features->'allow_gifts') = 'boolean')
-    and (not (features ? 'max_photos') or features->'max_photos' = 'null'::jsonb or
-      (jsonb_typeof(features->'max_photos') = 'number' and (features->>'max_photos')::numeric between 1 and 500 and trunc((features->>'max_photos')::numeric) = (features->>'max_photos')::numeric))
-    and (not (features ? 'max_videos') or features->'max_videos' = 'null'::jsonb or
-      (jsonb_typeof(features->'max_videos') = 'number' and (features->>'max_videos')::numeric between 1 and 200 and trunc((features->>'max_videos')::numeric) = (features->>'max_videos')::numeric))
-  ) not valid;
-
+DO $migration$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.publication_plans'::regclass
+      AND conname = 'publication_plans_feature_gallery_flags_check'
+  ) THEN
+    alter table public.publication_plans
+      add constraint publication_plans_feature_gallery_flags_check check (
+        (not (features ? 'photo_gallery') or jsonb_typeof(features->'photo_gallery') = 'boolean')
+        and (not (features ? 'video_gallery') or jsonb_typeof(features->'video_gallery') = 'boolean')
+        and (not (features ? 'featured_photo') or jsonb_typeof(features->'featured_photo') = 'boolean')
+        and (not (features ? 'featured_video') or jsonb_typeof(features->'featured_video') = 'boolean')
+        and (not (features ? 'highlight_card_photo') or jsonb_typeof(features->'highlight_card_photo') = 'boolean')
+        and (not (features ? 'advertiser_gallery') or jsonb_typeof(features->'advertiser_gallery') = 'boolean')
+        and (not (features ? 'profile_audio') or jsonb_typeof(features->'profile_audio') = 'boolean')
+        and (not (features ? 'allow_reviews') or jsonb_typeof(features->'allow_reviews') = 'boolean')
+        and (not (features ? 'allow_gifts') or jsonb_typeof(features->'allow_gifts') = 'boolean')
+        and (not (features ? 'max_photos') or features->'max_photos' = 'null'::jsonb or
+          (jsonb_typeof(features->'max_photos') = 'number' and (features->>'max_photos')::numeric between 1 and 500 and trunc((features->>'max_photos')::numeric) = (features->>'max_photos')::numeric))
+        and (not (features ? 'max_videos') or features->'max_videos' = 'null'::jsonb or
+          (jsonb_typeof(features->'max_videos') = 'number' and (features->>'max_videos')::numeric between 1 and 200 and trunc((features->>'max_videos')::numeric) = (features->>'max_videos')::numeric))
+      ) not valid;
+    
+  END IF;
+END
+$migration$;
 alter table public.publication_plans
   validate constraint publication_plans_feature_gallery_flags_check;
 

@@ -12,7 +12,7 @@ create table if not exists public.partner_store_products (
   is_published boolean not null default false,
   sort_order integer not null default 0,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 create index if not exists partner_store_products_public_idx

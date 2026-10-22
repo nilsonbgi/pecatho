@@ -14,14 +14,12 @@ alter table public.digital_content_product_items
 
 alter table public.digital_content_product_items
   drop constraint if exists digital_content_product_items_video_processing_status_check;
-
 alter table public.digital_content_product_items
   add constraint digital_content_product_items_video_processing_status_check
   check (video_processing_status in ('not_required','not_configured','queued','processing','ready','failed'));
 
 alter table public.digital_content_product_items
   drop constraint if exists digital_content_product_items_dimensions_check;
-
 alter table public.digital_content_product_items
   add constraint digital_content_product_items_dimensions_check
   check ((width is null or width > 0) and (height is null or height > 0) and (duration_seconds is null or duration_seconds > 0));
