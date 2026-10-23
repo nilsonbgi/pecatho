@@ -115,6 +115,19 @@ const checks = [
     ],
   },
   {
+    file: "supabase/migrations/20261023190000_persist_provider_fees_across_checkout_settlements.sql",
+    name: "Checkout — persist provider fees across settlement RPCs",
+    required: [
+      "settle_digital_content_checkout",
+      "settle_fans_boost_checkout",
+      "settle_fans_checkout",
+      "settle_fans_live_extension_checkout",
+      "settle_profile_media_checkout",
+      "provider_fee=round(coalesce(p_provider_fee,0),2)",
+      "v_count <> 1",
+    ],
+  },
+  {
     file: "supabase/migrations/20261023180000_fix_affiliate_premium_net_revenue.sql",
     name: "Premium — persist provider fee and calculate affiliate revenue base correctly",
     required: [
