@@ -31,7 +31,7 @@ begin
   update public.orders set status='refunded',updated_at=now() where id=v_order.id;
   update public.pecatho_customer_premium_subscriptions set status=p_payment_status,updated_at=now() where id=v_subscription.id;
  else
-  update public.payments set provider=p_provider,provider_payment_id=p_provider_payment_id,status=p_payment_status,payment_method=p_payment_method,updated_at=now() where id=v_payment.id;
+  update public.payments set provider=p_provider,provider_payment_id=p_provider_payment_id,status=p_payment_status,payment_method=p_payment_method,provider_fee=round(coalesce(p_provider_fee,provider_fee,0),2),updated_at=now() where id=v_payment.id;
   update public.orders set status=case when p_payment_status='failed' then 'failed' when p_payment_status='cancelled' then 'cancelled' else 'awaiting_payment' end,updated_at=now() where id=v_order.id;
   update public.pecatho_customer_premium_subscriptions set status=case when p_payment_status in('failed','cancelled') then 'cancelled' else 'pending' end,updated_at=now() where id=v_subscription.id;
  end if;
