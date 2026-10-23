@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     locale: "pt_BR",
     title: "Conteúdos exclusivos — Pecatho",
     description: "Explore fotos, vídeos e pacotes digitais publicados por vendedores ativos no Pecatho. Confira os detalhes antes de comprar.",
-    url: "/conteudos",
+    url: `https://www.pecatho.com/conteudos`,
     siteName: "Pecatho",
   },
 };
