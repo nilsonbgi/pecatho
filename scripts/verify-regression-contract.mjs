@@ -124,6 +124,28 @@ const checks = [
     ],
   },
   {
+    file: "supabase/migrations/20261023120000_enforce_content_seller_contact_premium_gate.sql",
+    name: "Conteúdo — WhatsApp e telefone protegidos por entitlement Premium",
+    required: [
+      "private.get_public_advertiser_profile",
+      "fc.advertiser_profile_id = p.id",
+      "fc.status = 'active'",
+      "s.feature_flags -> 'private_seller_contact' = 'true'::jsonb",
+      "else null",
+    ],
+  },
+  {
+    file: "src/app/anunciantes/[slug]/page.tsx",
+    name: "Conteúdo — CTA Premium em vez de contato pessoal para não assinantes",
+    required: [
+      "premiumEntitlementLoaded",
+      "sellerContactRequiresPremium",
+      "setHasPrivateSellerContactPremium(canContactContentSeller)",
+      "Seja Premium",
+      "/painel/cliente#premium",
+    ],
+  },
+  {
     file: "src/app/anunciantes/page.tsx",
     name: "Catálogo público — filtros estruturados",
     required: [
