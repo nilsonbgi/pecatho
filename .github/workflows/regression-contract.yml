@@ -77,6 +77,8 @@ jobs:
           name: pecatho-npm-audit-report
           path: npm-audit.json
           if-no-files-found: ignore
+      - name: Enforce production dependency security
+        run: npm audit --omit=dev --audit-level=high
       - name: Build application
         run: npm run build
       - name: Install Chromium
