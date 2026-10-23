@@ -22,6 +22,23 @@ export async function POST(request: Request) {
   const { data: plan, error: planError } = await admin.from("publication_plans").select("id,name,price,active,free,audience").eq("id", planId).maybeSingle();
   if (planError) return NextResponse.json({ error: "Não foi possível validar o plano." }, { status: 503 });
   if (!plan || !plan.active) return NextResponse.json({ error: "Este plano não está mais disponível." }, { status: 409 });
+  if (plan.audience !== "content_seller" && plan.audience !== "both") {
+    return NextResponse.json({ error: "Este plano não é destinado a vendedores de conteúdo." }, { status: 409 });
+  }
+
+  // A retomada de um pedido pendente não pode contornar a validação de titularidade
+  // e situação atual do perfil que o RPC aplica ao criar um novo pedido.
+  const { data: creator, error: creatorError } = await admin
+    .from("fans_creators")
+    .select("id,user_id,status")
+    .eq("id", creatorId)
+    .maybeSingle();
+  if (creatorError) {
+    return NextResponse.json({ error: "Não foi possível validar o perfil de vendedor de conteúdo." }, { status: 503 });
+  }
+  if (!creator || creator.user_id !== user.id || creator.status !== "active") {
+    return NextResponse.json({ error: "O perfil não pertence à sua conta ou não está ativo." }, { status: 403 });
+  }
 
   if (plan.free) {
     const { data, error } = await client.rpc("activate_free_pecatho_creator_publication_plan", { p_plan_id: planId, p_creator_id: creatorId });
