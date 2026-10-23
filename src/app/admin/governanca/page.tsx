@@ -74,12 +74,16 @@ export default function GovernanceAdminPage(){
    const user=(await supabase.auth.getUser()).data.user;if(!user)throw new Error("Sessão expirada.");
    const until=decision.outcome==="temporary_suspension"?decision.suspension_until:null;
    if(decision.outcome==="temporary_suspension"&&!until)throw new Error("Defina a data final da suspensão temporária.");
-   const {error:insertError}=await supabase.from("governance_decisions").insert({report_id:selected.id,reviewer_user_id:user.id,outcome:decision.outcome,rationale:decision.rationale.trim(),suspension_until:until?new Date(until).toISOString():null});
-   if(insertError)throw insertError;
+   const {error:decisionError}=await supabase.rpc("record_governance_decision",{
+    p_report_id:selected.id,
+    p_reviewer_user_id:user.id,
+    p_outcome:decision.outcome,
+    p_rationale:decision.rationale.trim(),
+    p_suspension_until:until?new Date(until).toISOString():null
+   });
+   if(decisionError)throw decisionError;
    const nextStatus=decision.outcome==="no_action"?"rejected":"actioned";
-   const {error:updateError}=await supabase.from("governance_reports").update({status:nextStatus,decision_reason:decision.rationale.trim(),reviewer_user_id:user.id,decided_at:new Date().toISOString()}).eq("id",selected.id);
-   if(updateError)throw updateError;
-   setMessage("Decisão administrativa registrada com fundamentação. A decisão fica no histórico; a aplicação automática de suspensão à conta ainda exige integração com o mecanismo de status de contas existente.");
+   setMessage("Decisão registrada de forma transacional, com histórico de auditoria. A aplicação automática de suspensão à conta ainda depende da integração com o mecanismo central de status de usuários.");
    setSelected({...selected,status:nextStatus,decision_reason:decision.rationale.trim()});
    const {data:historyData,error:historyError}=await supabase.from("governance_decisions").select("id,outcome,rationale,suspension_until,created_at,reviewer_user_id").eq("report_id",selected.id).order("created_at",{ascending:false});
    if(historyError)setError(historyError.message);else setHistory((historyData||[]) as DecisionRecord[]);
