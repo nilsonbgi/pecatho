@@ -51,6 +51,35 @@ export async function POST(request: Request) {
     return NextResponse.json({ activated: true, publication: data }, { status: 201 });
   }
 
+  // O RPC valida titularidade e público do plano ao criar o pedido. A retomada
+  // de um pedido existente precisa repetir essas verificações no estado atual.
+  const { data: profile, error: profileError } = await admin
+    .from("advertiser_profiles")
+    .select("id,user_id")
+    .eq("id", profileId)
+    .maybeSingle();
+  if (profileError) {
+    return NextResponse.json({ error: "Não foi possível validar a titularidade do anúncio." }, { status: 503 });
+  }
+  if (!profile || profile.user_id !== user.id) {
+    return NextResponse.json({ error: "O anúncio não pertence à sua conta." }, { status: 403 });
+  }
+
+  const { data: linkedCreator, error: linkedCreatorError } = await admin
+    .from("fans_creators")
+    .select("id")
+    .eq("advertiser_profile_id", profileId)
+    .eq("status", "active")
+    .limit(1)
+    .maybeSingle();
+  if (linkedCreatorError) {
+    return NextResponse.json({ error: "Não foi possível validar o tipo de perfil para este plano." }, { status: 503 });
+  }
+  const expectedAudience = linkedCreator ? "content_seller" : "companion";
+  if (plan.audience !== "both" && plan.audience !== expectedAudience) {
+    return NextResponse.json({ error: "Este plano foi criado para outro tipo de perfil." }, { status: 409 });
+  }
+
   // Retoma o checkout pendente do mesmo plano/perfil após falha de rede ou retorno ao painel.
   let intent: { order_id: string } | null = null;
   let intentError: { message?: string } | null = null;
