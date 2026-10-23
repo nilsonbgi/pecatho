@@ -14,8 +14,8 @@ export async function GET() {
   const now = new Date().toISOString();
   const [{ data: initialPlans, error: initialPlansError }, { data: subscriptions, error: subscriptionsError }] = await Promise.all([
     admin.from("pecatho_customer_premium_plans")
-      .select("id,plan_key,name,description,price,currency,duration_days,discount_percent,benefits,sort_order,audience,feature_flags,card_style,badge_label")
-      .eq("audience", "customer").eq("active", true).in("duration_days", [30, 90, 180, 365]).order("sort_order", { ascending: true }).order("price", { ascending: true }),
+      .select("id,plan_key,name,description,price,currency,duration_days,discount_percent,billing_options,benefits,sort_order,audience,feature_flags,card_style,badge_label")
+      .eq("audience", "customer").eq("active", true).eq("duration_days", 30).order("sort_order", { ascending: true }).order("price", { ascending: true }),
     admin.from("pecatho_customer_premium_subscriptions")
       .select("id,plan_id,order_id,status,starts_at,ends_at,paid_amount,currency,created_at,feature_flags,card_style,badge_label,plan_name,duration_days,benefits,plan_description")
       .eq("user_id", user.id).in("status", ["active", "pending"])
@@ -25,7 +25,7 @@ export async function GET() {
   type CustomerPremiumPlanRows = NonNullable<typeof initialPlans>;
   let plans: CustomerPremiumPlanRows = initialPlans ?? [];
   if (initialPlansError) {
-    const missingDiscountColumn = /discount_percent|column .* does not exist|schema cache/i.test(initialPlansError.message ?? "");
+    const missingDiscountColumn = /discount_percent|billing_options|column .* does not exist|schema cache/i.test(initialPlansError.message ?? "");
     if (!missingDiscountColumn) {
       return NextResponse.json({ error: "Não foi possível carregar os dados do Premium. Confirme se a migração de banco foi aplicada." }, { status: 503 });
     }
@@ -69,10 +69,12 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => null);
   const planId = body?.plan_id;
+  const durationDays = body?.duration_days;
   const creatorId = body?.creator_id;
   if (typeof planId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(planId)) {
     return NextResponse.json({ error: "Selecione um plano Premium válido." }, { status: 400 });
   }
+  if (![30, 90, 180, 365].includes(durationDays)) return NextResponse.json({ error: "Selecione um período Premium válido." }, { status: 400 });
   if (creatorId !== undefined && (typeof creatorId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(creatorId))) {
     return NextResponse.json({ error: "Origem do perfil inválida. Abra novamente o perfil do vendedor." }, { status: 400 });
   }
@@ -92,9 +94,10 @@ export async function POST(request: Request) {
   let intentError: { message?: string } | null = null;
 
   let pendingQuery = admin.from("pecatho_customer_premium_subscriptions")
-    .select("id,plan_id,order_id,attributed_creator_id,status")
+    .select("id,plan_id,order_id,attributed_creator_id,status,duration_days")
     .eq("user_id", user.id)
     .eq("plan_id", planId)
+    .eq("duration_days", durationDays)
     .eq("status", "pending")
     .order("created_at", { ascending: false })
     .limit(10);
@@ -123,6 +126,7 @@ export async function POST(request: Request) {
     if (!candidateOrder || !candidatePayment || candidateOrder.status !== "awaiting_payment" ||
         candidateOrder.metadata?.product_type !== "premium_subscription" ||
         candidateOrder.metadata?.product_id !== planId ||
+        Number(candidateOrder.metadata?.duration_days) !== durationDays ||
         (candidateOrder.metadata?.attributed_creator_id ?? null) !== (typeof creatorId === "string" ? creatorId : null)) {
       continue;
     }
@@ -144,6 +148,7 @@ export async function POST(request: Request) {
     const result = await client.rpc("create_pecatho_customer_premium_checkout", {
       p_plan_id: planId,
       p_creator_id: typeof creatorId === "string" ? creatorId : null,
+      p_duration_days: durationDays,
     });
     intent = result.data;
     intentError = result.error;
@@ -152,16 +157,19 @@ export async function POST(request: Request) {
     const message = intentError?.message ?? "";
     const customerRequired = message.includes("CUSTOMER_ACCOUNT_REQUIRED");
     const unavailable = message.includes("PREMIUM_PLAN_UNAVAILABLE");
+    const termUnavailable = message.includes("PREMIUM_BILLING_TERM_NOT_CONFIGURED") || message.includes("PREMIUM_DURATION_INVALID");
     const invalidAttribution = message.includes("PREMIUM_ATTRIBUTION_CREATOR_INVALID");
     return NextResponse.json({
       error: customerRequired
         ? "O Premium está disponível para contas de cliente."
-        : unavailable
+        : termUnavailable
+          ? "Este período ainda não está configurado para contratação."
+          : unavailable
           ? "Este plano não está mais disponível."
           : invalidAttribution
             ? "O perfil de origem não está mais disponível para atribuição."
             : "Não foi possível iniciar a contratação. Confirme se a migration de atribuição Premium foi aplicada.",
-    }, { status: customerRequired ? 403 : unavailable || invalidAttribution ? 409 : 503 });
+    }, { status: customerRequired ? 403 : unavailable || invalidAttribution || termUnavailable ? 409 : 503 });
   }
 
   const { data: order, error: orderError } = await admin
