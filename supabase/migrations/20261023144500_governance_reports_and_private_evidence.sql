@@ -1,7 +1,7 @@
 -- Habilita a central de governança usada por /painel/seguranca e /admin/governanca.
 -- Evidências permanecem privadas e só podem ser lidas pelo denunciante e pela equipe autorizada.
 
-create table public.governance_reports (
+create table if not exists public.governance_reports (
   id uuid primary key default gen_random_uuid(),
   reporter_user_id uuid not null references public.profiles(id) on delete restrict,
   target_user_id uuid not null references public.profiles(id) on delete restrict,
@@ -16,11 +16,11 @@ create table public.governance_reports (
   constraint governance_reports_not_self_reported check (reporter_user_id <> target_user_id)
 );
 
-create index governance_reports_status_created_idx on public.governance_reports(status, created_at);
-create index governance_reports_reporter_created_idx on public.governance_reports(reporter_user_id, created_at desc);
-create index governance_reports_target_created_idx on public.governance_reports(target_user_id, created_at desc);
+create index if not exists governance_reports_status_created_idx on public.governance_reports(status, created_at);
+create index if not exists governance_reports_reporter_created_idx on public.governance_reports(reporter_user_id, created_at desc);
+create index if not exists governance_reports_target_created_idx on public.governance_reports(target_user_id, created_at desc);
 
-create table public.governance_evidence (
+create table if not exists public.governance_evidence (
   id uuid primary key default gen_random_uuid(),
   report_id uuid not null references public.governance_reports(id) on delete cascade,
   uploader_user_id uuid not null references public.profiles(id) on delete restrict,
@@ -32,9 +32,9 @@ create table public.governance_evidence (
   created_at timestamptz not null default now()
 );
 
-create index governance_evidence_report_created_idx on public.governance_evidence(report_id, created_at);
+create index if not exists governance_evidence_report_created_idx on public.governance_evidence(report_id, created_at);
 
-create table public.governance_decisions (
+create table if not exists public.governance_decisions (
   id uuid primary key default gen_random_uuid(),
   report_id uuid not null references public.governance_reports(id) on delete restrict,
   reviewer_user_id uuid not null references public.profiles(id) on delete restrict,
@@ -45,9 +45,9 @@ create table public.governance_decisions (
   constraint governance_decisions_temporary_suspension_date check (outcome <> 'temporary_suspension' or suspension_until is not null)
 );
 
-create index governance_decisions_report_created_idx on public.governance_decisions(report_id, created_at desc);
+create index if not exists governance_decisions_report_created_idx on public.governance_decisions(report_id, created_at desc);
 
-create table public.governance_user_blocks (
+create table if not exists public.governance_user_blocks (
   id uuid primary key default gen_random_uuid(),
   blocker_user_id uuid not null references public.profiles(id) on delete cascade,
   blocked_user_id uuid not null references public.profiles(id) on delete restrict,
@@ -57,13 +57,14 @@ create table public.governance_user_blocks (
   constraint governance_user_blocks_unique_pair unique (blocker_user_id, blocked_user_id)
 );
 
-create index governance_user_blocks_blocked_idx on public.governance_user_blocks(blocked_user_id);
+create index if not exists governance_user_blocks_blocked_idx on public.governance_user_blocks(blocked_user_id);
 
 alter table public.governance_reports enable row level security;
 alter table public.governance_evidence enable row level security;
 alter table public.governance_decisions enable row level security;
 alter table public.governance_user_blocks enable row level security;
 
+drop policy if exists governance_reports_read_reporter_or_staff on public.governance_reports;
 create policy governance_reports_read_reporter_or_staff
   on public.governance_reports for select to authenticated
   using (
@@ -75,6 +76,7 @@ create policy governance_reports_read_reporter_or_staff
     )
   );
 
+drop policy if exists governance_reports_submit_own on public.governance_reports;
 create policy governance_reports_submit_own
   on public.governance_reports for insert to authenticated
   with check (
@@ -85,6 +87,7 @@ create policy governance_reports_submit_own
     and decided_at is null
   );
 
+drop policy if exists governance_reports_update_staff on public.governance_reports;
 create policy governance_reports_update_staff
   on public.governance_reports for update to authenticated
   using (
@@ -102,6 +105,7 @@ create policy governance_reports_update_staff
     )
   );
 
+drop policy if exists governance_evidence_read_reporter_or_staff on public.governance_evidence;
 create policy governance_evidence_read_reporter_or_staff
   on public.governance_evidence for select to authenticated
   using (
@@ -119,6 +123,7 @@ create policy governance_evidence_read_reporter_or_staff
     )
   );
 
+drop policy if exists governance_evidence_add_to_own_report on public.governance_evidence;
 create policy governance_evidence_add_to_own_report
   on public.governance_evidence for insert to authenticated
   with check (
@@ -129,6 +134,7 @@ create policy governance_evidence_add_to_own_report
     )
   );
 
+drop policy if exists governance_decisions_read_staff on public.governance_decisions;
 create policy governance_decisions_read_staff
   on public.governance_decisions for select to authenticated
   using (
@@ -139,6 +145,7 @@ create policy governance_decisions_read_staff
     )
   );
 
+drop policy if exists governance_decisions_add_staff on public.governance_decisions;
 create policy governance_decisions_add_staff
   on public.governance_decisions for insert to authenticated
   with check (
@@ -150,10 +157,12 @@ create policy governance_decisions_add_staff
     )
   );
 
+drop policy if exists governance_user_blocks_read_own on public.governance_user_blocks;
 create policy governance_user_blocks_read_own
   on public.governance_user_blocks for select to authenticated
   using (blocker_user_id = (select auth.uid()));
 
+drop policy if exists governance_user_blocks_add_own on public.governance_user_blocks;
 create policy governance_user_blocks_add_own
   on public.governance_user_blocks for insert to authenticated
   with check (
@@ -161,6 +170,7 @@ create policy governance_user_blocks_add_own
     and blocked_user_id <> (select auth.uid())
   );
 
+drop policy if exists governance_user_blocks_remove_own on public.governance_user_blocks;
 create policy governance_user_blocks_remove_own
   on public.governance_user_blocks for delete to authenticated
   using (blocker_user_id = (select auth.uid()));
@@ -178,6 +188,7 @@ set name = excluded.name,
     file_size_limit = excluded.file_size_limit,
     allowed_mime_types = excluded.allowed_mime_types;
 
+drop policy if exists governance_evidence_storage_upload_own_report on storage.objects;
 create policy governance_evidence_storage_upload_own_report
   on storage.objects for insert to authenticated
   with check (
@@ -190,6 +201,7 @@ create policy governance_evidence_storage_upload_own_report
     )
   );
 
+drop policy if exists governance_evidence_storage_read_reporter_or_staff on storage.objects;
 create policy governance_evidence_storage_read_reporter_or_staff
   on storage.objects for select to authenticated
   using (
