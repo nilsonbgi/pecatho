@@ -56,6 +56,10 @@ const checks = [
       "pendingPayment.provider_payment_id",
       'intent = { order_id: matchingPendingOrder.id }',
       "create_pecatho_publication_checkout",
+      '.from("advertiser_profiles")',
+      'profile.user_id !== user.id',
+      '.from("fans_creators")',
+      'plan.audience !== "both" && plan.audience !== expectedAudience',
     ],
   },
   {
