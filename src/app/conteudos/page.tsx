@@ -1,6 +1,21 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPublicDigitalContentCover } from "@/lib/digital-content/public-cover";
+
+export const metadata: Metadata = {
+  title: "Conteúdos exclusivos — Pecatho",
+  description: "Explore fotos, vídeos e pacotes digitais publicados por vendedores ativos no Pecatho. Confira os detalhes antes de comprar.",
+  alternates: { canonical: "/conteudos" },
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    title: "Conteúdos exclusivos — Pecatho",
+    description: "Explore fotos, vídeos e pacotes digitais publicados por vendedores ativos no Pecatho. Confira os detalhes antes de comprar.",
+    url: "/conteudos",
+    siteName: "Pecatho",
+  },
+};
 
 export const dynamic = "force-dynamic";
 
