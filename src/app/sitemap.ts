@@ -9,6 +9,20 @@ type PublishedProfile = {
   updated_at: string | null;
 };
 
+type PublicPartner = {
+  slug: string | null;
+  updated_at?: string | null;
+};
+
+async function getPublicPartnerSlugs(): Promise<PublicPartner[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_public_partner_venues", { p_slug: null });
+
+  if (error || !data?.length) return [];
+
+  return (data as PublicPartner[]).filter((partner) => Boolean(partner.slug));
+}
+
 async function getPublishedProfiles(): Promise<PublishedProfile[]> {
   const supabase = await createClient();
   const profiles: PublishedProfile[] = [];
@@ -37,7 +51,10 @@ async function getPublishedProfiles(): Promise<PublishedProfile[]> {
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
-  const profiles = await getPublishedProfiles();
+  const [profiles, partners] = await Promise.all([
+    getPublishedProfiles(),
+    getPublicPartnerSlugs(),
+  ]);
 
   return [
     {
@@ -65,6 +82,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.9,
+    },
+    {
+      url: `${siteUrl}/parceiros`,
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.85,
+    },
+    ...partners.map((partner) => ({
+      url: `${siteUrl}/parceiros/${encodeURIComponent(partner.slug as string)}`,
+      lastModified: partner.updated_at ? new Date(partner.updated_at) : now,
+      changeFrequency: "daily" as const,
+      priority: 0.75,
+    })),
+    {
+      url: `${siteUrl}/conteudos`,
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.8,
+    },
+    {
+      url: `${siteUrl}/como-funciona`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.6,
     },
     {
       url: `${siteUrl}/login`,
