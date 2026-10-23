@@ -121,6 +121,7 @@ const checks = [
       "o Premium só é ativado depois que o Pecatho confirma o pagamento",
       "Seu Premium está ativo",
       "Não há renovação automática habilitada.",
+      "const billingMonths = durationDays === 365 ? 12 : durationDays / 30;",
     ],
   },
   {
