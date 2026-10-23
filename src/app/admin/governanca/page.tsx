@@ -34,11 +34,15 @@ export default function GovernanceAdminPage(){
  useEffect(()=>{(async()=>{const {data:{user}}=await supabase.auth.getUser();if(!user){setAuthorized(false);return;}const {data:role,error:roleError}=await supabase.from("user_roles").select("role").eq("user_id",user.id).in("role",["super_admin","admin","moderator","support"]).limit(1).maybeSingle();if(roleError){setError(roleError.message);setAuthorized(false);return;}setAuthorized(Boolean(role));if(role)await load();})();},[]);
  async function openReport(report:Report){
   setSelected(report);setEvidence([]);setError("");setMessage("");
-  const {data,error:evidenceError}=await supabase.from("governance_evidence").select("id,storage_path,original_filename,mime_type,size_bytes").eq("report_id",report.id).order("created_at");
+  const [{data,error:evidenceError},{data:historyData,error:historyError}]=await Promise.all([
+   supabase.from("governance_evidence").select("id,storage_path,original_filename,mime_type,size_bytes").eq("report_id",report.id).order("created_at"),
+   supabase.from("governance_decisions").select("id,outcome,rationale,suspension_until,created_at,reviewer_user_id").eq("report_id",report.id).order("created_at",{ascending:false}),
+  ]);
   if(evidenceError){setError(evidenceError.message);return;}
+  if(historyError){setError(historyError.message);return;}
   const list=(data||[]) as Evidence[];
   const signed=await Promise.all(list.map(async item=>{const {data:result,error}=await supabase.storage.from("governance-evidence").createSignedUrl(item.storage_path,300);return {...item,url:error?undefined:result?.signedUrl};}));
-  setEvidence(signed);setStatus(report.status==="submitted"?"under_review":report.status);
+  setEvidence(signed);setHistory((historyData||[]) as DecisionRecord[]);setStatus(report.status==="submitted"?"under_review":report.status);
  }
  async function saveStatus(){
   if(!selected)return;setBusy(true);setError("");setMessage("");
@@ -59,7 +63,10 @@ export default function GovernanceAdminPage(){
    const {error:updateError}=await supabase.from("governance_reports").update({status:nextStatus,decision_reason:decision.rationale.trim(),reviewer_user_id:user.id,decided_at:new Date().toISOString()}).eq("id",selected.id);
    if(updateError)throw updateError;
    setMessage("Decisão administrativa registrada com fundamentação. A decisão fica no histórico; a aplicação automática de suspensão à conta ainda exige integração com o mecanismo de status de contas existente.");
-   setSelected({...selected,status:nextStatus,decision_reason:decision.rationale.trim()});await load();
+   setSelected({...selected,status:nextStatus,decision_reason:decision.rationale.trim()});
+   const {data:historyData,error:historyError}=await supabase.from("governance_decisions").select("id,outcome,rationale,suspension_until,created_at,reviewer_user_id").eq("report_id",selected.id).order("created_at",{ascending:false});
+   if(historyError)setError(historyError.message);else setHistory((historyData||[]) as DecisionRecord[]);
+   await load();
   }catch(err){setError(err instanceof Error?err.message:"Não foi possível salvar a decisão.");}
   finally{setBusy(false);}
  }
