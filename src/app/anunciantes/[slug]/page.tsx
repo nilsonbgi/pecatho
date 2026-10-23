@@ -208,7 +208,9 @@ export default function PublicAdvertiserPage() {
   const publicImages = media.filter((item) => item.kind === "image" && item.show_in_gallery !== false).length;
   const publicVideos = media.filter((item) => item.kind === "video" && item.show_in_gallery !== false).length;
   const exclusiveMediaCount = media.filter((item) => item.access_type === "paid" && item.show_in_gallery !== false).length;
-  const socialLinks = Object.entries(profile?.social_links || {}).map(([label, value]) => { const url = safeExternalUrl(value); return url ? [label, url] as const : null; }).filter((entry): entry is readonly [string, string] => entry !== null);
+  const sellerContactRequiresPremium = Boolean(fans && !profile?.is_owner && (!premiumEntitlementLoaded || !hasPrivateSellerContactPremium));
+  const premiumContactHref = currentUserId ? "/painel/cliente#premium" : `/login?next=${encodeURIComponent("/painel/cliente#premium")}`;
+  const socialLinks = Object.entries(profile?.social_links || {}).map(([label, value]) => { const url = safeExternalUrl(value); return url ? [label, url] as const : null; }).filter((entry): entry is readonly [string, string] => entry !== null && (!sellerContactRequiresPremium || !/whats?app|wa\\.me/i.test(`${entry[0]} ${entry[1]}`)));
   const paymentMethods = (() => {
     const methods = profile?.payment_options?.methods;
     return methods && typeof methods === "object" && !Array.isArray(methods)
@@ -216,8 +218,6 @@ export default function PublicAdvertiserPage() {
       : [];
   })();
   const paymentLabels: Record<string, string> = { pix: "PIX", dinheiro: "Dinheiro", cartao_credito: "Cartão de crédito", cartao_debito: "Cartão de débito", transferencia: "Transferência bancária", outro: "Outro meio de pagamento" };
-  const sellerContactRequiresPremium = Boolean(fans && !profile?.is_owner && (!premiumEntitlementLoaded || !hasPrivateSellerContactPremium));
-  const premiumContactHref = currentUserId ? "/painel/cliente#premium" : `/login?next=${encodeURIComponent("/painel/cliente#premium")}`;
   const whatsappContact = sellerContactRequiresPremium ? "" : contactDigits(profile?.whatsapp);
   const whatsappUrl = (message: string) => whatsappContact ? `https://wa.me/${whatsappContact}?text=${encodeURIComponent(message)}` : null;
   const phoneContact = sellerContactRequiresPremium ? "" : contactDigits(profile?.phone);
@@ -413,7 +413,7 @@ export default function PublicAdvertiserPage() {
 
       <section className="advertiserCommercialStrip" style={{ marginTop: 18, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))", gap: 12 }}>
         <article className="card" style={{ padding: 18, border: "1px solid rgba(124,58,237,.12)", background: "linear-gradient(135deg,rgba(124,58,237,.07),rgba(255,255,255,.98))" }}>
-          <div className="eyebrow">ATENDIMENTO</div><strong style={{ display: "block", fontSize: 20, marginTop: 5 }}>{profile.availability ? "Agenda informada" : "Consulte a disponibilidade"}</strong><p style={{ margin: "7px 0 12px", color: "#64748b", lineHeight: 1.5 }}>{profile.availability || "Fale diretamente com a anunciante para confirmar horários e condições."}</p>
+          <div className="eyebrow">ATENDIMENTO</div><strong style={{ display: "block", fontSize: 20, marginTop: 5 }}>{profile.availability ? "Agenda informada" : "Consulte a disponibilidade"}</strong><p style={{ margin: "7px 0 12px", color: "#64748b", lineHeight: 1.5 }}>{sellerContactRequiresPremium ? "O contato pessoal deste vendedor de conteúdo é um benefício exclusivo de clientes Premium." : profile.availability || "Fale diretamente com a anunciante para confirmar horários e condições."}</p>
           {sellerContactRequiresPremium ? <a href={premiumContactHref} className="secondaryButton" style={{ textDecoration: "none" }}>Seja Premium</a> : whatsappContact ? <a href={whatsappUrl("Olá! Encontrei seu perfil no Pecatho e gostaria de consultar sua disponibilidade. Este contato ocorreu por intermédio do Pecatho.") || "#"} target="_blank" rel="noreferrer" className="secondaryButton" style={{ textDecoration: "none" }}>Consultar disponibilidade</a> : <button type="button" className="secondaryButton" onClick={() => void startConversation("Olá! Gostaria de consultar sua disponibilidade. Este contato ocorreu por intermédio do Pecatho.")} disabled={conversationBusy}>Consultar disponibilidade</button>}
         </article>
         <article className="card" style={{ padding: 18, border: "1px solid rgba(231,195,63,.28)", background: "linear-gradient(135deg,rgba(231,195,63,.10),rgba(255,255,255,.98))" }}>
@@ -481,7 +481,7 @@ export default function PublicAdvertiserPage() {
 
       {paymentMethods.length > 0 && <section className="profilePayment card"><div className="eyebrow">PAGAMENTO DIRETO</div><h2>Formas de pagamento</h2><p>Os serviços de acompanhante são negociados diretamente entre cliente e acompanhante. O Pecatho não realiza a cobrança antecipada desses serviços.</p><div className="paymentChips">{paymentMethods.map((key) => <span key={key}>✓ {paymentLabels[key] || key}</span>)}</div></section>}
 
-      {(whatsappContact || phoneContact || profile.positioning) && <section className="profileContact card"><div className="eyebrow">CONTATO</div><h2>Contato e atendimento</h2>{profile.positioning && <p>{profile.positioning}</p>}<div className="profileContactActions" style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 16 }}>{whatsappContact && <a href={`https://wa.me/${whatsappContact}`} target="_blank" rel="noreferrer" className="primaryButton">◉ WhatsApp</a>}{phoneContact && <a href={`tel:+${phoneContact}`} className="secondaryButton">☎ Ligar</a>}</div><small style={{ display: "block", marginTop: 14, color: "#777168", lineHeight: 1.5 }}>Os canais acima foram informados pela própria acompanhante e ficam sujeitos às regras de uso do Pecatho.</small></section>}
+      {(whatsappContact || phoneContact || profile.positioning) && <section className="profileContact card"><div className="eyebrow">CONTATO</div><h2>Contato e atendimento</h2>{profile.positioning && <p>{profile.positioning}</p>}<div className="profileContactActions" style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 16 }}>{sellerContactRequiresPremium && <a href={premiumContactHref} className="primaryButton" style={{ textDecoration: "none" }}>Seja Premium</a>}{whatsappContact && <a href={`https://wa.me/${whatsappContact}`} target="_blank" rel="noreferrer" className="primaryButton">◉ WhatsApp</a>}{phoneContact && <a href={`tel:+${phoneContact}`} className="secondaryButton">☎ Ligar</a>}</div><small style={{ display: "block", marginTop: 14, color: "#777168", lineHeight: 1.5 }}>Os canais acima foram informados pela própria acompanhante e ficam sujeitos às regras de uso do Pecatho.</small></section>}
 
       {profile.availability && <section className="profileAvailability card"><div className="eyebrow">DISPONIBILIDADE</div><h2>Horários de atendimento</h2><p>{profile.availability}</p></section>}
 
