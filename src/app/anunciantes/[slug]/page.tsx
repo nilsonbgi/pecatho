@@ -84,6 +84,8 @@ export default function PublicAdvertiserPage() {
   const [followBusy, setFollowBusy] = useState(false);
   const [followNotice, setFollowNotice] = useState("");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [hasPrivateSellerContactPremium, setHasPrivateSellerContactPremium] = useState(false);
+  const [premiumEntitlementLoaded, setPremiumEntitlementLoaded] = useState(false);
   const [conversationBusy, setConversationBusy] = useState(false);
   const [conversationNotice, setConversationNotice] = useState("");
   const ageVerified = useSyncExternalStore(subscribeToAgeVerification, getAgeVerificationSnapshot, () => false);
@@ -118,6 +120,13 @@ export default function PublicAdvertiserPage() {
 
   useEffect(() => {
     let active = true;
+    setLoading(true);
+    setError("");
+    setProfile(null);
+    setFans(null);
+    setCurrentUserId(null);
+    setHasPrivateSellerContactPremium(false);
+    setPremiumEntitlementLoaded(false);
     const supabase = createClient();
     (async () => {
       const { data: p, error: profileError } = await supabase
@@ -168,8 +177,25 @@ export default function PublicAdvertiserPage() {
       }
       if (authData.user && !typed.is_owner) {
         if (active) setCurrentUserId(authData.user.id);
+        let canContactContentSeller = false;
+        try {
+          const premiumResponse = await fetch("/api/cliente/premium", { cache: "no-store" });
+          if (premiumResponse.ok) {
+            const premiumPayload = await premiumResponse.json();
+            canContactContentSeller = premiumPayload?.current?.feature_flags?.private_seller_contact === true;
+          }
+        } catch (premiumError) {
+          console.error("Falha ao validar o benefício Premium de contato", premiumError);
+        }
+        if (active) {
+          setHasPrivateSellerContactPremium(canContactContentSeller);
+          setPremiumEntitlementLoaded(true);
+        }
         const { data: followRow } = await supabase.from("user_follows").select("profile_id").eq("follower_id", authData.user.id).eq("profile_id", typed.id).maybeSingle();
         if (active) setFollowing(Boolean(followRow));
+      } else if (active) {
+        setHasPrivateSellerContactPremium(false);
+        setPremiumEntitlementLoaded(true);
       }
     })().catch((err) => { console.error(err); if (active) { setError("Não foi possível carregar este perfil."); setLoading(false); } });
     return () => { active = false; };
@@ -190,9 +216,11 @@ export default function PublicAdvertiserPage() {
       : [];
   })();
   const paymentLabels: Record<string, string> = { pix: "PIX", dinheiro: "Dinheiro", cartao_credito: "Cartão de crédito", cartao_debito: "Cartão de débito", transferencia: "Transferência bancária", outro: "Outro meio de pagamento" };
-  const whatsappContact = contactDigits(profile?.whatsapp);
+  const sellerContactRequiresPremium = Boolean(fans && !profile?.is_owner && (!premiumEntitlementLoaded || !hasPrivateSellerContactPremium));
+  const premiumContactHref = currentUserId ? "/painel/cliente#premium" : `/login?next=${encodeURIComponent("/painel/cliente#premium")}`;
+  const whatsappContact = sellerContactRequiresPremium ? "" : contactDigits(profile?.whatsapp);
   const whatsappUrl = (message: string) => whatsappContact ? `https://wa.me/${whatsappContact}?text=${encodeURIComponent(message)}` : null;
-  const phoneContact = contactDigits(profile?.phone);
+  const phoneContact = sellerContactRequiresPremium ? "" : contactDigits(profile?.phone);
   const age = profile?.age_years ?? null;
   const visibleAttributeRows = attributes.map((attribute) => ({ attribute, value: attributeValues.find((entry) => entry.attribute_id === attribute.id)?.value })).filter(({ value }) => labelValue(value));
   const selectedServices = services
@@ -386,13 +414,13 @@ export default function PublicAdvertiserPage() {
       <section className="advertiserCommercialStrip" style={{ marginTop: 18, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))", gap: 12 }}>
         <article className="card" style={{ padding: 18, border: "1px solid rgba(124,58,237,.12)", background: "linear-gradient(135deg,rgba(124,58,237,.07),rgba(255,255,255,.98))" }}>
           <div className="eyebrow">ATENDIMENTO</div><strong style={{ display: "block", fontSize: 20, marginTop: 5 }}>{profile.availability ? "Agenda informada" : "Consulte a disponibilidade"}</strong><p style={{ margin: "7px 0 12px", color: "#64748b", lineHeight: 1.5 }}>{profile.availability || "Fale diretamente com a anunciante para confirmar horários e condições."}</p>
-          {whatsappContact ? <a href={whatsappUrl("Olá! Encontrei seu perfil no Pecatho e gostaria de consultar sua disponibilidade. Este contato ocorreu por intermédio do Pecatho.") || "#"} target="_blank" rel="noreferrer" className="secondaryButton" style={{ textDecoration: "none" }}>Consultar disponibilidade</a> : <button type="button" className="secondaryButton" onClick={() => void startConversation("Olá! Gostaria de consultar sua disponibilidade. Este contato ocorreu por intermédio do Pecatho.")} disabled={conversationBusy}>Consultar disponibilidade</button>}
+          {sellerContactRequiresPremium ? <a href={premiumContactHref} className="secondaryButton" style={{ textDecoration: "none" }}>Seja Premium</a> : whatsappContact ? <a href={whatsappUrl("Olá! Encontrei seu perfil no Pecatho e gostaria de consultar sua disponibilidade. Este contato ocorreu por intermédio do Pecatho.") || "#"} target="_blank" rel="noreferrer" className="secondaryButton" style={{ textDecoration: "none" }}>Consultar disponibilidade</a> : <button type="button" className="secondaryButton" onClick={() => void startConversation("Olá! Gostaria de consultar sua disponibilidade. Este contato ocorreu por intermédio do Pecatho.")} disabled={conversationBusy}>Consultar disponibilidade</button>}
         </article>
         <article className="card" style={{ padding: 18, border: "1px solid rgba(231,195,63,.28)", background: "linear-gradient(135deg,rgba(231,195,63,.10),rgba(255,255,255,.98))" }}>
           <div className="eyebrow">VALORES</div><strong style={{ display: "block", fontSize: 20, marginTop: 5 }}>{validPrices.length > 0 ? "A partir de " + brl(Number(validPrices[0].price)) : "Valores sob consulta"}</strong><p style={{ margin: "7px 0 12px", color: "#64748b", lineHeight: 1.5 }}>{validPrices.length > 0 ? validPrices.length + " período(s) informado(s). Confira os valores e condições abaixo." : "Consulte diretamente a anunciante sobre os períodos disponíveis."}</p><a href="#valores" className="secondaryButton" style={{ textDecoration: "none" }}>Ver valores</a>
         </article>
         <article className="card" style={{ padding: 18, border: "1px solid rgba(15,23,42,.08)", background: "#fff" }}>
-          <div className="eyebrow">CONTATO</div><strong style={{ display: "block", fontSize: 20, marginTop: 5 }}>{whatsappContact ? "WhatsApp disponível" : "Atendimento pelo Pecatho"}</strong><p style={{ margin: "7px 0 12px", color: "#64748b", lineHeight: 1.5 }}>O primeiro contato informa que você chegou até este anúncio por intermédio do Pecatho.</p>{whatsappContact ? <a href={whatsappUrl("Olá! Encontrei seu perfil no Pecatho e gostaria de conversar sobre os serviços anunciados. Este contato ocorreu por intermédio do Pecatho.") || "#"} target="_blank" rel="noreferrer" className="primaryButton" style={{ textDecoration: "none" }}>Falar pelo WhatsApp</a> : <button type="button" className="primaryButton" onClick={() => void startConversation("Olá! Encontrei seu perfil no Pecatho e gostaria de conversar sobre os serviços anunciados. Este contato ocorreu por intermédio do Pecatho.")} disabled={conversationBusy}>{conversationBusy ? "Abrindo conversa..." : "Enviar mensagem"}</button>}
+          <div className="eyebrow">CONTATO</div><strong style={{ display: "block", fontSize: 20, marginTop: 5 }}>{whatsappContact ? "WhatsApp disponível" : "Atendimento pelo Pecatho"}</strong><p style={{ margin: "7px 0 12px", color: "#64748b", lineHeight: 1.5 }}>O primeiro contato informa que você chegou até este anúncio por intermédio do Pecatho.</p>{sellerContactRequiresPremium ? <a href={premiumContactHref} className="primaryButton" style={{ textDecoration: "none" }}>Seja Premium</a> : whatsappContact ? <a href={whatsappUrl("Olá! Encontrei seu perfil no Pecatho e gostaria de conversar sobre os serviços anunciados. Este contato ocorreu por intermédio do Pecatho.") || "#"} target="_blank" rel="noreferrer" className="primaryButton" style={{ textDecoration: "none" }}>Falar pelo WhatsApp</a> : <button type="button" className="primaryButton" onClick={() => void startConversation("Olá! Encontrei seu perfil no Pecatho e gostaria de conversar sobre os serviços anunciados. Este contato ocorreu por intermédio do Pecatho.")} disabled={conversationBusy}>{conversationBusy ? "Abrindo conversa..." : "Enviar mensagem"}</button>}
         </article>
       </section>
 
@@ -435,7 +463,7 @@ export default function PublicAdvertiserPage() {
             <h2>Serviços e modalidades</h2>
             <p>Veja o que esta acompanhante disponibiliza e inicie o atendimento diretamente pelo Pecatho.</p>
           </div>
-          {whatsappContact ? <a href={whatsappUrl("Olá! Encontrei seu perfil no Pecatho e gostaria de conversar sobre os serviços anunciados. Este contato ocorreu por intermédio do Pecatho.") || "#"} target="_blank" rel="noreferrer" className="primaryButton" style={{ textDecoration: "none" }}>Conversar pelo WhatsApp</a> : <button type="button" className="primaryButton" onClick={() => void startConversation("Olá! Gostaria de conhecer os serviços disponíveis e alinhar o atendimento. Este contato ocorreu por intermédio do Pecatho.")} disabled={conversationBusy}>{conversationBusy ? "Abrindo atendimento..." : "Solicitar atendimento"}</button>}
+          {sellerContactRequiresPremium ? <a href={premiumContactHref} className="primaryButton" style={{ textDecoration: "none" }}>Seja Premium</a> : whatsappContact ? <a href={whatsappUrl("Olá! Encontrei seu perfil no Pecatho e gostaria de conversar sobre os serviços anunciados. Este contato ocorreu por intermédio do Pecatho.") || "#"} target="_blank" rel="noreferrer" className="primaryButton" style={{ textDecoration: "none" }}>Conversar pelo WhatsApp</a> : <button type="button" className="primaryButton" onClick={() => void startConversation("Olá! Gostaria de conhecer os serviços disponíveis e alinhar o atendimento. Este contato ocorreu por intermédio do Pecatho.")} disabled={conversationBusy}>{conversationBusy ? "Abrindo atendimento..." : "Solicitar atendimento"}</button>}
         </div>
         <div className="serviceChips">
           {selectedServices.map((service) => (
@@ -449,7 +477,7 @@ export default function PublicAdvertiserPage() {
         {conversationNotice && <div className="followNotice" style={{ marginTop: 14 }}>{conversationNotice}</div>}
       </section>}
 
-      {validPrices.length > 0 && <section id="valores" className="profilePricing card"><div className="eyebrow">VALORES</div><h2>Preços por período</h2><div className="priceGrid">{validPrices.map((row, index) => { const minutes = Number(row.minutes); const label = typeof row.period === "string" && row.period ? row.period : minutes === 60 ? "1 Hora" : minutes > 0 ? `${minutes} minutos` : "Período"; const amount = brl(Number(row.price)); const context = `Olá! Tenho interesse no período ${label}, anunciado por ${row.starting_from === true ? "a partir de " : ""}${amount}. Gostaria de confirmar disponibilidade e condições. O contato foi realizado por intermédio do Pecatho.`; return <div key={`${String(row.minutes ?? row.period ?? index)}-${index}`} style={{ display: "grid", gap: 10, padding: 16, border: "1px solid rgba(15,23,42,.08)", borderRadius: 16, background: "#fff" }}><div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}><span>{label}</span><strong>{row.starting_from === true ? "A partir de " : ""}{amount}</strong></div><button type="button" className="secondaryButton" onClick={() => { const url = whatsappUrl(context); if (url) window.open(url, "_blank", "noopener,noreferrer"); else void startConversation(context); }} disabled={conversationBusy}>{conversationBusy ? "Abrindo atendimento..." : whatsappContact ? "Consultar pelo WhatsApp" : "Consultar este período"}</button></div>; })}</div></section>}
+      {validPrices.length > 0 && <section id="valores" className="profilePricing card"><div className="eyebrow">VALORES</div><h2>Preços por período</h2><div className="priceGrid">{validPrices.map((row, index) => { const minutes = Number(row.minutes); const label = typeof row.period === "string" && row.period ? row.period : minutes === 60 ? "1 Hora" : minutes > 0 ? `${minutes} minutos` : "Período"; const amount = brl(Number(row.price)); const context = `Olá! Tenho interesse no período ${label}, anunciado por ${row.starting_from === true ? "a partir de " : ""}${amount}. Gostaria de confirmar disponibilidade e condições. O contato foi realizado por intermédio do Pecatho.`; return <div key={`${String(row.minutes ?? row.period ?? index)}-${index}`} style={{ display: "grid", gap: 10, padding: 16, border: "1px solid rgba(15,23,42,.08)", borderRadius: 16, background: "#fff" }}><div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}><span>{label}</span><strong>{row.starting_from === true ? "A partir de " : ""}{amount}</strong></div>{sellerContactRequiresPremium ? <a href={premiumContactHref} className="secondaryButton" style={{ textDecoration: "none" }}>Seja Premium</a> : <button type="button" className="secondaryButton" onClick={() => { const url = whatsappUrl(context); if (url) window.open(url, "_blank", "noopener,noreferrer"); else void startConversation(context); }} disabled={conversationBusy}>{conversationBusy ? "Abrindo atendimento..." : whatsappContact ? "Consultar pelo WhatsApp" : "Consultar este período"}</button>}</div>; })}</div></section>}
 
       {paymentMethods.length > 0 && <section className="profilePayment card"><div className="eyebrow">PAGAMENTO DIRETO</div><h2>Formas de pagamento</h2><p>Os serviços de acompanhante são negociados diretamente entre cliente e acompanhante. O Pecatho não realiza a cobrança antecipada desses serviços.</p><div className="paymentChips">{paymentMethods.map((key) => <span key={key}>✓ {paymentLabels[key] || key}</span>)}</div></section>}
 
