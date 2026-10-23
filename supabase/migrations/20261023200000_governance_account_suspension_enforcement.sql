@@ -183,7 +183,8 @@ begin
 
   if p_outcome = 'permanent_suspension' then
     v_previous_status := case
-      when found and v_existing.expired_at is null then v_existing.previous_status
+      when v_existing.user_id is not null and v_existing.expired_at is null
+        then v_existing.previous_status
       else v_profile_status
     end;
 
