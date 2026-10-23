@@ -210,7 +210,7 @@ export default function PublicAdvertiserPage() {
   const exclusiveMediaCount = media.filter((item) => item.access_type === "paid" && item.show_in_gallery !== false).length;
   const sellerContactRequiresPremium = Boolean(fans && !profile?.is_owner && (!premiumEntitlementLoaded || !hasPrivateSellerContactPremium));
   const premiumContactHref = currentUserId ? "/painel/cliente#premium" : `/login?next=${encodeURIComponent("/painel/cliente#premium")}`;
-  const socialLinks = Object.entries(profile?.social_links || {}).map(([label, value]) => { const url = safeExternalUrl(value); return url ? [label, url] as const : null; }).filter((entry): entry is readonly [string, string] => entry !== null && (!sellerContactRequiresPremium || !/whats?app|wa\\.me/i.test(`${entry[0]} ${entry[1]}`)));
+  const socialLinks = Object.entries(profile?.social_links || {}).map(([label, value]) => { const url = safeExternalUrl(value); return url ? [label, url] as const : null; }).filter((entry): entry is readonly [string, string] => entry !== null && (!sellerContactRequiresPremium || !/whats?app|wa\.me/i.test(`${entry[0]} ${entry[1]}`)));
   const paymentMethods = (() => {
     const methods = profile?.payment_options?.methods;
     return methods && typeof methods === "object" && !Array.isArray(methods)
