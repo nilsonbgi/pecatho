@@ -33,6 +33,62 @@ create policy governance_account_suspensions_read_staff
   );
 grant select on public.governance_account_suspensions to authenticated;
 
+-- Permit only the security-definer governance flow to restore a user's prior status.
+-- Ordinary authenticated profile updates remain unable to alter account status.
+create or replace function private.guard_profile_sensitive_fields()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, private
+as $
+begin
+  if not private.is_staff() then
+    if tg_op = 'INSERT' then
+      if new.status <> 'pending'::public.account_status
+         or new.verification_status <> 'unverified'::public.verification_status then
+        raise exception 'A criação de conta deve iniciar em estado pendente e não verificado';
+      end if;
+    else
+      if (new.status is distinct from old.status
+          and current_setting('app.governance_status_update_authorized', true) is distinct from 'true')
+         or new.verification_status is distinct from old.verification_status
+         or new.cpf is distinct from old.cpf
+         or new.account_type is distinct from old.account_type
+         or (
+           new.legal_name is distinct from old.legal_name
+           and current_setting('app.profile_update_authorized', true) <> 'true'
+         )
+         or (
+           new.birth_date is distinct from old.birth_date
+           and current_setting('app.profile_update_authorized', true) <> 'true'
+         ) then
+        raise exception 'Campos de identidade, tipo de conta, verificação ou status somente podem ser alterados pelo fluxo autorizado';
+      end if;
+    end if;
+  end if;
+  return new;
+end;
+$;
+
+create or replace function private.protect_profile_sensitive_fields()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, private
+as $
+begin
+  if auth.uid() is not null and not private.is_staff() then
+    if (new.status is distinct from old.status
+        and current_setting('app.governance_status_update_authorized', true) is distinct from 'true')
+       or new.verification_status is distinct from old.verification_status
+       or new.account_type is distinct from old.account_type then
+      raise exception 'profile_sensitive_field_forbidden';
+    end if;
+  end if;
+  return new;
+end;
+$;
+
 create or replace function private.restore_expired_governance_suspension(p_user_id uuid)
 returns public.account_status
 language plpgsql
@@ -56,10 +112,12 @@ begin
      and v_suspension.outcome = 'temporary_suspension'
      and v_suspension.expired_at is null
      and v_suspension.suspension_until <= now() then
+    perform set_config('app.governance_status_update_authorized', 'true', true);
     update public.profiles
        set status = v_suspension.previous_status
      where id = p_user_id
        and status = 'suspended'::public.account_status;
+    perform set_config('app.governance_status_update_authorized', 'false', true);
 
     update public.governance_account_suspensions
        set expired_at = now(), updated_at = now()
