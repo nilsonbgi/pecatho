@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     locale: "pt_BR",
     title: "Pecatho Fans — descubra criadores e conteúdos",
     description: "Descubra criadores do Pecatho Fans, publicações, assinaturas e experiências exclusivas em um só lugar.",
-    url: "/fans",
+    url: `https://www.pecatho.com/fans`,
     siteName: "Pecatho",
   },
 };
