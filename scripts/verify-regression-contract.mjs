@@ -115,6 +115,15 @@ const checks = [
     ],
   },
   {
+    file: "supabase/migrations/20261023180000_fix_affiliate_premium_net_revenue.sql",
+    name: "Premium — persist provider fee and calculate affiliate revenue base correctly",
+    required: [
+      "provider_fee=round(coalesce(p_provider_fee,0),2)",
+      "nullif(v_order.metadata->>'attributed_creator_id','') IS NOT NULL",
+      "v_revenue_base := greatest(round(NEW.amount - CASE WHEN",
+    ],
+  },
+  {
     file: "src/components/CustomerPremium.tsx",
     name: "Premium do cliente — ativação condicionada à confirmação",
     required: [
