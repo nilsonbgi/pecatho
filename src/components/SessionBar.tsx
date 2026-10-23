@@ -17,36 +17,60 @@ export default function SessionBar() {
   useEffect(() => {
     const supabase = createClient();
     let active = true;
+    let roleRequest = 0;
 
-    async function loadSession() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!active) return;
-      setEmail(user?.email ?? null);
-      if (!user) {
-        setIsStaff(false);
-        return;
-      }
-
+    async function loadStaffRole(userId: string) {
+      const request = ++roleRequest;
       const { data: roleRow } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .in("role", STAFF_ROLES)
         .limit(1)
         .maybeSingle();
 
-      if (active) setIsStaff(Boolean(roleRow?.role));
+      if (active && request === roleRequest) {
+        setIsStaff(Boolean(roleRow?.role));
+      }
+    }
+
+    async function loadSession() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!active) return;
+
+      setEmail(user?.email ?? null);
+      if (!user) {
+        roleRequest += 1;
+        setIsStaff(false);
+        return;
+      }
+
+      await loadStaffRole(user.id);
     }
 
     loadSession();
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!active) return;
-      setEmail(session?.user?.email ?? null);
-      if (!session?.user) setIsStaff(false);
+
+      const user = session?.user;
+      setEmail(user?.email ?? null);
+
+      if (!user) {
+        roleRequest += 1;
+        setIsStaff(false);
+        return;
+      }
+
+      // Deixa o callback de autenticação terminar antes de consultar o banco.
+      setIsStaff(false);
+      window.setTimeout(() => {
+        if (active) void loadStaffRole(user.id);
+      }, 0);
     });
 
     return () => {
       active = false;
+      roleRequest += 1;
       listener.subscription.unsubscribe();
     };
   }, []);
