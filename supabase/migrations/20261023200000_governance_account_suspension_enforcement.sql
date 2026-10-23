@@ -40,7 +40,7 @@ returns trigger
 language plpgsql
 security definer
 set search_path = public, private
-as $
+as $$
 begin
   if not private.is_staff() then
     if tg_op = 'INSERT' then
@@ -68,14 +68,14 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 
 create or replace function private.protect_profile_sensitive_fields()
 returns trigger
 language plpgsql
 security definer
 set search_path = public, private
-as $
+as $$
 begin
   if auth.uid() is not null and not private.is_staff() then
     if (new.status is distinct from old.status
@@ -87,7 +87,7 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 
 create or replace function private.restore_expired_governance_suspension(p_user_id uuid)
 returns public.account_status
