@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     locale: "pt_BR",
     title: "Parceiros Pecatho — estabelecimentos e experiências",
     description: "Encontre casas noturnas, bares, lounges e espaços parceiros do Pecatho. Consulte informações públicas, serviços e oportunidades.",
-    url: "/parceiros",
+    url: `https://www.pecatho.com/parceiros`,
     siteName: "Pecatho",
   },
 };
