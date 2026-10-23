@@ -243,6 +243,10 @@ export default async function FansPage() {
         .fansMainNav{display:flex;align-items:center;gap:30px;margin-left:30px}
         .fansMainNav a{color:#a9a69e;text-decoration:none;font-size:13px;font-weight:650;transition:.2s}
         .fansMainNav a:hover,.fansMainNav a.active{color:#f1c94d}
+        .fansEcosystemNav{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;padding:13px 0;border-bottom:1px solid rgba(231,195,63,.12)}
+        .fansEcosystemNav a{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:38px;padding:0 15px;border:1px solid rgba(231,195,63,.24);border-radius:999px;background:rgba(231,195,63,.045);color:#e8dcae;text-decoration:none;font-size:11px;font-weight:800;transition:background .2s,border-color .2s,color .2s}
+        .fansEcosystemNav a:hover,.fansEcosystemNav a:focus-visible{border-color:rgba(231,195,63,.65);background:rgba(231,195,63,.12);color:#f5d96c;outline-offset:3px}
+        .fansEcosystemNav .fansEcosystemLabel{margin-right:4px;color:#817b6b;font-size:9px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
         .fansTopActions{display:flex;align-items:center;gap:10px}
         .fansSearch{height:42px;width:215px;border:1px solid rgba(255,255,255,.09);border-radius:12px;background:rgba(255,255,255,.045);display:flex;align-items:center;gap:9px;padding:0 13px;color:#77746e;font-size:11px}
         .fansSearchIcon{font-size:17px;color:#aaa59b}
@@ -361,6 +365,13 @@ export default async function FansPage() {
             <Link href={user ? "/fans/gerenciar" : "/login?next=/fans"} className="fansAvatarMini" aria-label={user ? "Meu Fans" : "Entrar"}>{userInitial}</Link>
           </div>
         </header>
+
+        <nav className="fansEcosystemNav" aria-label="Explorar outras áreas do Pecatho">
+          <span className="fansEcosystemLabel">Explore também</span>
+          <Link href="/anunciantes">Acompanhantes <span aria-hidden="true">↗</span></Link>
+          <Link href="/parceiros">Parceiros <span aria-hidden="true">↗</span></Link>
+          <Link href="/conteudos">Conteúdo digital <span aria-hidden="true">↗</span></Link>
+        </nav>
 
         <section className="fansHero">
           <div className="fansHeroCopy">
