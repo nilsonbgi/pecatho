@@ -113,7 +113,8 @@ export default function CustomerPremium() {
               { days: 365, label: "Anual", discount: Number(plan.billing_options?.["365"]?.discount_percent ?? 0) },
             ];
             const selected = terms.find((term) => term.days === durationDays) ?? terms[0];
-            const total = Math.round(Number(plan.price) * durationDays / 30 * (1 - selected.discount / 100) * 100) / 100;
+            const billingMonths = durationDays === 365 ? 12 : durationDays / 30;
+            const total = Math.round(Number(plan.price) * billingMonths * (1 - selected.discount / 100) * 100) / 100;
             const configured = durationDays === 30 || selected.discount > 0;
             return <article className="card" key={plan.id} style={{ border: "1px solid rgba(231,195,63,.42)", gridColumn: "1 / -1" }}>
               <div className="eyebrow">UM ÚNICO PLANO · PECATHO PREMIUM</div><h3>{plan.name}</h3>
@@ -124,7 +125,7 @@ export default function CustomerPremium() {
                 </select>
               </label>
               {selected.discount > 0 && <p className="fieldNote" style={{ color: "#86efac", fontWeight: 800 }}>Economize {selected.discount.toLocaleString("pt-BR")}% em relação ao preço proporcional mensal.</p>}
-              {durationDays > 30 && selected.discount > 0 && <p style={{ color: "#a6aab5", textDecoration: "line-through" }}>De {money(Number(plan.price) * durationDays / 30, plan.currency)}</p>}
+              {durationDays > 30 && selected.discount > 0 && <p style={{ color: "#a6aab5", textDecoration: "line-through" }}>De {money(Number(plan.price) * billingMonths, plan.currency)}</p>}
               <p className="financeBig">{money(total, plan.currency)} <span className="fieldNote" style={{ fontSize: 14, fontWeight: 400 }}>/{selected.label.toLocaleLowerCase("pt-BR")}</span></p>
               <p className="fieldNote">Todos os períodos oferecem os mesmos benefícios e privilégios. O valor exibido é o total do período selecionado.</p>
               {plan.feature_flags?.private_seller_contact && <p>✓ Contato privado com vendedores de conteúdo durante a vigência.</p>}
