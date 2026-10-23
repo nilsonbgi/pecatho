@@ -58,7 +58,7 @@ export default function GovernanceAdminPage(){
     status,
     decision_reason:decision.rationale.trim()||selected.decision_reason,
     reviewer_user_id:user.id,
-    decided_at:["actioned","rejected","closed"].includes(status)?selected.decided_at:null
+    ...( ["submitted","under_review","appealed"].includes(status) ? {decided_at:null} : {})
    }).eq("id",selected.id);
    if(saveError)throw saveError;
    setMessage("Triagem atualizada. As medidas finais devem ser registradas pela ação de decisão para preservar o histórico.");
