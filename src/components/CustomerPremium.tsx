@@ -11,6 +11,7 @@ type PremiumPlan = {
   currency: string;
   duration_days: number;
   discount_percent: number;
+  billing_options?: Record<string, { discount_percent: number }> | null;
   benefits: string[] | null;
   feature_flags?: { private_seller_contact?: boolean } | null;
 };
@@ -44,6 +45,7 @@ export default function CustomerPremium() {
   const [data, setData] = useState<PremiumResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState<string | null>(null);
+  const [durationDays, setDurationDays] = useState(30);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -70,7 +72,7 @@ export default function CustomerPremium() {
       const response = await fetch("/api/cliente/premium", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan_id: plan.id, ...(creatorId ? { creator_id: creatorId } : {}) }),
+        body: JSON.stringify({ plan_id: plan.id, duration_days: durationDays, ...(creatorId ? { creator_id: creatorId } : {}) }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || "Não foi possível iniciar o pagamento.");
@@ -102,23 +104,33 @@ export default function CustomerPremium() {
         </article>
       ) : loading ? null : data?.plans?.length ? (
         <div className="pillars">
-          {data.plans.map((plan) => {
+          {data.plans.filter((plan) => plan.duration_days === 30).slice(0, 1).map((plan) => {
             const benefits = Array.isArray(plan.benefits) ? plan.benefits : [];
-            return (
-              <article className="card" key={plan.id} style={{ border: "1px solid rgba(231,195,63,.28)" }}>
-                <div className="eyebrow">ASSINATURA {plan.duration_days === 30 ? "MENSAL" : plan.duration_days === 90 ? "TRIMESTRAL" : plan.duration_days === 180 ? "SEMESTRAL" : plan.duration_days === 365 ? "ANUAL" : "POR " + plan.duration_days + " DIAS"}</div>
-                <h3>{plan.name}</h3>
-                {Number(plan.discount_percent ?? 0) > 0 && <p className="fieldNote" style={{ color: "#86efac", fontWeight: 800 }}>Economize {Number(plan.discount_percent).toLocaleString("pt-BR")}% em relação ao preço proporcional mensal.</p>}
-                {Number(plan.discount_percent ?? 0) > 0 && <p style={{ color: "#a6aab5", textDecoration: "line-through" }}>De {money(Number(plan.price) / (1 - Number(plan.discount_percent) / 100), plan.currency)}</p>}
-                <p className="financeBig">{money(plan.price, plan.currency)}</p>
-                {plan.description && <p>{plan.description}</p>}
-                {plan.feature_flags?.private_seller_contact && <p>✓ Contato privado com vendedores de conteúdo durante a vigência.</p>}
-                {benefits.length > 0 ? <ul>{benefits.map((benefit, index) => <li key={plan.id + "-benefit-" + index}>{benefit}</li>)}</ul> : null}
-                <button className="primaryButton" type="button" disabled={buying !== null} onClick={() => void subscribe(plan)}>
-                  {buying === plan.id ? "Preparando pagamento..." : "Assinar com Mercado Pago"}
-                </button>
-              </article>
-            );
+            const terms = [
+              { days: 30, label: "Mensal", discount: 0 },
+              { days: 90, label: "Trimestral", discount: Number(plan.billing_options?.["90"]?.discount_percent ?? 0) },
+              { days: 180, label: "Semestral", discount: Number(plan.billing_options?.["180"]?.discount_percent ?? 0) },
+              { days: 365, label: "Anual", discount: Number(plan.billing_options?.["365"]?.discount_percent ?? 0) },
+            ];
+            const selected = terms.find((term) => term.days === durationDays) ?? terms[0];
+            const total = Math.round(Number(plan.price) * durationDays / 30 * (1 - selected.discount / 100) * 100) / 100;
+            const configured = durationDays === 30 || selected.discount > 0;
+            return <article className="card" key={plan.id} style={{ border: "1px solid rgba(231,195,63,.42)", gridColumn: "1 / -1" }}>
+              <div className="eyebrow">UM ÚNICO PLANO · PECATHO PREMIUM</div><h3>{plan.name}</h3>
+              {plan.description && <p>{plan.description}</p>}
+              <label style={{ display: "grid", gap: 8, maxWidth: 460 }}>Período de contratação
+                <select value={durationDays} onChange={(event) => setDurationDays(Number(event.target.value))} style={{ width: "100%", padding: 12, borderRadius: 10, background: "#0b0d12", color: "#f6f7fb", border: "1px solid rgba(231,195,63,.35)" }}>
+                  {terms.map((term) => <option key={term.days} value={term.days}>{term.label}{term.days === 30 ? " · sem desconto" : term.discount > 0 ? " · " + term.discount.toLocaleString("pt-BR") + "% de desconto" : " · desconto não configurado"}</option>)}
+                </select>
+              </label>
+              {selected.discount > 0 && <p className="fieldNote" style={{ color: "#86efac", fontWeight: 800 }}>Economize {selected.discount.toLocaleString("pt-BR")}% em relação ao preço proporcional mensal.</p>}
+              {durationDays > 30 && selected.discount > 0 && <p style={{ color: "#a6aab5", textDecoration: "line-through" }}>De {money(Number(plan.price) * durationDays / 30, plan.currency)}</p>}
+              <p className="financeBig">{money(total, plan.currency)} <span className="fieldNote" style={{ fontSize: 14, fontWeight: 400 }}>/{selected.label.toLocaleLowerCase("pt-BR")}</span></p>
+              <p className="fieldNote">Todos os períodos oferecem os mesmos benefícios e privilégios. O valor exibido é o total do período selecionado.</p>
+              {plan.feature_flags?.private_seller_contact && <p>✓ Contato privado com vendedores de conteúdo durante a vigência.</p>}
+              {benefits.length > 0 ? <ul>{benefits.map((benefit, index) => <li key={plan.id + "-benefit-" + index}>{benefit}</li>)}</ul> : null}
+              <button className="primaryButton" type="button" disabled={buying !== null || !configured} onClick={() => void subscribe(plan)}>{buying === plan.id ? "Preparando pagamento..." : configured ? "Assinar com Mercado Pago" : "Período em configuração"}</button>
+            </article>;
           })}
         </div>
       ) : (

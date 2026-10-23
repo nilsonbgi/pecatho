@@ -13,6 +13,7 @@ type PremiumPlan = {
   currency: string;
   duration_days: number;
   discount_percent: number;
+  billing_options?: Record<string, { discount_percent: number }> | null;
   benefits: string[] | null;
   active: boolean;
   sort_order: number;
@@ -76,6 +77,9 @@ export default function AdminCustomerPremiumPage() {
   const [price, setPrice] = useState("");
   const [durationDays, setDurationDays] = useState("30");
   const [discountPercent, setDiscountPercent] = useState("0");
+  const [quarterlyDiscount, setQuarterlyDiscount] = useState("10");
+  const [semiannualDiscount, setSemiannualDiscount] = useState("15");
+  const [annualDiscount, setAnnualDiscount] = useState("20");
   const [benefitsText, setBenefitsText] = useState("");
   const [active, setActive] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -125,7 +129,7 @@ export default function AdminCustomerPremiumPage() {
     try {
       const [{ data, error: loadError }, { data: publicationData, error: publicationError }] = await Promise.all([
         supabase.from("pecatho_customer_premium_plans")
-          .select("id,plan_key,name,description,price,currency,duration_days,discount_percent,benefits,active,sort_order,updated_at,audience,feature_flags,card_style,badge_label")
+          .select("id,plan_key,name,description,price,currency,duration_days,discount_percent,billing_options,benefits,active,sort_order,updated_at,audience,feature_flags,card_style,badge_label")
           .order("sort_order", { ascending: true }).order("price", { ascending: true }),
         supabase.from("publication_plans")
           .select("id,name,description,duration_days,price,currency,active,free,has_video,features,audience,featured_card,search_priority,show_premium_badge,profile_theme,max_gallery_items,updated_at")
@@ -175,6 +179,9 @@ export default function AdminCustomerPremiumPage() {
     setPrice(String(plan.price).replace(".", ","));
     setDurationDays(String(plan.duration_days));
     setDiscountPercent(String(plan.discount_percent ?? 0));
+    setQuarterlyDiscount(String(plan.billing_options?.["90"]?.discount_percent ?? 10));
+    setSemiannualDiscount(String(plan.billing_options?.["180"]?.discount_percent ?? 15));
+    setAnnualDiscount(String(plan.billing_options?.["365"]?.discount_percent ?? 20));
     setBenefitsText((plan.benefits ?? []).join("\n"));
     setActive(plan.active);
     setAudience(plan.audience ?? "customer");
@@ -194,6 +201,9 @@ export default function AdminCustomerPremiumPage() {
     setPrice("");
     setDurationDays("30");
     setDiscountPercent("0");
+    setQuarterlyDiscount("10");
+    setSemiannualDiscount("15");
+    setAnnualDiscount("20");
     setBenefitsText("");
     setActive(false);
     setAudience("customer");
@@ -340,14 +350,17 @@ export default function AdminCustomerPremiumPage() {
     const benefits = benefitsText.split("\n").map((item) => item.trim()).filter(Boolean);
     try {
       if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) throw new Error("Informe um preço maior que zero.");
+      if (audience === "customer" && !editingId && plans.some((item) => item.audience === "customer")) throw new Error("CUSTOMER_PREMIUM_SINGLE_PRODUCT_ONLY");
+      const billingOptions = audience === "customer" ? { "90": { discount_percent: Number(quarterlyDiscount) }, "180": { discount_percent: Number(semiannualDiscount) }, "365": { discount_percent: Number(annualDiscount) } } : {};
       const { error: rpcError } = await supabase.rpc("admin_save_pecatho_customer_premium_plan", {
         p_plan_id: editingId,
         p_plan_key: planKey.trim().toLowerCase(),
         p_name: name.trim(),
         p_description: description.trim() || null,
         p_price: parsedPrice,
-        p_duration_days: Number(durationDays),
-        p_discount_percent: audience === "customer" ? Number(discountPercent) : 0,
+        p_duration_days: audience === "customer" ? 30 : Number(durationDays),
+        p_discount_percent: 0,
+        p_billing_options: billingOptions,
         p_benefits: benefits,
         p_active: active,
         p_audience: audience,
@@ -367,6 +380,8 @@ export default function AdminCustomerPremiumPage() {
         : raw.includes("INVALID_PLAN_PRICE") ? "O preço deve ser maior que zero e não ultrapassar R$ 10.000,00."
         : raw.includes("INVALID_PLAN_AUDIENCE") ? "Selecione um público válido para o plano."
         : raw.includes("INVALID_PLAN_DURATION") ? "Selecione uma duração válida: mensal, trimestral, semestral ou anual."
+        : raw.includes("CUSTOMER_PREMIUM_SINGLE_PRODUCT_ONLY") ? "Já existe um único Plano Premium para clientes. Edite esse cadastro para configurar os períodos e descontos."
+        : raw.includes("CUSTOMER_PREMIUM_DISCOUNTS_MUST_INCREASE") ? "Configure descontos progressivos: trimestral menor que semestral, e semestral menor que anual."
         : raw.includes("INVALID_PLAN_DISCOUNT") ? "O desconto deve estar entre 0% e 80%."
         : raw.includes("MONTHLY_PLAN_DISCOUNT_MUST_BE_ZERO") ? "O plano mensal deve ter desconto de 0%."
         : raw.includes("PROFESSIONAL_PLAN_DISCOUNT_NOT_SUPPORTED") ? "Descontos por período são configurados apenas para assinaturas de clientes."
@@ -467,11 +482,8 @@ export default function AdminCustomerPremiumPage() {
             <label>Chave única do plano<input required minLength={2} maxLength={50} pattern="[a-z0-9][a-z0-9_-]{1,49}" value={planKey} onChange={(event) => setPlanKey(event.target.value)} placeholder="premium-mensal" /></label>
             <label>Nome comercial<input required minLength={3} maxLength={100} value={name} onChange={(event) => setName(event.target.value)} placeholder={audience === "customer" ? "Premium mensal" : audience === "companion" ? "Destaque para acompanhante" : "Perfil Creator Premium"} /></label>
             <label>Descrição<textarea rows={2} maxLength={500} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Explique a proposta do plano." /></label>
-            <div className="pillars">
-              <label>Preço final em reais<input required inputMode="decimal" value={price} disabled={audience === "customer" && Number(durationDays) !== 30 && suggestedCustomerPrice(Number(durationDays), Number(discountPercent)) !== null} onChange={(event) => setPrice(event.target.value)} placeholder="19,90" /><small>{audience === "customer" && Number(durationDays) !== 30 ? "Calculado sobre o plano mensal cadastrado, aplicando o desconto selecionado." : "Para clientes, este é o preço-base mensal. Os períodos maiores usam esse valor proporcional com desconto."}</small></label>
-              <label>Periodicidade da assinatura<select required value={durationDays} onChange={(event) => changeCustomerDuration(event.target.value)}><option value="30">Mensal · 30 dias</option><option value="90">Trimestral · 90 dias</option><option value="180">Semestral · 180 dias</option><option value="365">Anual · 365 dias</option></select></label>
-              {audience === "customer" && <label>Desconto sobre o preço proporcional mensal (%)<input required type="number" min={0} max={80} step={0.5} value={discountPercent} disabled={Number(durationDays) === 30} onChange={(event) => changeCustomerDiscount(event.target.value)} /><small>Mensal = 0%. Trimestral, semestral e anual devem usar descontos progressivos. O preço final é recalculado a partir do plano mensal existente.</small></label>}
-            </div>
+            <div className="pillars"><label>Preço-base mensal em reais<input required inputMode="decimal" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="9,90" /><small>O preço-base mensal calcula o valor total de cada período.</small></label>{audience !== "customer" && <label>Periodicidade da publicação<select required value={durationDays} onChange={(event) => changeCustomerDuration(event.target.value)}><option value="30">Mensal · 30 dias</option><option value="90">Trimestral · 90 dias</option><option value="180">Semestral · 180 dias</option><option value="365">Anual · 365 dias</option></select></label>}</div>
+            {audience === "customer" && <section className="premiumEntitlementEditor" aria-label="Períodos de cobrança do único Plano Premium"><div className="eyebrow">UM PLANO · QUATRO PERÍODOS</div><p className="fieldNote">Todos os períodos mantêm os mesmos benefícios. Estes descontos são provisórios para desenvolvimento e podem ser alterados aqui.</p><div className="pillars"><label>Trimestral · desconto (%)<input required type="number" min={0.5} max={80} step={0.5} value={quarterlyDiscount} onChange={(event) => setQuarterlyDiscount(event.target.value)} /></label><label>Semestral · desconto (%)<input required type="number" min={0.5} max={80} step={0.5} value={semiannualDiscount} onChange={(event) => setSemiannualDiscount(event.target.value)} /></label><label>Anual · desconto (%)<input required type="number" min={0.5} max={80} step={0.5} value={annualDiscount} onChange={(event) => setAnnualDiscount(event.target.value)} /></label></div><ul><li>Mensal: preço-base sem desconto</li><li>Trimestral: preço proporcional com {quarterlyDiscount}% de desconto</li><li>Semestral: preço proporcional com {semiannualDiscount}% de desconto</li><li>Anual: preço proporcional com {annualDiscount}% de desconto</li></ul></section>}
             <label>Detalhamento comercial dos diferenciais (um por linha)<textarea rows={4} maxLength={5000} value={benefitsText} onChange={(event) => setBenefitsText(event.target.value)} placeholder={audience === "customer" ? "Contato privado com vendedores de conteúdo\nAcesso durante o período contratado" : "Card com destaque visual\nPrioridade no catálogo de descoberta"} /></label>
             <p className="fieldNote">Texto livre é apenas descritivo. Somente os diferenciais operacionais habilitados abaixo são concedidos pela plataforma.</p>
             <section className="premiumEntitlementEditor" aria-label="Diferenciais operacionais"><div className="eyebrow">DIFERENCIAIS OPERACIONAIS</div>
