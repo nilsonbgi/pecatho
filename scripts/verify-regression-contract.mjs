@@ -48,6 +48,28 @@ const checks = [
     ],
   },
   {
+    file: "src/app/api/anunciantes/planos/checkout/route.ts",
+    name: "Anúncios — retomada idempotente de checkout pendente",
+    required: [
+      'contains("metadata", { product_type: "publication_plan", profile_id: profileId })',
+      "order.metadata?.product_id === planId",
+      "pendingPayment.provider_payment_id",
+      'intent = { order_id: matchingPendingOrder.id }',
+      "create_pecatho_publication_checkout",
+    ],
+  },
+  {
+    file: "src/app/api/fans/planos-publicacao/checkout/route.ts",
+    name: "Vendedores de conteúdo — retomada idempotente de checkout pendente",
+    required: [
+      'contains("metadata", { product_type: "creator_publication_plan", creator_id: creatorId })',
+      "order.metadata?.product_id === planId",
+      "pendingPayment.provider_payment_id",
+      'intent = { order_id: matchingPendingOrder.id }',
+      "create_pecatho_creator_publication_checkout",
+    ],
+  },
+  {
     file: "src/app/api/fans/payments/mercadopago/webhook/route.ts",
     name: "Premium do cliente — conciliação por webhook",
     required: [
