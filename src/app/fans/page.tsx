@@ -1,6 +1,21 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+
+export const metadata: Metadata = {
+  title: "Pecatho Fans — descubra criadores e conteúdos",
+  description: "Descubra criadores do Pecatho Fans, publicações, assinaturas e experiências exclusivas em um só lugar.",
+  alternates: { canonical: "/fans" },
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    title: "Pecatho Fans — descubra criadores e conteúdos",
+    description: "Descubra criadores do Pecatho Fans, publicações, assinaturas e experiências exclusivas em um só lugar.",
+    url: `https://www.pecatho.com/fans`,
+    siteName: "Pecatho",
+  },
+};
 
 export const dynamic = "force-dynamic";
 
