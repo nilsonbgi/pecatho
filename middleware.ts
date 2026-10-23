@@ -19,7 +19,8 @@ export async function middleware(request: NextRequest) {
   const hostname = request.headers.get("host")?.split(":")[0].toLowerCase();
   const isFansHost = hostname ? FANS_HOSTS.has(hostname) : false;
   const pathname = request.nextUrl.pathname;
-  const isProtectedPanel = pathname.startsWith("/painel");
+  // Apply the canonical account-status enforcement to both user panels and admin pages.
+  const isProtectedPanel = pathname.startsWith("/painel") || pathname.startsWith("/admin");
 
   if (isProtectedPanel) {
     const supabase = createServerClient(
