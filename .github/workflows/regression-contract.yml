@@ -49,6 +49,34 @@ jobs:
           fi
       - name: Install dependencies
         run: npm install
+      - name: Diagnose npm vulnerabilities
+        run: |
+          npm audit --json > npm-audit.json || true
+          node -e '
+            const report = require("./npm-audit.json");
+            if (report.error) {
+              console.log("npm audit could not complete:", report.error.code || "", report.error.summary || report.error.message || "");
+              process.exit(0);
+            }
+            const vulnerabilities = Object.entries(report.vulnerabilities || {});
+            console.log("npm audit totals:", JSON.stringify(report.metadata?.vulnerabilities || {}));
+            const relevant = vulnerabilities.filter(([, item]) => ["high", "critical"].includes(item.severity));
+            if (!relevant.length) console.log("No high/critical package vulnerabilities reported.");
+            for (const [name, item] of relevant) {
+              console.log("\nPACKAGE:", name, "| severity:", item.severity, "| installed range:", item.range, "| direct:", item.isDirect, "| fix:", JSON.stringify(item.fixAvailable));
+              for (const advisory of item.via || []) {
+                if (typeof advisory === "string") console.log("  dependency:", advisory);
+                else console.log("  advisory:", advisory.title, "| range:", advisory.range, "| url:", advisory.url);
+              }
+            }
+          '
+      - name: Upload npm audit report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pecatho-npm-audit-report
+          path: npm-audit.json
+          if-no-files-found: ignore
       - name: Build application
         run: npm run build
       - name: Install Chromium
