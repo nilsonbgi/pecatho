@@ -43,6 +43,23 @@ export async function middleware(request: NextRequest) {
       url.pathname = "/login";
       return applySecurityHeaders(NextResponse.redirect(url));
     }
+
+    // Restore expired temporary suspensions before evaluating the canonical account status.
+    // The RPC is intentionally scoped to the authenticated user's own account.
+    await supabase.rpc("enforce_my_governance_suspension_expiry");
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("status")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.status === "suspended" || profile?.status === "blocked") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/conta-suspensa";
+      url.searchParams.set("status", profile.status);
+      return applySecurityHeaders(NextResponse.redirect(url));
+    }
   }
 
   if (isFansHost && !pathname.startsWith("/fans") && !pathname.startsWith("/_next") && pathname !== "/favicon.ico") {
