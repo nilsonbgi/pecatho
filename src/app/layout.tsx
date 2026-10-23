@@ -11,7 +11,7 @@ import "./fans-editorial.css";
 import SessionBar from "@/components/SessionBar";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://pecatho.com.br"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://www.pecatho.com"),
   title: {
     default: "Pecatho — Descubra, conecte-se e escolha",
     template: "%s | Pecatho",
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "pt_BR",
-    url: "https://pecatho.com.br/",
+    url: process.env.NEXT_PUBLIC_SITE_URL || "https://www.pecatho.com",
     siteName: "Pecatho",
     title: "Pecatho — Descubra, conecte-se e escolha",
     description: "Um ecossistema para descobrir perfis, conhecer experiências e acessar o Pecatho Fans.",
