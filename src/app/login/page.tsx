@@ -38,9 +38,16 @@ export default function LoginPage() {
         .maybeSingle();
 
       const next = new URLSearchParams(window.location.search).get("next");
-      if (next && next.startsWith("/") && !next.startsWith("//")) {
-        window.location.href = next;
-        return;
+      if (next?.startsWith("/") && !next.startsWith("//")) {
+        try {
+          const destination = new URL(next, window.location.origin);
+          if (destination.origin === window.location.origin) {
+            window.location.assign(`${destination.pathname}${destination.search}${destination.hash}`);
+            return;
+          }
+        } catch {
+          // Destinos malformados são ignorados; o fluxo usa o destino padrão do perfil.
+        }
       }
 
       if (adminRole?.role) {
