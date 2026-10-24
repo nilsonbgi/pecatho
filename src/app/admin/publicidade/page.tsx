@@ -1,7 +1,7 @@
 "use client";
 
 import "../admin-redesign.css";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
@@ -86,7 +86,7 @@ export default function AdminAdvertisingPage() {
   const [error, setError] = useState("");
   const [filter, setFilter] = useState("all");
 
-  async function loadBanners() {
+  const loadBanners = useCallback(async () => {
     setLoading(true);
     const { data, error: queryError } = await supabase
       .from("banners")
@@ -95,7 +95,7 @@ export default function AdminAdvertisingPage() {
     if (queryError) setError(queryError.message);
     else setBanners((data || []) as Banner[]);
     setLoading(false);
-  }
+  }, [supabase]);
 
   useEffect(() => {
     let alive = true;
@@ -118,7 +118,7 @@ export default function AdminAdvertisingPage() {
       setAuthLoading(false);
     });
     return () => { alive = false; };
-  }, [router, supabase]);
+  }, [router, supabase, loadBanners]);
 
   function beginEdit(banner: Banner) {
     const meta = banner.metadata || {};
@@ -268,7 +268,7 @@ export default function AdminAdvertisingPage() {
             <div style={{ minHeight: 90, borderRadius: 10, overflow: "hidden", background: "#11131a" }}>{banner.image_path && <img src={banner.image_path} alt="" style={{ width: "100%", height: "100%", minHeight: 90, objectFit: "cover" }} />}</div>
             <div style={{ minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}><div><h3 style={{ margin: "0 0 6px", overflowWrap: "anywhere" }}>{banner.title || "Campanha sem título"}</h3><p style={{ margin: "0 0 6px", color: "#aeb3c0" }}>{meta.campaign_type === "pecatho" ? "Campanha própria Pecatho" : "Publicidade de anunciante"} · {statusLabels[status] || status}</p><p style={{ margin: 0, color: "#aeb3c0", fontSize: 13 }}>{meta.advertiser_name || "Anunciante não informado"} · {money(meta.commercial_value)}</p><p style={{ margin: "6px 0 0", color: "#8f96a7", fontSize: 12 }}>Posição: {banner.placement || "home"} · Ordem: {banner.sort_order} · {formatDate(banner.starts_at)} a {formatDate(banner.ends_at)}</p></div><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><button type="button" className="secondaryButton" onClick={() => beginEdit(banner)}>Editar</button><button type="button" className="secondaryButton" onClick={() => void deleteCampaign(banner)}>Excluir</button></div></div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}><label style={{ display: "flex", alignItems: "center", gap: 8 }}>Etapa rápida<select value={status} onChange={e => void setCampaignStatus(banner, e.target.value as NonNullable<BannerMetadata["campaign_status"]>)}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>{meta.contact_email && <a href={`mailto:${meta.contact_email}`} className="secondaryButton">E-mail</a>}{meta.contact_whatsapp && <a href={`https://wa.me/${meta.contact_whatsapp.replace(/\\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="secondaryButton">WhatsApp</a>}</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}><label style={{ display: "flex", alignItems: "center", gap: 8 }}>Etapa rápida<select value={status} onChange={e => void setCampaignStatus(banner, e.target.value as NonNullable<BannerMetadata["campaign_status"]>)}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>{meta.contact_email && <a href={`mailto:${meta.contact_email}`} className="secondaryButton">E-mail</a>}{meta.contact_whatsapp && <a href={`https://wa.me/${meta.contact_whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="secondaryButton">WhatsApp</a>}</div>
               {meta.notes && <p style={{ margin: "10px 0 0", color: "#c4c8d1", whiteSpace: "pre-wrap" }}>{meta.notes}</p>}
             </div>
           </article>;
