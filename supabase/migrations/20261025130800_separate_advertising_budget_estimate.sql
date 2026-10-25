@@ -30,7 +30,7 @@ BEGIN
   IF v_name = '' OR v_company = '' OR v_email = '' OR v_message = '' THEN
     RAISE EXCEPTION 'Preencha nome, empresa, e-mail e mensagem.';
   END IF;
-  IF v_email !~ '^[A-Za-z0-9.!#$%&''*+/=?^_`{|}~-]+@[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)+$' THEN
+  IF v_email !~ '^[A-Za-z0-9.!#$%&''*+/=?^_`{|}~-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$' THEN
     RAISE EXCEPTION 'Informe um e-mail válido.';
   END IF;
   IF length(trim(coalesce(p_contact_name, ''))) > 120
