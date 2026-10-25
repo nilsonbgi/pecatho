@@ -60,3 +60,13 @@
 @media(max-width:1050px){.adminConsoleShell .pillars{grid-template-columns:repeat(2,minmax(0,1fr))}.adminReviewShell .editorGrid{grid-template-columns:1fr}.adminReviewShell .editorNav{position:static;max-height:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}.adminReviewShell .editorNav>label{grid-column:1/-1}.adminReviewShell .editorTab{min-width:0}}
 @media(max-width:680px){.adminConsoleShell,.adminReviewShell{padding:0 16px 42px}.adminConsoleShell .hero,.adminReviewShell .hero{padding:34px 0}.adminConsoleShell .pillars{grid-template-columns:1fr 1fr;gap:10px}.adminConsoleShell .card{padding:14px;min-height:130px}.adminConsoleShell .hero>div[style*="display: flex"]{width:100%;overflow-x:auto;flex-wrap:nowrap!important}.adminConsoleShell .hero>div[style*="display: flex"] button{flex:0 0 auto}.adminConsoleShell .authCard,.adminReviewShell .authCard{padding:16px}.adminReviewShell .editorNav{grid-template-columns:1fr}.adminReviewShell .editorCard>div[style*="justify-content: space-between"]{display:grid!important;grid-template-columns:1fr 1fr}.adminReviewShell .formGrid{grid-template-columns:1fr}.adminConsoleShell table,.adminReviewShell table{min-width:620px}.adminConsoleShell .authCard>div[style*="overflow"],.adminReviewShell .authCard>div[style*="overflow"]{overflow-x:auto}}
 @media(prefers-reduced-motion:reduce){.adminConsoleShell *,.adminReviewShell *{transition:none!important;scroll-behavior:auto!important}}
+
+.adminReviewShell .reviewQueueSummary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-bottom:12px}
+.adminReviewShell .reviewQueueSummary>span{display:grid;gap:4px;min-width:0;padding:10px 8px;border:1px solid #30333d;border-radius:9px;background:#151821}
+.adminReviewShell .reviewQueueSummary strong{font-size:20px;line-height:1;color:#e7c33f}
+.adminReviewShell .reviewQueueSummary small{font-size:10px;line-height:1.3;color:#aeb3c0}
+.adminReviewShell .reviewQueueResultCount{margin:2px 0 8px;color:#aeb3c0;font-size:11px}
+.adminReviewShell .editorNav>label{display:grid;gap:7px}
+.adminReviewShell .editorNav select{width:100%;max-width:100%;padding:0 10px}
+@media(max-width:1050px){.adminReviewShell .reviewQueueSummary{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:680px){.adminReviewShell .reviewQueueSummary strong{font-size:18px}.adminReviewShell .reviewQueueSummary small{font-size:9px}}
