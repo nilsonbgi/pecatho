@@ -186,6 +186,16 @@ export default function AdminAdvertisingPage() {
 
   async function setCampaignStatus(banner: Banner, status: NonNullable<BannerMetadata["campaign_status"]>) {
     setMessage(""); setError("");
+    if (status === "active") {
+      if (typeof banner.image_path !== "string" || !/^https?:\/\//i.test(banner.image_path)) {
+        setError("Não é possível ativar esta campanha: cadastre primeiro uma URL pública válida para a imagem e salve as alterações.");
+        return;
+      }
+      if (banner.starts_at && banner.ends_at && new Date(banner.ends_at).getTime() < new Date(banner.starts_at).getTime()) {
+        setError("Não é possível ativar esta campanha: a data de encerramento é anterior ao início.");
+        return;
+      }
+    }
     const metadata = { ...(banner.metadata || {}), campaign_status: status };
     const { error: updateError } = await supabase.from("banners")
       .update({ metadata, active: status === "active" }).eq("id", banner.id);
