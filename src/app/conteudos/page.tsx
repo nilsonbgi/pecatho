@@ -470,6 +470,14 @@ export default async function ConteudosPage({ searchParams }: Props) {
                   Uma vitrine própria para fotos, vídeos e pacotes. Explore por interesse,
                   compare ofertas e entre no perfil quando quiser conhecer quem está por trás do conteúdo.
                 </p>
+                <div className="mt-5">
+                  <Link
+                    href="/anunciar"
+                    className="inline-flex min-h-11 items-center justify-center rounded-xl border border-amber-300/35 bg-amber-300/10 px-5 py-3 text-xs font-black text-amber-200 no-underline transition hover:border-amber-200/70 hover:bg-amber-300/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-300"
+                  >
+                    Anunciar no Pecatho ↗
+                  </Link>
+                </div>
               </div>
               <div className="contentMarketplaceTrust">
                 <span>✓</span>
