@@ -5,7 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/browser";
 import "./anunciar.css";
 
-const initialForm = { contact_name: "", company_name: "", email: "", whatsapp: "", placement: "home", budget: "", message: "", website: "" };
+const initialForm = { contact_name: "", company_name: "", email: "", whatsapp: "", placement: "home", banner_format: "leaderboard", budget: "", message: "", website: "" };
 
 export default function AnunciarPage() {
   const [form, setForm] = useState(initialForm);
@@ -30,7 +30,7 @@ export default function AnunciarPage() {
         p_whatsapp: form.whatsapp.trim(),
         p_placement: form.placement,
         p_budget: form.budget.trim(),
-        p_message: form.message.trim(),
+        p_message: `Formato preferido: ${form.banner_format}\n\n${form.message.trim()}`.slice(0, 3000),
         p_website: form.website.trim(),
       });
       if (submitError) {
@@ -69,9 +69,9 @@ export default function AnunciarPage() {
           <label>Seu nome *<input required maxLength={120} autoComplete="name" value={form.contact_name} onChange={e => setForm({...form,contact_name:e.target.value})} /></label>
           <label>Empresa ou marca *<input required maxLength={160} autoComplete="organization" value={form.company_name} onChange={e => setForm({...form,company_name:e.target.value})} /></label>
           <div className="advertisingLeadFields"><label>E-mail comercial *<input required type="email" maxLength={254} autoComplete="email" value={form.email} onChange={e => setForm({...form,email:e.target.value})} /></label><label>WhatsApp<input maxLength={40} autoComplete="tel" value={form.whatsapp} onChange={e => setForm({...form,whatsapp:e.target.value})} /></label></div>
-          <label>Onde deseja anunciar?<select value={form.placement} onChange={e => setForm({...form,placement:e.target.value})}><option value="home">Página inicial</option><option value="home_top">Página inicial · superior</option><option value="home_mid">Página inicial · intermediária</option><option value="home_bottom">Página inicial · inferior</option><option value="fans">Pecatho Fans</option><option value="catalog">Catálogo</option></select></label>
+          <label>Onde deseja anunciar?<select value={form.placement} onChange={e => setForm({...form,placement:e.target.value})}><option value="home">Página inicial</option><option value="home_top">Página inicial · superior</option><option value="home_mid">Página inicial · intermediária</option><option value="home_bottom">Página inicial · inferior</option><option value="fans">Pecatho Fans</option><option value="catalog">Catálogo</option></select></label>\n          <label>Formato preferido do banner<select value={form.banner_format} onChange={e => setForm({...form,banner_format:e.target.value})}><option value="leaderboard">Faixa horizontal · proporção 5:1 (até 1200 × 240 px)</option><option value="rectangle">Retangular · proporção 2:1 (até 600 × 300 px)</option><option value="square">Quadrado · proporção 1:1 (até 600 × 600 px)</option><option value="vertical">Vertical · proporção 1:2 (até 300 × 600 px)</option><option value="consultation">Preciso de orientação sobre o formato</option></select></label>\n          <p className="advertisingLeadFormatNote">A escolha é uma preferência para a proposta. A equipe confirma o formato compatível com a posição, o material e o período contratados.</p>
           <label>Orçamento estimado (opcional)<input maxLength={80} value={form.budget} onChange={e => setForm({...form,budget:e.target.value})} placeholder="Ex.: ainda em definição" /></label>
-          <label>Conte um pouco sobre a campanha *<textarea required maxLength={3000} rows={5} value={form.message} onChange={e => setForm({...form,message:e.target.value})} placeholder="Objetivo, público, período desejado e outras informações relevantes." /></label>
+          <label>Conte um pouco sobre a campanha *<textarea required maxLength={2800} rows={5} value={form.message} onChange={e => setForm({...form,message:e.target.value})} placeholder="Objetivo, público, período desejado e outras informações relevantes." /></label>
           <label className="advertisingLeadHoneypot" aria-hidden="true">Website<input tabIndex={-1} autoComplete="off" value={form.website} onChange={e => setForm({...form,website:e.target.value})} /></label>
           <button className="advertisingLeadSubmit" type="submit" disabled={sending}>{sending ? "Enviando solicitação…" : "Enviar solicitação comercial"}</button>
           <small>Ao enviar, você autoriza a equipe Pecatho a usar os dados informados para responder a esta solicitação.</small>
