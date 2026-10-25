@@ -29,17 +29,18 @@ export default async function AdvertisingPlacement({ placement }: { placement: "
     .select("id,title,image_path,link_url,target,placement,sort_order,starts_at,ends_at,metadata")
     .eq("active", true)
     .eq("placement", placement)
+    .or(`starts_at.is.null,starts_at.lte.${new Date().toISOString()}`)
+    .or(`ends_at.is.null,ends_at.gte.${new Date().toISOString()}`)
     .order("sort_order", { ascending: true })
-    .limit(8);
+    .limit(30);
 
   if (error || !data?.length) return null;
-  const now = Date.now();
-  const banners = (data as BannerRow[]).filter((banner) =>
-    (!banner.starts_at || new Date(banner.starts_at).getTime() <= now) &&
-    (!banner.ends_at || new Date(banner.ends_at).getTime() >= now) &&
-    typeof banner.image_path === "string" &&
-    /^https?:\/\//i.test(banner.image_path)
-  );
+  const banners = (data as BannerRow[])
+    .filter((banner) =>
+      typeof banner.image_path === "string" &&
+      /^https?:\/\//i.test(banner.image_path)
+    )
+    .slice(0, 8);
   if (!banners.length) return null;
 
   return (
