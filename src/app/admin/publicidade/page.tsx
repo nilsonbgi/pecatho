@@ -87,6 +87,8 @@ export default function AdminAdvertisingPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [filter, setFilter] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [placementFilter, setPlacementFilter] = useState("all");
 
   const loadBanners = useCallback(async () => {
     setLoading(true);
@@ -212,12 +214,22 @@ export default function AdminAdvertisingPage() {
     else { setMessage("Campanha excluída."); if (form.id === banner.id) setForm(emptyForm); await loadBanners(); }
   }
 
+  const isCurrentlyLive = (banner: Banner) => {
+    const now = Date.now();
+    return banner.active && (!banner.starts_at || new Date(banner.starts_at).getTime() <= now) && (!banner.ends_at || new Date(banner.ends_at).getTime() >= now);
+  };
   const filteredBanners = banners.filter((banner) => {
-    if (filter === "all") return true;
-    if (filter === "active") return banner.active;
-    return (banner.metadata?.campaign_status || (banner.active ? "active" : "lead")) === filter;
+    const status = banner.metadata?.campaign_status || (banner.active ? "active" : "lead");
+    const needle = searchTerm.trim().toLocaleLowerCase("pt-BR");
+    const searchable = [banner.title, banner.placement, banner.metadata?.advertiser_name, banner.metadata?.contact_name, banner.metadata?.contact_email, banner.metadata?.contact_whatsapp].filter(Boolean).join(" ").toLocaleLowerCase("pt-BR");
+    if (needle && !searchable.includes(needle)) return false;
+    if (placementFilter !== "all" && (banner.placement || "home") !== placementFilter) return false;
+    if (filter === "active") return isCurrentlyLive(banner);
+    if (filter !== "all" && status !== filter) return false;
+    return true;
   });
-  const activeCount = banners.filter((banner) => banner.active).length;
+  const activeCount = banners.filter(isCurrentlyLive).length;
+  const scheduledCount = banners.filter((banner) => banner.active && banner.starts_at && new Date(banner.starts_at).getTime() > Date.now()).length;
   const pendingCount = banners.filter((banner) => ["lead", "quoted", "approved"].includes(banner.metadata?.campaign_status || "")).length;
   const formatDate = (value: string | null) => value ? new Date(value).toLocaleDateString("pt-BR") : "Sem data";
 
@@ -232,7 +244,8 @@ export default function AdminAdvertisingPage() {
       <p className="heroCopy">Cadastre peças, organize a negociação, registre o anunciante e o valor combinado, programe a veiculação e pause ou encerre campanhas. Os registros usam a tabela banners existente; nenhum dado financeiro é criado automaticamente.</p>
       <div className="pillars" style={{ marginBottom: 24 }}>
         <article className="card"><div className="cardIcon">M</div><h2>{banners.length} campanhas</h2><p>Registros administráveis</p></article>
-        <article className="card"><div className="cardIcon">▶</div><h2>{activeCount} ativas</h2><p>Marcadas para veiculação</p></article>
+        <article className="card"><div className="cardIcon">▶</div><h2>{activeCount} veiculando</h2><p>Ativas e dentro do período programado</p></article>
+        <article className="card"><div className="cardIcon">◷</div><h2>{scheduledCount} programadas</h2><p>Ativas, com início futuro</p></article>
         <article className="card"><div className="cardIcon">↗</div><h2>{pendingCount} em negociação</h2><p>Contato, proposta ou aprovação</p></article>
       </div>
       {message && <p className="formSuccess" role="status">{message}</p>}
@@ -278,7 +291,7 @@ export default function AdminAdvertisingPage() {
         </form>
       </section>
       <section className="authCard">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}><h2>Carteira de campanhas</h2><label>Filtrar<select value={filter} onChange={e => setFilter(e.target.value)}><option value="all">Todas</option><option value="active">Veiculando</option>{Object.entries(statusLabels).filter(([value]) => value !== "active").map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>
+        <div style={{ display: "grid", gap: 12 }}><h2>Carteira de campanhas</h2><div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))", gap: 10 }}><label>Buscar campanha ou anunciante<input type="search" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Título, empresa, contato, e-mail…" /></label><label>Etapa comercial<select value={filter} onChange={e => setFilter(e.target.value)}><option value="all">Todas as etapas</option><option value="active">Veiculando agora</option>{Object.entries(statusLabels).filter(([value]) => value !== "active").map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Posição<select value={placementFilter} onChange={e => setPlacementFilter(e.target.value)}><option value="all">Todas as posições</option><option value="home">Página inicial</option><option value="home_top">Página inicial · superior</option><option value="home_mid">Página inicial · intermediária</option><option value="home_bottom">Página inicial · inferior</option><option value="fans">Pecatho Fans</option><option value="catalog">Catálogo</option></select></label></div><p style={{ margin: 0, color: "#aeb3c0", fontSize: 13 }}>{filteredBanners.length} de {banners.length} campanhas exibidas.</p></div>
         {loading ? <p>Carregando campanhas…</p> : filteredBanners.length === 0 ? <p>Nenhuma campanha encontrada para este filtro.</p> : <div style={{ display: "grid", gap: 14, marginTop: 16 }}>{filteredBanners.map(banner => {
           const meta = banner.metadata || {};
           const status = meta.campaign_status || (banner.active ? "active" : "lead");
