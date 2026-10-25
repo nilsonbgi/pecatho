@@ -267,7 +267,7 @@ export default function AdminAdvertisingPage() {
               <strong style={{ fontSize: 13 }}>Prévia da peça publicitária</strong>
               <span style={{ color: "#aeb3c0", fontSize: 12 }}>{form.placement.replaceAll("_", " ")} · ordem {Math.max(0, Number.parseInt(form.sort_order, 10) || 0)}</span>
             </div>
-            {/^https?:\/\//i.test(form.image_path.trim()) ? <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.4fr) minmax(180px, 1fr)", gap: 14, alignItems: "center" }}>
+            {/^https?:\/\//i.test(form.image_path.trim()) ? <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))", gap: 14, alignItems: "center" }}>
               <div style={{ overflow: "hidden", borderRadius: 10, background: "#11131a", border: "1px solid rgba(255,255,255,.1)" }}>
                 <img src={form.image_path.trim()} alt={form.title.trim() || "Prévia da campanha"} style={{ display: "block", width: "100%", maxHeight: 260, objectFit: "contain" }} />
               </div>
