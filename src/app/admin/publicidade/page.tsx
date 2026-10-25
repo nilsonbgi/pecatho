@@ -19,6 +19,7 @@ type BannerMetadata = {
   intake_source?: string;
   submitted_at?: string;
   banner_format?: "leaderboard" | "rectangle" | "square" | "vertical";
+  banner_format_preference?: "leaderboard" | "rectangle" | "square" | "vertical" | "consultation";
 };
 type Banner = {
   id: string;
@@ -80,6 +81,21 @@ function toLocalInput(value: string | null) {
 }
 function fromLocalInput(value: string) {
   return value ? new Date(value).toISOString() : null;
+}
+const bannerFormatPreferenceLabels: Record<NonNullable<BannerMetadata["banner_format_preference"]>, string> = {
+  leaderboard: "Faixa horizontal · 5:1 · até 1200 × 240 px",
+  rectangle: "Retangular · 2:1 · até 600 × 300 px",
+  square: "Quadrado · 1:1 · até 600 × 600 px",
+  vertical: "Vertical · 1:2 · até 300 × 600 px",
+  consultation: "Solicitou orientação sobre o formato",
+};
+function readBannerFormatPreference(notes: string | null | undefined) {
+  const match = notes?.match(/^Formato preferido:\s*(leaderboard|rectangle|square|vertical|consultation)\s*(?:\r?\n\s*\r?\n)?/i);
+  if (!match) return { preference: null as NonNullable<BannerMetadata["banner_format_preference"]> | null, notes: notes || "" };
+  return {
+    preference: match[1].toLowerCase() as NonNullable<BannerMetadata["banner_format_preference"]>,
+    notes: (notes || "").slice(match[0].length).trimStart(),
+  };
 }
 function money(value: string | undefined) {
   if (!value) return "Não informado";
@@ -154,7 +170,7 @@ export default function AdminAdvertisingPage() {
       contact_whatsapp: meta.contact_whatsapp || "",
       commercial_value: meta.intake_source === "public_advertising_form" ? "" : meta.commercial_value || "",
       budget_estimate: meta.budget_estimate || (meta.intake_source === "public_advertising_form" ? meta.commercial_value || "" : ""),
-      notes: meta.notes || "",
+      notes: readBannerFormatPreference(meta.notes).notes,
     });
     setMessage(""); setError("");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -191,6 +207,7 @@ export default function AdminAdvertisingPage() {
         campaign_type: form.campaign_type,
         campaign_status: form.campaign_status,
         banner_format: form.banner_format,
+        banner_format_preference: existingMetadata.banner_format_preference || readBannerFormatPreference(typeof existingMetadata.notes === "string" ? existingMetadata.notes : "").preference,
         advertiser_name: form.advertiser_name.trim() || null,
         contact_name: form.contact_name.trim() || null,
         contact_email: form.contact_email.trim() || null,
@@ -354,9 +371,9 @@ export default function AdminAdvertisingPage() {
           return <article key={banner.id} style={{ display: "grid", gridTemplateColumns: "minmax(100px,180px) minmax(0,1fr)", gap: 16, padding: 16, border: "1px solid rgba(255,255,255,.12)", borderRadius: 14, background: "rgba(255,255,255,.025)" }}>
             <div style={{ minHeight: 90, borderRadius: 10, overflow: "hidden", background: "#11131a" }}>{banner.image_path && <img src={banner.image_path} alt="" style={{ width: "100%", height: "100%", minHeight: 90, objectFit: "cover" }} />}</div>
             <div style={{ minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}><div><h3 style={{ margin: "0 0 6px", overflowWrap: "anywhere" }}>{banner.title || "Campanha sem título"}</h3><p style={{ margin: "0 0 6px", color: "#aeb3c0" }}>{meta.campaign_type === "pecatho" ? "Campanha própria Pecatho" : "Publicidade de anunciante"} · {statusLabels[status] || status}</p><p style={{ margin: 0, color: "#aeb3c0", fontSize: 13 }}>{meta.advertiser_name || "Anunciante não informado"} · Valor combinado: {money(meta.commercial_value)}</p>{meta.budget_estimate && <p style={{ margin: "5px 0 0", color: "#c4c8d1", fontSize: 12 }}>Orçamento estimado informado: {meta.budget_estimate}</p>}<p style={{ margin: "6px 0 0", color: "#8f96a7", fontSize: 12 }}>Posição: {banner.placement || "home"} · Ordem: {banner.sort_order} · {formatDate(banner.starts_at)} a {formatDate(banner.ends_at)}</p>{meta.intake_source === "public_advertising_form" && meta.submitted_at && <p style={{ margin: "5px 0 0", color: "#8f96a7", fontSize: 12 }}>Solicitação recebida em: {new Date(meta.submitted_at).toLocaleString("pt-BR")}</p>}</div><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><button type="button" className="secondaryButton" onClick={() => beginEdit(banner)}>Editar</button><button type="button" className="secondaryButton" onClick={() => void deleteCampaign(banner)}>Excluir</button></div></div>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}><div><h3 style={{ margin: "0 0 6px", overflowWrap: "anywhere" }}>{banner.title || "Campanha sem título"}</h3><p style={{ margin: "0 0 6px", color: "#aeb3c0" }}>{meta.campaign_type === "pecatho" ? "Campanha própria Pecatho" : "Publicidade de anunciante"} · {statusLabels[status] || status}</p>{(meta.banner_format_preference || readBannerFormatPreference(meta.notes).preference) && <p style={{ margin: "6px 0", color: "#e7c33f", fontSize: 13, fontWeight: 650 }}>Formato solicitado: {bannerFormatPreferenceLabels[(meta.banner_format_preference || readBannerFormatPreference(meta.notes).preference)!]}</p>}<p style={{ margin: 0, color: "#aeb3c0", fontSize: 13 }}>{meta.advertiser_name || "Anunciante não informado"} · Valor combinado: {money(meta.commercial_value)}</p>{meta.budget_estimate && <p style={{ margin: "5px 0 0", color: "#c4c8d1", fontSize: 12 }}>Orçamento estimado informado: {meta.budget_estimate}</p>}<p style={{ margin: "6px 0 0", color: "#8f96a7", fontSize: 12 }}>Posição: {banner.placement || "home"} · Ordem: {banner.sort_order} · {formatDate(banner.starts_at)} a {formatDate(banner.ends_at)}</p>{meta.intake_source === "public_advertising_form" && meta.submitted_at && <p style={{ margin: "5px 0 0", color: "#8f96a7", fontSize: 12 }}>Solicitação recebida em: {new Date(meta.submitted_at).toLocaleString("pt-BR")}</p>}</div><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><button type="button" className="secondaryButton" onClick={() => beginEdit(banner)}>Editar</button><button type="button" className="secondaryButton" onClick={() => void deleteCampaign(banner)}>Excluir</button></div></div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}><label style={{ display: "flex", alignItems: "center", gap: 8 }}>Etapa rápida<select value={status} onChange={e => void setCampaignStatus(banner, e.target.value as NonNullable<BannerMetadata["campaign_status"]>)}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>{meta.contact_email && <a href={`mailto:${meta.contact_email}`} className="secondaryButton">E-mail</a>}{meta.contact_whatsapp && <a href={`https://wa.me/${meta.contact_whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="secondaryButton">WhatsApp</a>}</div>
-              {meta.notes && <p style={{ margin: "10px 0 0", color: "#c4c8d1", whiteSpace: "pre-wrap" }}>{meta.notes}</p>}
+              {readBannerFormatPreference(meta.notes).notes && <p style={{ margin: "10px 0 0", color: "#c4c8d1", whiteSpace: "pre-wrap" }}>{readBannerFormatPreference(meta.notes).notes}</p>}
             </div>
           </article>;
         })}</div>}
