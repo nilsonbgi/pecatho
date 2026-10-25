@@ -52,7 +52,7 @@ type FormState = {
 const emptyForm: FormState = {
   id: "", title: "", image_path: "", link_url: "", target: "_self", placement: "home",
   sort_order: "0", starts_at: "", ends_at: "", campaign_type: "advertiser",
-  campaign_status: "lead", advertiser_name: "", contact_email: "", contact_whatsapp: "",
+  campaign_status: "lead", advertiser_name: "", contact_name: "", contact_email: "", contact_whatsapp: "",
   commercial_value: "", notes: "",
 };
 const statusLabels: Record<NonNullable<BannerMetadata["campaign_status"]>, string> = {
@@ -252,8 +252,8 @@ export default function AdminAdvertisingPage() {
             <label>WhatsApp de contato<input value={form.contact_whatsapp} onChange={e => setForm({ ...form, contact_whatsapp: e.target.value })} placeholder="DDD + número" /></label>
           </div>
           <div className="formRow">
-            <label>WhatsApp de contato<input value={form.contact_whatsapp} onChange={e => setForm({ ...form, contact_whatsapp: e.target.value })} placeholder="DDD + número" /></label>
             <label>Valor comercial combinado (R$)<input inputMode="decimal" value={form.commercial_value} onChange={e => setForm({ ...form, commercial_value: e.target.value })} placeholder="Ex.: 500,00" /></label>
+            <div aria-hidden="true" />
           </div>
           <div className="formRow">
             <label>Início da veiculação<input type="datetime-local" value={form.starts_at} onChange={e => setForm({ ...form, starts_at: e.target.value })} /></label>
