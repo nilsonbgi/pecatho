@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AdvertisingPlacement from "@/components/AdvertisingPlacement";
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPublicDigitalContentCover } from "@/lib/digital-content/public-cover";
@@ -459,6 +460,8 @@ export default async function ConteudosPage({ searchParams }: Props) {
 
         {!scoped ? (
           <>
+            <AdvertisingPlacement placement="catalog" />
+
             <section className="contentMarketplaceIntro mt-5">
               <div>
                 <span className="contentMarketplaceEyebrow">PECATHO FANS · MARKETPLACE</span>
