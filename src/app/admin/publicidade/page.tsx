@@ -10,6 +10,7 @@ type BannerMetadata = {
   campaign_type?: "advertiser" | "pecatho";
   campaign_status?: "lead" | "quoted" | "approved" | "active" | "paused" | "completed" | "rejected";
   advertiser_name?: string;
+  contact_name?: string;
   contact_email?: string;
   contact_whatsapp?: string;
   commercial_value?: string;
@@ -42,6 +43,7 @@ type FormState = {
   campaign_type: "advertiser" | "pecatho";
   campaign_status: NonNullable<BannerMetadata["campaign_status"]>;
   advertiser_name: string;
+  contact_name: string;
   contact_email: string;
   contact_whatsapp: string;
   commercial_value: string;
@@ -50,7 +52,7 @@ type FormState = {
 const emptyForm: FormState = {
   id: "", title: "", image_path: "", link_url: "", target: "_self", placement: "home",
   sort_order: "0", starts_at: "", ends_at: "", campaign_type: "advertiser",
-  campaign_status: "lead", advertiser_name: "", contact_email: "", contact_whatsapp: "",
+  campaign_status: "lead", advertiser_name: "", contact_name: "", contact_email: "", contact_whatsapp: "",
   commercial_value: "", notes: "",
 };
 const statusLabels: Record<NonNullable<BannerMetadata["campaign_status"]>, string> = {
@@ -129,7 +131,7 @@ export default function AdminAdvertisingPage() {
       starts_at: toLocalInput(banner.starts_at), ends_at: toLocalInput(banner.ends_at),
       campaign_type: meta.campaign_type === "pecatho" ? "pecatho" : "advertiser",
       campaign_status: meta.campaign_status || (banner.active ? "active" : "lead"),
-      advertiser_name: meta.advertiser_name || "", contact_email: meta.contact_email || "",
+      advertiser_name: meta.advertiser_name || "", contact_name: meta.contact_name || "", contact_email: meta.contact_email || "",
       contact_whatsapp: meta.contact_whatsapp || "", commercial_value: meta.commercial_value || "",
       notes: meta.notes || "",
     });
@@ -142,7 +144,8 @@ export default function AdminAdvertisingPage() {
     const image = form.image_path.trim();
     const link = form.link_url.trim();
     if (!form.title.trim()) { setError("Informe o título da campanha."); return; }
-    if (!/^https?:\/\//i.test(image)) { setError("A imagem deve ser informada por uma URL pública iniciada em https:// ou http://."); return; }
+    if (form.campaign_status === "active" && !image) { setError("Informe a URL pública da imagem antes de ativar a campanha."); return; }
+    if (image && !/^https?:\/\//i.test(image)) { setError("A imagem deve ser informada por uma URL pública iniciada em https:// ou http://."); return; }
     if (link && !/^https?:\/\//i.test(link) && !link.startsWith("/")) { setError("O destino deve ser uma URL http(s) ou um caminho interno iniciado por /."); return; }
     if (form.starts_at && form.ends_at && new Date(form.ends_at).getTime() < new Date(form.starts_at).getTime()) { setError("O encerramento não pode ser anterior ao início."); return; }
     const rawValue = form.commercial_value.trim();
@@ -151,7 +154,7 @@ export default function AdminAdvertisingPage() {
     const campaignActive = form.campaign_status === "active";
     const payload = {
       title: form.title.trim(),
-      image_path: image,
+      image_path: image || null,
       link_url: link || null,
       target: form.target,
       placement: form.placement.trim() || "home",
@@ -163,6 +166,7 @@ export default function AdminAdvertisingPage() {
         campaign_type: form.campaign_type,
         campaign_status: form.campaign_status,
         advertiser_name: form.advertiser_name.trim() || null,
+        contact_name: form.contact_name.trim() || null,
         contact_email: form.contact_email.trim() || null,
         contact_whatsapp: form.contact_whatsapp.trim() || null,
         commercial_value: rawValue ? normalizedValue : null,
@@ -232,7 +236,7 @@ export default function AdminAdvertisingPage() {
             <label>Tipo de campanha<select value={form.campaign_type} onChange={e => setForm({ ...form, campaign_type: e.target.value as FormState["campaign_type"] })}><option value="advertiser">Publicidade de anunciante</option><option value="pecatho">Campanha própria Pecatho</option></select></label>
           </div>
           <div className="formRow">
-            <label>URL pública da imagem<input required type="url" value={form.image_path} onChange={e => setForm({ ...form, image_path: e.target.value })} placeholder="https://…" /></label>
+            <label>URL pública da imagem<input type="url" value={form.image_path} onChange={e => setForm({ ...form, image_path: e.target.value })} placeholder="https://… (obrigatória para veicular)" /></label>
             <label>Link ao clicar<input type="text" value={form.link_url} onChange={e => setForm({ ...form, link_url: e.target.value })} placeholder="/fans ou https://…" /></label>
           </div>
           <div className="formRow">
@@ -241,11 +245,15 @@ export default function AdminAdvertisingPage() {
           </div>
           <div className="formRow">
             <label>Nome da empresa / anunciante<input value={form.advertiser_name} onChange={e => setForm({ ...form, advertiser_name: e.target.value })} placeholder="Empresa ou responsável" /></label>
-            <label>Contato por e-mail<input type="email" value={form.contact_email} onChange={e => setForm({ ...form, contact_email: e.target.value })} placeholder="contato@empresa.com" /></label>
+            <label>Nome do contato<input value={form.contact_name} onChange={e => setForm({ ...form, contact_name: e.target.value })} placeholder="Pessoa responsável" /></label>
           </div>
           <div className="formRow">
+            <label>Contato por e-mail<input type="email" value={form.contact_email} onChange={e => setForm({ ...form, contact_email: e.target.value })} placeholder="contato@empresa.com" /></label>
             <label>WhatsApp de contato<input value={form.contact_whatsapp} onChange={e => setForm({ ...form, contact_whatsapp: e.target.value })} placeholder="DDD + número" /></label>
+          </div>
+          <div className="formRow">
             <label>Valor comercial combinado (R$)<input inputMode="decimal" value={form.commercial_value} onChange={e => setForm({ ...form, commercial_value: e.target.value })} placeholder="Ex.: 500,00" /></label>
+            <div aria-hidden="true" />
           </div>
           <div className="formRow">
             <label>Início da veiculação<input type="datetime-local" value={form.starts_at} onChange={e => setForm({ ...form, starts_at: e.target.value })} /></label>
