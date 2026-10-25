@@ -143,7 +143,7 @@ export default function HomePage() {
         <section className="pHomeShowcase" aria-label="Vitrines e campanhas Pecatho">
           <div className="pPromoGrid">
             <article className="pPromoCard pPromoOwn"><div><div className="pPromoLabel">✦ CAMPANHAS PECATHO</div><h3>Descubra o que está acontecendo no universo Pecatho.</h3><p>Novos criadores, conteúdo digital e experiências para continuar conectado.</p></div><Link className="pPromoLink" href="/fans">Explorar campanhas e criadores ↗</Link></article>
-            <article className="pPromoCard"><div><div className="pPromoLabel">ESPAÇO PARA SUA MARCA</div><h3>Coloque seu negócio em evidência.</h3><p>Apresente sua marca para quem já está explorando o ecossistema Pecatho.</p></div><Link className="pPromoLink" href="/cadastro">Quero anunciar no Pecatho ↗</Link></article>
+            <article className="pPromoCard"><div><div className="pPromoLabel">ESPAÇO PARA SUA MARCA</div><h3>Coloque seu negócio em evidência.</h3><p>Apresente sua marca para quem já está explorando o ecossistema Pecatho.</p></div><Link className="pPromoLink" href="/anunciar">Quero anunciar no Pecatho ↗</Link></article>
           </div>
           {homeBanners.length > 0 && <div className="pBannerRail" aria-label="Campanhas em destaque">{homeBanners.map((banner) => <Link className="pLiveBanner" href={banner.link_url || "/fans"} key={banner.id} target={banner.target === "_blank" ? "_blank" : undefined} rel={banner.target === "_blank" ? "noopener noreferrer" : undefined}><img src={banner.image_path!} alt={banner.title || "Campanha Pecatho"} loading="lazy" /><span>{banner.title || "Em destaque no Pecatho"}</span></Link>)}</div>}
         </section>
