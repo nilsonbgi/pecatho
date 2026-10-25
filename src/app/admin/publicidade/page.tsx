@@ -61,6 +61,12 @@ const emptyForm: FormState = {
   campaign_status: "lead", advertiser_name: "", contact_name: "", contact_email: "", contact_whatsapp: "",
   commercial_value: "", budget_estimate: "", notes: "",
 };
+const bannerFormatDetails: Record<NonNullable<BannerMetadata["banner_format"]>, { label: string; maxWidth: number; ratio: string }> = {
+  leaderboard: { label: "Faixa horizontal · 5:1 · até 1200 × 240 px", maxWidth: 1200, ratio: "5 / 1" },
+  rectangle: { label: "Retangular · 2:1 · até 600 × 300 px", maxWidth: 600, ratio: "2 / 1" },
+  square: { label: "Quadrado · 1:1 · até 600 × 600 px", maxWidth: 600, ratio: "1 / 1" },
+  vertical: { label: "Vertical · 1:2 · até 300 × 600 px", maxWidth: 300, ratio: "1 / 2" },
+};
 const statusLabels: Record<NonNullable<BannerMetadata["campaign_status"]>, string> = {
   lead: "Contato recebido", quoted: "Proposta enviada", approved: "Aprovada / aguardando veiculação",
   active: "Veiculando", paused: "Pausada", completed: "Encerrada", rejected: "Recusada",
@@ -297,10 +303,10 @@ export default function AdminAdvertisingPage() {
           <div style={{ marginTop: 14, padding: 14, border: "1px solid rgba(255,255,255,.12)", borderRadius: 14, background: "rgba(255,255,255,.025)" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
               <strong style={{ fontSize: 13 }}>Prévia da peça publicitária</strong>
-              <span style={{ color: "#aeb3c0", fontSize: 12 }}>{form.placement.replaceAll("_", " ")} · ordem {Math.max(0, Number.parseInt(form.sort_order, 10) || 0)}</span>
+              <span style={{ color: "#aeb3c0", fontSize: 12 }}>{form.placement.replaceAll("_", " ")} · {bannerFormatDetails[form.banner_format].label} · ordem {Math.max(0, Number.parseInt(form.sort_order, 10) || 0)}</span>
             </div>
             {/^https?:\/\//i.test(form.image_path.trim()) ? <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))", gap: 14, alignItems: "center" }}>
-              <div style={{ overflow: "hidden", borderRadius: 10, background: "#11131a", border: "1px solid rgba(255,255,255,.1)" }}>
+              <div style={{ overflow: "hidden", width: "100%", maxWidth: bannerFormatDetails[form.banner_format].maxWidth, aspectRatio: bannerFormatDetails[form.banner_format].ratio, borderRadius: 10, background: "#11131a", border: "1px solid rgba(255,255,255,.1)" }}>
                 <img src={form.image_path.trim()} alt={form.title.trim() || "Prévia da campanha"} style={{ display: "block", width: "100%", maxHeight: 260, objectFit: "contain" }} />
               </div>
               <div style={{ minWidth: 0 }}>
