@@ -78,7 +78,7 @@ export default function HomePage() {
       const rawFormat = String(banner.metadata?.banner_format || "leaderboard");
       const format: HomeBannerFormat = rawFormat in homeBannerFormats ? rawFormat as HomeBannerFormat : "leaderboard";
       const size = homeBannerFormats[format];
-      return <Link className={`pLiveBanner pLiveBanner-${format}`} style={{ maxWidth: size.maxWidth, aspectRatio: size.ratio }} href={banner.link_url || "/fans"} key={banner.id} target={banner.target === "_blank" ? "_blank" : undefined} rel={banner.target === "_blank" ? "noopener noreferrer" : undefined} aria-label={banner.title || "Campanha Pecatho"}>
+      return <Link className={`pLiveBanner pLiveBanner-${format}`} style={{ maxWidth: size.maxWidth, flex: `0 1 ${size.maxWidth}px`, aspectRatio: size.ratio }} href={banner.link_url || "/fans"} key={banner.id} target={banner.target === "_blank" ? "_blank" : undefined} rel={banner.target === "_blank" ? "noopener noreferrer" : undefined} aria-label={banner.title || "Campanha Pecatho"}>
         <img src={banner.image_path!} alt={banner.title || "Campanha Pecatho"} loading="lazy" />
         <span>{banner.title || "Em destaque no Pecatho"}</span>
       </Link>;
