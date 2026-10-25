@@ -58,7 +58,7 @@ export default function HomePage() {
       setFeaturedCompanions(companions.slice(0,12));
       setFeaturedCreators(((creatorsResult.data??[]) as HomeCreator[]).slice(0,12));
       const now=Date.now();
-      setHomeBanners(((bannersResult.data??[]) as HomeBanner[]).filter(b=>(!b.starts_at||new Date(b.starts_at).getTime()<=now)&&(!b.ends_at||new Date(b.ends_at).getTime()>=now)&&typeof b.image_path==="string"&&/^https?:\/\//i.test(b.image_path)).slice(0,8));
+      setHomeBanners(((bannersResult.data??[]) as HomeBanner[]).filter(b=>(!b.placement||["home","home_top","home_mid","home_bottom"].includes(b.placement))&&(!b.starts_at||new Date(b.starts_at).getTime()<=now)&&(!b.ends_at||new Date(b.ends_at).getTime()>=now)&&typeof b.image_path==="string"&&/^https?:\/\//i.test(b.image_path)).slice(0,8));
     };
     void load().catch(error=>console.error("Falha ao carregar vitrines da página inicial:",error));
     return ()=>{active=false;};
