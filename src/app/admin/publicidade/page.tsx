@@ -15,6 +15,9 @@ type BannerMetadata = {
   contact_whatsapp?: string;
   commercial_value?: string;
   notes?: string;
+  budget_estimate?: string;
+  intake_source?: string;
+  submitted_at?: string;
 };
 type Banner = {
   id: string;
@@ -47,13 +50,14 @@ type FormState = {
   contact_email: string;
   contact_whatsapp: string;
   commercial_value: string;
+  budget_estimate: string;
   notes: string;
 };
 const emptyForm: FormState = {
   id: "", title: "", image_path: "", link_url: "", target: "_self", placement: "home",
   sort_order: "0", starts_at: "", ends_at: "", campaign_type: "advertiser",
   campaign_status: "lead", advertiser_name: "", contact_name: "", contact_email: "", contact_whatsapp: "",
-  commercial_value: "", notes: "",
+  commercial_value: "", budget_estimate: "", notes: "",
 };
 const statusLabels: Record<NonNullable<BannerMetadata["campaign_status"]>, string> = {
   lead: "Contato recebido", quoted: "Proposta enviada", approved: "Aprovada / aguardando veiculação",
@@ -134,7 +138,9 @@ export default function AdminAdvertisingPage() {
       campaign_type: meta.campaign_type === "pecatho" ? "pecatho" : "advertiser",
       campaign_status: meta.campaign_status || (banner.active ? "active" : "lead"),
       advertiser_name: meta.advertiser_name || "", contact_name: meta.contact_name || "", contact_email: meta.contact_email || "",
-      contact_whatsapp: meta.contact_whatsapp || "", commercial_value: meta.commercial_value || "",
+      contact_whatsapp: meta.contact_whatsapp || "",
+      commercial_value: meta.intake_source === "public_advertising_form" ? "" : meta.commercial_value || "",
+      budget_estimate: meta.budget_estimate || (meta.intake_source === "public_advertising_form" ? meta.commercial_value || "" : ""),
       notes: meta.notes || "",
     });
     setMessage(""); setError("");
@@ -172,6 +178,7 @@ export default function AdminAdvertisingPage() {
         contact_email: form.contact_email.trim() || null,
         contact_whatsapp: form.contact_whatsapp.trim() || null,
         commercial_value: rawValue ? normalizedValue : null,
+        budget_estimate: form.budget_estimate.trim() || null,
         notes: form.notes.trim() || null,
       },
     };
@@ -293,7 +300,7 @@ export default function AdminAdvertisingPage() {
           </div>
           <div className="formRow">
             <label>Valor comercial combinado (R$)<input inputMode="decimal" value={form.commercial_value} onChange={e => setForm({ ...form, commercial_value: e.target.value })} placeholder="Ex.: 500,00" /></label>
-            <div aria-hidden="true" />
+            <label>Orçamento estimado informado (R$ ou texto)<input maxLength={80} value={form.budget_estimate} onChange={e => setForm({ ...form, budget_estimate: e.target.value })} placeholder="Orçamento indicado pelo solicitante" /></label>
           </div>
           <div className="formRow">
             <label>Início da veiculação<input type="datetime-local" value={form.starts_at} onChange={e => setForm({ ...form, starts_at: e.target.value })} /></label>
@@ -315,7 +322,7 @@ export default function AdminAdvertisingPage() {
           return <article key={banner.id} style={{ display: "grid", gridTemplateColumns: "minmax(100px,180px) minmax(0,1fr)", gap: 16, padding: 16, border: "1px solid rgba(255,255,255,.12)", borderRadius: 14, background: "rgba(255,255,255,.025)" }}>
             <div style={{ minHeight: 90, borderRadius: 10, overflow: "hidden", background: "#11131a" }}>{banner.image_path && <img src={banner.image_path} alt="" style={{ width: "100%", height: "100%", minHeight: 90, objectFit: "cover" }} />}</div>
             <div style={{ minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}><div><h3 style={{ margin: "0 0 6px", overflowWrap: "anywhere" }}>{banner.title || "Campanha sem título"}</h3><p style={{ margin: "0 0 6px", color: "#aeb3c0" }}>{meta.campaign_type === "pecatho" ? "Campanha própria Pecatho" : "Publicidade de anunciante"} · {statusLabels[status] || status}</p><p style={{ margin: 0, color: "#aeb3c0", fontSize: 13 }}>{meta.advertiser_name || "Anunciante não informado"} · {money(meta.commercial_value)}</p><p style={{ margin: "6px 0 0", color: "#8f96a7", fontSize: 12 }}>Posição: {banner.placement || "home"} · Ordem: {banner.sort_order} · {formatDate(banner.starts_at)} a {formatDate(banner.ends_at)}</p></div><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><button type="button" className="secondaryButton" onClick={() => beginEdit(banner)}>Editar</button><button type="button" className="secondaryButton" onClick={() => void deleteCampaign(banner)}>Excluir</button></div></div>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}><div><h3 style={{ margin: "0 0 6px", overflowWrap: "anywhere" }}>{banner.title || "Campanha sem título"}</h3><p style={{ margin: "0 0 6px", color: "#aeb3c0" }}>{meta.campaign_type === "pecatho" ? "Campanha própria Pecatho" : "Publicidade de anunciante"} · {statusLabels[status] || status}</p><p style={{ margin: 0, color: "#aeb3c0", fontSize: 13 }}>{meta.advertiser_name || "Anunciante não informado"} · Valor combinado: {money(meta.commercial_value)}</p>{meta.budget_estimate && <p style={{ margin: "5px 0 0", color: "#c4c8d1", fontSize: 12 }}>Orçamento estimado informado: {meta.budget_estimate}</p>}<p style={{ margin: "6px 0 0", color: "#8f96a7", fontSize: 12 }}>Posição: {banner.placement || "home"} · Ordem: {banner.sort_order} · {formatDate(banner.starts_at)} a {formatDate(banner.ends_at)}</p>{meta.intake_source === "public_advertising_form" && meta.submitted_at && <p style={{ margin: "5px 0 0", color: "#8f96a7", fontSize: 12 }}>Solicitação recebida em: {new Date(meta.submitted_at).toLocaleString("pt-BR")}</p>}</div><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><button type="button" className="secondaryButton" onClick={() => beginEdit(banner)}>Editar</button><button type="button" className="secondaryButton" onClick={() => void deleteCampaign(banner)}>Excluir</button></div></div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}><label style={{ display: "flex", alignItems: "center", gap: 8 }}>Etapa rápida<select value={status} onChange={e => void setCampaignStatus(banner, e.target.value as NonNullable<BannerMetadata["campaign_status"]>)}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>{meta.contact_email && <a href={`mailto:${meta.contact_email}`} className="secondaryButton">E-mail</a>}{meta.contact_whatsapp && <a href={`https://wa.me/${meta.contact_whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="secondaryButton">WhatsApp</a>}</div>
               {meta.notes && <p style={{ margin: "10px 0 0", color: "#c4c8d1", whiteSpace: "pre-wrap" }}>{meta.notes}</p>}
             </div>
