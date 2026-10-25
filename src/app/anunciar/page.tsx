@@ -21,26 +21,31 @@ export default function AnunciarPage() {
       return;
     }
     setSending(true);
-    const supabase = createClient();
-    const { error: submitError } = await supabase.rpc("submit_public_advertising_inquiry", {
-      p_contact_name: form.contact_name.trim(),
-      p_company_name: form.company_name.trim(),
-      p_email: form.email.trim(),
-      p_whatsapp: form.whatsapp.trim(),
-      p_placement: form.placement,
-      p_budget: form.budget.trim(),
-      p_message: form.message.trim(),
-      p_website: form.website.trim(),
-    });
-    setSending(false);
-    if (submitError) {
-      setError(submitError.message.includes("email") || submitError.message.includes("e-mail")
-        ? "Confira o e-mail informado e tente novamente."
-        : "Não foi possível enviar a solicitação agora. Revise os campos e tente novamente.");
-      return;
+    try {
+      const supabase = createClient();
+      const { error: submitError } = await supabase.rpc("submit_public_advertising_inquiry", {
+        p_contact_name: form.contact_name.trim(),
+        p_company_name: form.company_name.trim(),
+        p_email: form.email.trim(),
+        p_whatsapp: form.whatsapp.trim(),
+        p_placement: form.placement,
+        p_budget: form.budget.trim(),
+        p_message: form.message.trim(),
+        p_website: form.website.trim(),
+      });
+      if (submitError) {
+        setError(submitError.message.includes("email") || submitError.message.includes("e-mail")
+          ? "Confira o e-mail informado e tente novamente."
+          : "Não foi possível enviar a solicitação agora. Revise os campos e tente novamente.");
+        return;
+      }
+      setSent(true);
+      setForm(initialForm);
+    } catch {
+      setError("Falha de conexão ao enviar a solicitação. Verifique sua internet e tente novamente; os dados preenchidos foram mantidos.");
+    } finally {
+      setSending(false);
     }
-    setSent(true);
-    setForm(initialForm);
   }
 
   return <main className="advertisingLeadPage">
