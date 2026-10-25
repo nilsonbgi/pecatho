@@ -262,6 +262,23 @@ export default function AdminAdvertisingPage() {
             <label>URL pública da imagem<input type="url" value={form.image_path} onChange={e => setForm({ ...form, image_path: e.target.value })} placeholder="https://… (obrigatória para veicular)" /></label>
             <label>Link ao clicar<input type="text" value={form.link_url} onChange={e => setForm({ ...form, link_url: e.target.value })} placeholder="/fans ou https://…" /></label>
           </div>
+          <div style={{ marginTop: 14, padding: 14, border: "1px solid rgba(255,255,255,.12)", borderRadius: 14, background: "rgba(255,255,255,.025)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
+              <strong style={{ fontSize: 13 }}>Prévia da peça publicitária</strong>
+              <span style={{ color: "#aeb3c0", fontSize: 12 }}>{form.placement.replaceAll("_", " ")} · ordem {Math.max(0, Number.parseInt(form.sort_order, 10) || 0)}</span>
+            </div>
+            {/^https?:\/\//i.test(form.image_path.trim()) ? <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))", gap: 14, alignItems: "center" }}>
+              <div style={{ overflow: "hidden", borderRadius: 10, background: "#11131a", border: "1px solid rgba(255,255,255,.1)" }}>
+                <img src={form.image_path.trim()} alt={form.title.trim() || "Prévia da campanha"} style={{ display: "block", width: "100%", maxHeight: 260, objectFit: "contain" }} />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ color: "#e9eaf0", fontSize: 16, fontWeight: 750, overflowWrap: "anywhere" }}>{form.title.trim() || "Título da campanha"}</div>
+                <p style={{ color: "#aeb3c0", fontSize: 12, lineHeight: 1.6, overflowWrap: "anywhere" }}>Destino: {form.link_url.trim() || "Sem link configurado"}</p>
+                <p style={{ color: form.campaign_status === "active" ? "#a4edbf" : "#e7c33f", fontSize: 12, marginBottom: 0 }}>Etapa: {statusLabels[form.campaign_status]}</p>
+              </div>
+            </div> : <p style={{ margin: 0, color: "#aeb3c0", fontSize: 13 }}>Informe uma URL pública de imagem para visualizar a peça. A prévia é administrativa; a campanha só será exibida ao público quando estiver ativa e dentro do período programado.</p>}
+            {form.link_url.trim() && <p style={{ margin: "10px 0 0", color: "#8f96a7", fontSize: 12, overflowWrap: "anywhere" }}>O clique levará para: {form.link_url.trim()}</p>}
+          </div>
           <div className="formRow">
             <label>Etapa comercial<select value={form.campaign_status} onChange={e => setForm({ ...form, campaign_status: e.target.value as FormState["campaign_status"] })}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
             <label>Posição<select value={form.placement} onChange={e => setForm({ ...form, placement: e.target.value })}><option value="home">Página inicial</option><option value="home_top">Página inicial · superior</option><option value="home_mid">Página inicial · intermediária</option><option value="home_bottom">Página inicial · inferior</option><option value="fans">Pecatho Fans</option><option value="catalog">Catálogo</option></select></label>
