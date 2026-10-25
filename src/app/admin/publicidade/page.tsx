@@ -18,6 +18,7 @@ type BannerMetadata = {
   budget_estimate?: string;
   intake_source?: string;
   submitted_at?: string;
+  banner_format?: "leaderboard" | "rectangle" | "square" | "vertical";
 };
 type Banner = {
   id: string;
@@ -40,6 +41,7 @@ type FormState = {
   link_url: string;
   target: "_self" | "_blank";
   placement: string;
+  banner_format: NonNullable<BannerMetadata["banner_format"]>;
   sort_order: string;
   starts_at: string;
   ends_at: string;
@@ -54,8 +56,8 @@ type FormState = {
   notes: string;
 };
 const emptyForm: FormState = {
-  id: "", title: "", image_path: "", link_url: "", target: "_self", placement: "home",
-  sort_order: "0", starts_at: "", ends_at: "", campaign_type: "advertiser",
+  id: "", title: "", image_path: "", link_url: "", target: "_self", placement: "home_top",
+  banner_format: "leaderboard", sort_order: "0", starts_at: "", ends_at: "", campaign_type: "advertiser",
   campaign_status: "lead", advertiser_name: "", contact_name: "", contact_email: "", contact_whatsapp: "",
   commercial_value: "", budget_estimate: "", notes: "",
 };
@@ -138,7 +140,7 @@ export default function AdminAdvertisingPage() {
     setForm({
       id: banner.id, title: banner.title || "", image_path: banner.image_path || "",
       link_url: banner.link_url || "", target: banner.target === "_blank" ? "_blank" : "_self",
-      placement: banner.placement || "home", sort_order: String(banner.sort_order ?? 0),
+      placement: banner.placement || "home_top", banner_format: meta.banner_format || "leaderboard", sort_order: String(banner.sort_order ?? 0),
       starts_at: toLocalInput(banner.starts_at), ends_at: toLocalInput(banner.ends_at),
       campaign_type: meta.campaign_type === "pecatho" ? "pecatho" : "advertiser",
       campaign_status: meta.campaign_status || (banner.active ? "active" : "lead"),
@@ -182,6 +184,7 @@ export default function AdminAdvertisingPage() {
         ...existingMetadata,
         campaign_type: form.campaign_type,
         campaign_status: form.campaign_status,
+        banner_format: form.banner_format,
         advertiser_name: form.advertiser_name.trim() || null,
         contact_name: form.contact_name.trim() || null,
         contact_email: form.contact_email.trim() || null,
@@ -310,7 +313,7 @@ export default function AdminAdvertisingPage() {
           </div>
           <div className="formRow">
             <label>Etapa comercial<select value={form.campaign_status} onChange={e => setForm({ ...form, campaign_status: e.target.value as FormState["campaign_status"] })}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-            <label>Posição<select value={form.placement} onChange={e => setForm({ ...form, placement: e.target.value })}><option value="home">Página inicial</option><option value="home_top">Página inicial · superior</option><option value="home_mid">Página inicial · intermediária</option><option value="home_bottom">Página inicial · inferior</option><option value="fans">Pecatho Fans</option><option value="catalog">Catálogo</option></select></label>
+            <label>Onde aparecerá<select value={form.placement} onChange={e => setForm({ ...form, placement: e.target.value })}><option value="home_top">Página inicial · superior</option><option value="home_mid">Página inicial · intermediária</option><option value="home_bottom">Página inicial · inferior</option><option value="home">Página inicial · posição padrão (superior)</option><option value="fans">Pecatho Fans · espaço reservado</option><option value="catalog">Catálogo · espaço reservado</option></select><small style={{ color: "#aeb3c0", fontWeight: 400 }}>Fans e Catálogo ainda não exibem banners automaticamente. Para veicular agora, escolha uma posição da página inicial.</small></label>
           </div>
           <div className="formRow">
             <label>Nome da empresa / anunciante<input value={form.advertiser_name} onChange={e => setForm({ ...form, advertiser_name: e.target.value })} placeholder="Empresa ou responsável" /></label>
@@ -329,6 +332,7 @@ export default function AdminAdvertisingPage() {
             <label>Fim da veiculação<input type="datetime-local" value={form.ends_at} onChange={e => setForm({ ...form, ends_at: e.target.value })} /></label>
           </div>
           <div className="formRow">
+            <label>Formato e tamanho<select value={form.banner_format} onChange={e => setForm({ ...form, banner_format: e.target.value as FormState["banner_format"] })}><option value="leaderboard">Faixa horizontal · proporção 5:1 · até 1200 × 240 px</option><option value="rectangle">Retangular · proporção 2:1 · até 600 × 300 px</option><option value="square">Quadrado · proporção 1:1 · até 600 × 600 px</option><option value="vertical">Vertical · proporção 1:2 · até 300 × 600 px</option></select><small style={{ color: "#aeb3c0", fontWeight: 400 }}>O site adapta a exibição ao desktop e celular. Envie a arte na proporção escolhida para evitar cortes.</small></label>
             <label>Ordem de exibição<input type="number" min="0" max="10000" value={form.sort_order} onChange={e => setForm({ ...form, sort_order: e.target.value })} /></label>
             <label>Abertura do link<select value={form.target} onChange={e => setForm({ ...form, target: e.target.value as FormState["target"] })}><option value="_self">Na mesma aba</option><option value="_blank">Nova aba</option></select></label>
           </div>
