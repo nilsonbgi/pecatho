@@ -372,6 +372,7 @@ export default async function FansPage() {
           <Link href="/anunciantes">Acompanhantes <span aria-hidden="true">↗</span></Link>
           <Link href="/parceiros">Parceiros <span aria-hidden="true">↗</span></Link>
           <Link href="/conteudos">Conteúdo digital <span aria-hidden="true">↗</span></Link>
+          <Link href="/anunciar">Anunciar no Pecatho <span aria-hidden="true">↗</span></Link>
         </nav>
 
         <AdvertisingPlacement placement="fans" />
