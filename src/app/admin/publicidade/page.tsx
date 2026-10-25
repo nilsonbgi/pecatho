@@ -96,13 +96,18 @@ export default function AdminAdvertisingPage() {
 
   const loadBanners = useCallback(async () => {
     setLoading(true);
-    const { data, error: queryError } = await supabase
-      .from("banners")
-      .select("id,title,image_path,link_url,target,placement,sort_order,active,starts_at,ends_at,metadata,created_at")
-      .order("created_at", { ascending: false });
-    if (queryError) setError(queryError.message);
-    else setBanners((data || []) as Banner[]);
-    setLoading(false);
+    try {
+      const { data, error: queryError } = await supabase
+        .from("banners")
+        .select("id,title,image_path,link_url,target,placement,sort_order,active,starts_at,ends_at,metadata,created_at")
+        .order("created_at", { ascending: false });
+      if (queryError) setError(queryError.message);
+      else setBanners((data || []) as Banner[]);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Não foi possível carregar as campanhas. Verifique a conexão e tente novamente.");
+    } finally {
+      setLoading(false);
+    }
   }, [supabase]);
 
   useEffect(() => {
@@ -187,14 +192,19 @@ export default function AdminAdvertisingPage() {
       },
     };
     setSaving(true);
-    const result = form.id
-      ? await supabase.from("banners").update(payload).eq("id", form.id)
-      : await supabase.from("banners").insert(payload);
-    setSaving(false);
-    if (result.error) { setError(result.error.message); return; }
-    setMessage(form.id ? "Campanha atualizada." : "Campanha cadastrada.");
-    setForm(emptyForm);
-    await loadBanners();
+    try {
+      const result = form.id
+        ? await supabase.from("banners").update(payload).eq("id", form.id)
+        : await supabase.from("banners").insert(payload);
+      if (result.error) { setError(result.error.message); return; }
+      setMessage(form.id ? "Campanha atualizada." : "Campanha cadastrada.");
+      setForm(emptyForm);
+      await loadBanners();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Não foi possível salvar a campanha por uma falha de conexão. Os dados preenchidos foram mantidos; tente novamente.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function setCampaignStatus(banner: Banner, status: NonNullable<BannerMetadata["campaign_status"]>) {
@@ -210,19 +220,27 @@ export default function AdminAdvertisingPage() {
       }
     }
     const metadata = { ...(banner.metadata || {}), campaign_status: status };
-    const { error: updateError } = await supabase.from("banners")
-      .update({ metadata, active: status === "active" }).eq("id", banner.id);
-    if (updateError) setError(updateError.message);
-    else { setMessage("Etapa comercial atualizada."); await loadBanners(); }
+    try {
+      const { error: updateError } = await supabase.from("banners")
+        .update({ metadata, active: status === "active" }).eq("id", banner.id);
+      if (updateError) setError(updateError.message);
+      else { setMessage("Etapa comercial atualizada."); await loadBanners(); }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Não foi possível atualizar a etapa comercial por uma falha de conexão. Tente novamente.");
+    }
   }
 
   async function deleteCampaign(banner: Banner) {
     const label = banner.title || "esta campanha";
     if (!window.confirm(`Excluir definitivamente "${label}"?`)) return;
     setMessage(""); setError("");
-    const { error: deleteError } = await supabase.from("banners").delete().eq("id", banner.id);
-    if (deleteError) setError(deleteError.message);
-    else { setMessage("Campanha excluída."); if (form.id === banner.id) setForm(emptyForm); await loadBanners(); }
+    try {
+      const { error: deleteError } = await supabase.from("banners").delete().eq("id", banner.id);
+      if (deleteError) setError(deleteError.message);
+      else { setMessage("Campanha excluída."); if (form.id === banner.id) setForm(emptyForm); await loadBanners(); }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Não foi possível excluir a campanha por uma falha de conexão. Tente novamente.");
+    }
   }
 
   const isCurrentlyLive = (banner: Banner) => {
