@@ -100,7 +100,7 @@ function readBannerFormatPreference(notes: string | null | undefined) {
 function money(value: string | undefined) {
   if (!value) return "Não informado";
   const normalized = value.includes(",")
-    ? value.replace(/\\./g, "").replace(",", ".")
+    ? value.replace(/\./g, "").replace(",", ".")
     : value;
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : value;
