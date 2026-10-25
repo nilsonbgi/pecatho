@@ -160,6 +160,9 @@ export default function AdminAdvertisingPage() {
     const normalizedValue = rawValue.includes(",") ? rawValue.replace(/\./g, "").replace(",", ".") : rawValue;
     if (rawValue && (!Number.isFinite(Number(normalizedValue)) || Number(normalizedValue) < 0)) { setError("Informe um valor comercial válido, sem valores negativos."); return; }
     const campaignActive = form.campaign_status === "active";
+    const existingMetadata = form.id
+      ? banners.find((banner) => banner.id === form.id)?.metadata || {}
+      : {};
     const payload = {
       title: form.title.trim(),
       image_path: image || null,
@@ -171,6 +174,7 @@ export default function AdminAdvertisingPage() {
       starts_at: fromLocalInput(form.starts_at),
       ends_at: fromLocalInput(form.ends_at),
       metadata: {
+        ...existingMetadata,
         campaign_type: form.campaign_type,
         campaign_status: form.campaign_status,
         advertiser_name: form.advertiser_name.trim() || null,
