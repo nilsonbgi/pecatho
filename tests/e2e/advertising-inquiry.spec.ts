@@ -66,7 +66,7 @@ test.describe('fluxo comercial público de publicidade', () => {
 
   test('preserva a preferência por orientação de formato no pedido comercial', async ({ page }) => {
     let requestBody: Record<string, unknown> | null = null;
-    await page.route(/\\/rest\\/v1\\/rpc\\/submit_public_advertising_inquiry(?:\\?.*)?$/, async (route) => {
+    await page.route(/\/rest\/v1\/rpc\/submit_public_advertising_inquiry(?:\?.*)?$/, async (route) => {
       requestBody = route.request().postDataJSON() as Record<string, unknown>;
       await route.fulfill({ status: 200, contentType: 'application/json', body: 'null' });
     });
@@ -83,7 +83,7 @@ test.describe('fluxo comercial público de publicidade', () => {
     await expect(page.getByRole('heading', { name: /Solicitação recebida/i })).toBeVisible();
     expect(requestBody).toMatchObject({
       p_placement: 'fans',
-      p_message: 'Formato preferido: consultation\\n\\nPreciso de orientação para escolher o formato adequado.',
+      p_message: 'Formato preferido: consultation\n\nPreciso de orientação para escolher o formato adequado.',
     });
   });
 
