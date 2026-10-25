@@ -58,7 +58,7 @@ test.describe('fluxo comercial público de publicidade', () => {
       p_whatsapp: '(11) 99999-0000',
       p_placement: 'home_top',
       p_budget: 'Até R$ 2.500,00',
-      p_message: 'Campanha de homologação automatizada; não publicar.',
+      p_message: 'Formato preferido: leaderboard\n\nCampanha de homologação automatizada; não publicar.',
       p_website: '',
     });
   });
