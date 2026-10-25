@@ -5,7 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/browser";
 
 type Evidence = { id: string; storage_path: string; original_filename: string; mime_type: string; size_bytes: number };
-type Report = { id: string; reporter_user_id: string; target_user_id: string; category: string; justification: string; status: string; created_at: string; incident_at: string|null; decision_reason: string|null; evidence?: Evidence[] };
+type Report = { id: string; reporter_user_id: string; target_user_id: string; category: string; justification: string; status: string; created_at: string; incident_at: string|null; decision_reason: string|null; triage_note: string|null; evidence?: Evidence[] };
 type Decision = { outcome: string; rationale: string; suspension_until?: string };
 type DecisionRecord = { id: string; outcome: string; rationale: string; suspension_until: string | null; created_at: string; reviewer_user_id: string };
 
@@ -28,13 +28,13 @@ export default function GovernanceAdminPage(){
  const [message,setMessage]=useState("");
  async function load(){
   setError("");
-  const {data,error:loadError}=await supabase.from("governance_reports").select("id,reporter_user_id,target_user_id,category,justification,status,created_at,incident_at,decision_reason").order("created_at",{ascending:true}).limit(200);
+  const {data,error:loadError}=await supabase.from("governance_reports").select("id,reporter_user_id,target_user_id,category,justification,status,created_at,incident_at,decision_reason,triage_note").order("created_at",{ascending:true}).limit(200);
   if(loadError){setError("Não foi possível carregar a fila de governança. Confirme a migration e suas permissões: "+loadError.message);return;}
   setReports((data||[]) as Report[]);
  }
  useEffect(()=>{(async()=>{const {data:{user}}=await supabase.auth.getUser();if(!user){setAuthorized(false);return;}const {data:role,error:roleError}=await supabase.from("user_roles").select("role").eq("user_id",user.id).in("role",["super_admin","admin","moderator","support"]).limit(1).maybeSingle();if(roleError){setError(roleError.message);setAuthorized(false);return;}setAuthorized(Boolean(role));if(role)await load();})();},[]);
  async function openReport(report:Report){
-  setSelected(report);setEvidence([]);setError("");setMessage("");setTriageNote(report.decision_reason||"");setDecision(d=>({...d,rationale:"",suspension_until:""}));
+  setSelected(report);setEvidence([]);setError("");setMessage("");setTriageNote(report.triage_note||"");setDecision(d=>({...d,rationale:"",suspension_until:""}));
   const [{data,error:evidenceError},{data:historyData,error:historyError}]=await Promise.all([
    supabase.from("governance_evidence").select("id,storage_path,original_filename,mime_type,size_bytes").eq("report_id",report.id).order("created_at"),
    supabase.from("governance_decisions").select("id,outcome,rationale,suspension_until,created_at,reviewer_user_id").eq("report_id",report.id).order("created_at",{ascending:false}),
@@ -57,14 +57,14 @@ export default function GovernanceAdminPage(){
    if(!user)throw new Error("Sessão expirada. Entre novamente para continuar.");
    const {error:saveError}=await supabase.from("governance_reports").update({
     status,
-    decision_reason:triageNote.trim()||selected.decision_reason,
+    triage_note:triageNote.trim()||null,
     reviewer_user_id:user.id,
     ...( ["submitted","under_review","appealed"].includes(status) ? {decided_at:null} : {})
    }).eq("id",selected.id);
    if(saveError)throw saveError;
    setMessage("Triagem atualizada. As medidas finais devem ser registradas pela ação de decisão para preservar o histórico.");
    await load();
-   setSelected({...selected,status,decision_reason:triageNote.trim()||selected.decision_reason});
+   setSelected({...selected,status,triage_note:triageNote.trim()||null});
   }catch(err){setError(err instanceof Error?err.message:"Não foi possível salvar a triagem.");}
   finally{setBusy(false);}
  }
@@ -85,7 +85,7 @@ export default function GovernanceAdminPage(){
    if(decisionError)throw decisionError;
    const nextStatus=decision.outcome==="no_action"?"rejected":"actioned";
    setMessage(decision.outcome === "temporary_suspension" ? "Decisão registrada. A conta foi suspensa; o prazo será aplicado e a liberação será processada no próximo acesso autenticado ao painel após a data final." : decision.outcome === "permanent_suspension" ? "Decisão registrada. O status central da conta foi alterado para bloqueado." : "Decisão registrada de forma transacional, com histórico de auditoria.");
-   setSelected({...selected,status:nextStatus,decision_reason:decision.rationale.trim()});
+   setSelected({...selected,status:nextStatus});
    const {data:historyData,error:historyError}=await supabase.from("governance_decisions").select("id,outcome,rationale,suspension_until,created_at,reviewer_user_id").eq("report_id",selected.id).order("created_at",{ascending:false});
    if(historyError)setError(historyError.message);else setHistory((historyData||[]) as DecisionRecord[]);
    await load();
