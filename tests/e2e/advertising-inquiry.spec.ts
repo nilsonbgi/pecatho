@@ -63,6 +63,30 @@ test.describe('fluxo comercial público de publicidade', () => {
     });
   });
 
+
+  test('preserva a preferência por orientação de formato no pedido comercial', async ({ page }) => {
+    let requestBody: Record<string, unknown> | null = null;
+    await page.route(/\/rest\/v1\/rpc\/submit_public_advertising_inquiry(?:\?.*)?$/, async (route) => {
+      requestBody = route.request().postDataJSON() as Record<string, unknown>;
+      await route.fulfill({ status: 200, contentType: 'application/json', body: 'null' });
+    });
+
+    await page.goto('/anunciar', { waitUntil: 'domcontentloaded' });
+    await page.getByLabel(/Seu nome/i).fill('Contato Homologação');
+    await page.getByLabel(/Empresa ou marca/i).fill('Marca de Teste');
+    await page.getByLabel(/E-mail comercial/i).fill('homologacao@example.com');
+    await page.getByLabel(/Onde deseja anunciar/i).selectOption('fans');
+    await page.getByLabel(/Formato preferido do banner/i).selectOption('consultation');
+    await page.getByLabel(/Conte um pouco sobre a campanha/i).fill('Preciso de orientação para escolher o formato adequado.');
+    await page.getByRole('button', { name: /Enviar solicitação comercial/i }).click();
+
+    await expect(page.getByRole('heading', { name: /Solicitação recebida/i })).toBeVisible();
+    expect(requestBody).toMatchObject({
+      p_placement: 'fans',
+      p_message: 'Formato preferido: consultation\n\nPreciso de orientação para escolher o formato adequado.',
+    });
+  });
+
   test('página de publicidade funciona em viewport estreito sem overflow horizontal', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/anunciar', { waitUntil: 'domcontentloaded' });
