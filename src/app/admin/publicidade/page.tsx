@@ -458,6 +458,25 @@ export default function AdminAdvertisingPage() {
       (!banner.ends_at || new Date(banner.ends_at).getTime() >= now);
   }).length;
   const pendingCount = banners.filter((banner) => ["lead", "quoted", "approved"].includes(banner.metadata?.campaign_status || "")).length;
+  const commercialValueTotal = banners.reduce((total, banner) => {
+    if (banner.metadata?.campaign_type === "pecatho") return total;
+    const rawValue = banner.metadata?.commercial_value?.trim();
+    if (!rawValue) return total;
+    const normalizedValue = rawValue.includes(",")
+      ? rawValue.replace(/\\./g, "").replace(",", ".")
+      : rawValue;
+    const parsedValue = Number(normalizedValue);
+    return Number.isFinite(parsedValue) && parsedValue >= 0 ? total + parsedValue : total;
+  }, 0);
+  const campaignsWithCommercialValue = banners.filter((banner) =>
+    banner.metadata?.campaign_type !== "pecatho" &&
+    Boolean(banner.metadata?.commercial_value?.trim()) &&
+    Number.isFinite(Number(
+      banner.metadata?.commercial_value?.includes(",")
+        ? banner.metadata.commercial_value.replace(/\\./g, "").replace(",", ".")
+        : banner.metadata?.commercial_value
+    ))
+  ).length;
   const formatDate = (value: string | null) => value ? new Date(value).toLocaleDateString("pt-BR") : "Sem data";
 
   if (authLoading) return <main className="shell"><section className="hero"><div className="eyebrow">ADMINISTRAÇÃO PECATHO</div><h1>Publicidade <em>e campanhas.</em></h1><div className="authCard">Validando acesso administrativo…</div></section></main>;
@@ -474,6 +493,7 @@ export default function AdminAdvertisingPage() {
         <article className="card"><div className="cardIcon">▶</div><h2>{activeCount} veiculando</h2><p>Ativas e dentro do período programado</p></article>
         <article className="card"><div className="cardIcon">◷</div><h2>{scheduledCount} programadas</h2><p>Ativas, com início futuro</p></article>
         <article className="card"><div className="cardIcon">↗</div><h2>{pendingCount} em negociação</h2><p>Contato, proposta ou aprovação</p></article>
+        <article className="card"><div className="cardIcon">R$</div><h2>{money(String(commercialValueTotal))}</h2><p>Valor comercial registrado em {campaignsWithCommercialValue} campanhas de anunciantes; não representa recebimentos confirmados</p></article>
       </div>
       {message && <p className="formSuccess" role="status">{message}</p>}
       {error && <p className="formError" role="alert">{error}</p>}
