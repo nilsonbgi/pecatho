@@ -395,6 +395,13 @@ export default function AdminAdvertisingPage() {
   function exportCampaignsCsv() {
     const columns = [
       ["Título", (banner: Banner) => banner.title || ""],
+      ["Data de cadastro", (banner: Banner) => banner.created_at || ""],
+      ["Origem da solicitação", (banner: Banner) => banner.metadata?.intake_source === "public_advertising_form" ? "Formulário público /anunciar" : "Cadastro administrativo"],
+      ["Data de recebimento da solicitação", (banner: Banner) => banner.metadata?.submitted_at || ""],
+      ["Formato do banner", (banner: Banner) => {
+        const preference = banner.metadata?.banner_format_preference || readBannerFormatPreference(banner.metadata?.notes).preference;
+        return preference ? bannerFormatPreferenceLabels[preference] : banner.metadata?.banner_format ? bannerFormatDetails[banner.metadata.banner_format].label : "";
+      }],
       ["Tipo", (banner: Banner) => banner.metadata?.campaign_type === "pecatho" ? "Campanha própria Pecatho" : "Publicidade de anunciante"],
       ["Etapa comercial", (banner: Banner) => campaignDisplayStatus(banner, banner.metadata?.campaign_status || (banner.active ? "active" : "lead"))],
       ["Anunciante", (banner: Banner) => banner.metadata?.advertiser_name || ""],
