@@ -10,6 +10,7 @@ type BannerMetadata = {
   campaign_type?: "advertiser" | "pecatho";
   campaign_status?: "lead" | "quoted" | "approved" | "active" | "paused" | "completed" | "rejected";
   campaign_status_history?: { from: string; to: string; changed_at: string; changed_by: string | null }[];
+  commercial_interaction_history?: { type: "call" | "email" | "whatsapp" | "meeting" | "note"; summary: string; created_at: string; created_by: string | null }[];
   advertiser_name?: string;
   contact_name?: string;
   contact_email?: string;
@@ -127,6 +128,7 @@ export default function AdminAdvertisingPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [updatingCampaignId, setUpdatingCampaignId] = useState<string | null>(null);
+  const [interactionDrafts, setInteractionDrafts] = useState<Record<string, { type: "call" | "email" | "whatsapp" | "meeting" | "note"; summary: string }>>({});
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [filter, setFilter] = useState("all");
@@ -307,6 +309,48 @@ export default function AdminAdvertisingPage() {
       else { setMessage("Etapa comercial atualizada."); await loadBanners(); }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Não foi possível atualizar a etapa comercial por uma falha de conexão. Tente novamente.");
+    } finally {
+      setUpdatingCampaignId(null);
+    }
+  }
+
+  async function logCommercialInteraction(banner: Banner) {
+    const draft = interactionDrafts[banner.id];
+    const summary = draft?.summary.trim() || "";
+    if (!summary) {
+      setError("Descreva o contato ou próximo passo antes de registrar a interação.");
+      return;
+    }
+    setMessage("");
+    setError("");
+    setUpdatingCampaignId(banner.id);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const history = Array.isArray(banner.metadata?.commercial_interaction_history)
+        ? banner.metadata.commercial_interaction_history
+        : [];
+      const metadata = {
+        ...(banner.metadata || {}),
+        commercial_interaction_history: [
+          ...history,
+          {
+            type: draft.type,
+            summary: summary.slice(0, 1000),
+            created_at: new Date().toISOString(),
+            created_by: user?.email || user?.id || null,
+          },
+        ].slice(-100),
+      };
+      const { error: updateError } = await supabase.from("banners").update({ metadata }).eq("id", banner.id);
+      if (updateError) {
+        setError(updateError.message);
+        return;
+      }
+      setInteractionDrafts((current) => ({ ...current, [banner.id]: { type: "note", summary: "" } }));
+      setMessage("Interação comercial registrada no histórico.");
+      await loadBanners();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Não foi possível registrar a interação comercial.");
     } finally {
       setUpdatingCampaignId(null);
     }
@@ -572,6 +616,31 @@ export default function AdminAdvertisingPage() {
             <div style={{ minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}><div><h3 style={{ margin: "0 0 6px", overflowWrap: "anywhere" }}>{banner.title || "Campanha sem título"}</h3><p style={{ margin: "0 0 6px", color: "#aeb3c0" }}>{meta.campaign_type === "pecatho" ? "Campanha própria Pecatho" : "Publicidade de anunciante"} · {campaignDisplayStatus(banner, status)}</p>{(meta.banner_format_preference || readBannerFormatPreference(meta.notes).preference) && <p style={{ margin: "6px 0", color: "#e7c33f", fontSize: 13, fontWeight: 650 }}>Formato solicitado: {bannerFormatPreferenceLabels[(meta.banner_format_preference || readBannerFormatPreference(meta.notes).preference)!]}</p>}<p style={{ margin: 0, color: "#aeb3c0", fontSize: 13 }}>{meta.advertiser_name || "Anunciante não informado"} · Valor combinado: {money(meta.commercial_value)}</p>{meta.budget_estimate && <p style={{ margin: "5px 0 0", color: "#c4c8d1", fontSize: 12 }}>Orçamento estimado informado: {meta.budget_estimate}</p>}<p style={{ margin: "6px 0 0", color: "#8f96a7", fontSize: 12 }}>Posição: {banner.placement || "home"} · Ordem: {banner.sort_order} · {formatDate(banner.starts_at)} a {formatDate(banner.ends_at)}</p>{meta.intake_source === "public_advertising_form" && meta.submitted_at && <p style={{ margin: "5px 0 0", color: "#8f96a7", fontSize: 12 }}>Solicitação recebida em: {new Date(meta.submitted_at).toLocaleString("pt-BR")}</p>}</div><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><button type="button" className="secondaryButton" disabled={updatingCampaignId === banner.id || saving} onClick={() => beginEdit(banner)}>Editar</button><button type="button" className="secondaryButton" disabled={updatingCampaignId === banner.id || saving} onClick={() => void duplicateCampaign(banner)}>Duplicar</button><button type="button" className="secondaryButton" disabled={updatingCampaignId === banner.id || saving} onClick={() => void deleteCampaign(banner)}>Excluir</button></div></div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}><label style={{ display: "flex", alignItems: "center", gap: 8 }}>Etapa rápida<select disabled={loading || saving || updatingCampaignId !== null} value={status} onChange={e => void setCampaignStatus(banner, e.target.value as NonNullable<BannerMetadata["campaign_status"]>)}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>{meta.contact_email && <a href={`mailto:${meta.contact_email}`} className="secondaryButton">E-mail</a>}{meta.contact_whatsapp && <a href={`https://wa.me/${meta.contact_whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="secondaryButton">WhatsApp</a>}</div>
+              <details style={{ marginTop: 12, borderTop: "1px solid rgba(255,255,255,.08)", paddingTop: 10 }}>
+                <summary style={{ cursor: "pointer", color: "#e7c33f", fontSize: 12, fontWeight: 750 }}>Registrar contato / acompanhamento</summary>
+                <div style={{ display: "grid", gridTemplateColumns: "minmax(140px, 200px) minmax(0, 1fr) auto", gap: 8, marginTop: 10, alignItems: "end" }}>
+                  <label style={{ display: "grid", gap: 5, fontSize: 12 }}>Tipo
+                    <select value={interactionDrafts[banner.id]?.type || "note"} onChange={e => setInteractionDrafts(current => ({ ...current, [banner.id]: { type: e.target.value as NonNullable<BannerMetadata["commercial_interaction_history"]>[number]["type"], summary: current[banner.id]?.summary || "" } }))}>
+                      <option value="call">Ligação</option><option value="email">E-mail</option><option value="whatsapp">WhatsApp</option><option value="meeting">Reunião</option><option value="note">Nota / próximo passo</option>
+                    </select>
+                  </label>
+                  <label style={{ display: "grid", gap: 5, fontSize: 12 }}>Resumo do contato ou próximo passo
+                    <input maxLength={1000} value={interactionDrafts[banner.id]?.summary || ""} onChange={e => setInteractionDrafts(current => ({ ...current, [banner.id]: { type: current[banner.id]?.type || "note", summary: e.target.value } }))} placeholder="Ex.: proposta enviada; retornar na sexta-feira" />
+                  </label>
+                  <button type="button" className="secondaryButton" disabled={updatingCampaignId === banner.id || saving || loading} onClick={() => void logCommercialInteraction(banner)}>Registrar</button>
+                </div>
+              </details>
+              {Array.isArray(meta.commercial_interaction_history) && meta.commercial_interaction_history.length > 0 && <details style={{ marginTop: 12, borderTop: "1px solid rgba(255,255,255,.08)", paddingTop: 10 }}>
+                <summary style={{ cursor: "pointer", color: "#e7c33f", fontSize: 12, fontWeight: 750 }}>Histórico de contatos ({meta.commercial_interaction_history.length})</summary>
+                <ol style={{ display: "grid", gap: 8, margin: "10px 0 0", paddingLeft: 20 }}>
+                  {[...meta.commercial_interaction_history].slice(-20).reverse().map((entry, index) => <li key={entry.created_at + "-" + index} style={{ color: "#c4c8d1", fontSize: 12, lineHeight: 1.55 }}>
+                    <strong>{{ call: "Ligação", email: "E-mail", whatsapp: "WhatsApp", meeting: "Reunião", note: "Nota" }[entry.type] || "Interação"}</strong>
+                    {" · "}{new Date(entry.created_at).toLocaleString("pt-BR")}
+                    {entry.created_by ? " · " + entry.created_by : ""}
+                    <div style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{entry.summary}</div>
+                  </li>)}
+                </ol>
+              </details>}
               {Array.isArray(meta.campaign_status_history) && meta.campaign_status_history.length > 0 && <details style={{ marginTop: 12, borderTop: "1px solid rgba(255,255,255,.08)", paddingTop: 10 }}>
                 <summary style={{ cursor: "pointer", color: "#e7c33f", fontSize: 12, fontWeight: 750 }}>Histórico comercial ({meta.campaign_status_history.length})</summary>
                 <ol style={{ display: "grid", gap: 8, margin: "10px 0 0", paddingLeft: 20 }}>
