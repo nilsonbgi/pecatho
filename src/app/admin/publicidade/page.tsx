@@ -463,7 +463,7 @@ export default function AdminAdvertisingPage() {
     const rawValue = banner.metadata?.commercial_value?.trim();
     if (!rawValue) return total;
     const normalizedValue = rawValue.includes(",")
-      ? rawValue.replace(/\\./g, "").replace(",", ".")
+      ? rawValue.replace(/\./g, "").replace(",", ".")
       : rawValue;
     const parsedValue = Number(normalizedValue);
     return Number.isFinite(parsedValue) && parsedValue >= 0 ? total + parsedValue : total;
@@ -473,7 +473,7 @@ export default function AdminAdvertisingPage() {
     Boolean(banner.metadata?.commercial_value?.trim()) &&
     Number.isFinite(Number(
       banner.metadata?.commercial_value?.includes(",")
-        ? banner.metadata.commercial_value.replace(/\\./g, "").replace(",", ".")
+        ? banner.metadata.commercial_value.replace(/\./g, "").replace(",", ".")
         : banner.metadata?.commercial_value
     ))
   ).length;
