@@ -15,6 +15,17 @@ type BannerRow = {
   metadata: Record<string, unknown> | null;
 };
 
+function isSafeCampaignLink(value: string) {
+  if (!value) return true;
+  if (value.startsWith("/") && !value.startsWith("//") && !value.includes("\\")) return true;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 const formats: Record<BannerFormat, { width: number; ratio: string }> = {
   leaderboard: { width: 1200, ratio: "5 / 1" },
   rectangle: { width: 600, ratio: "2 / 1" },
@@ -56,7 +67,10 @@ export default async function AdvertisingPlacement({ placement }: { placement: "
         const raw = String(banner.metadata?.banner_format || "leaderboard");
         const format: BannerFormat = raw in formats ? raw as BannerFormat : "leaderboard";
         const size = formats[format];
-        const href = banner.link_url || (placement === "fans" ? "/fans" : "/conteudos");
+        const requestedHref = (banner.link_url || "").trim();
+        const href = isSafeCampaignLink(requestedHref) && requestedHref
+          ? requestedHref
+          : (placement === "fans" ? "/fans" : "/conteudos");
         return (
           <Link
             key={banner.id}
