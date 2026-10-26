@@ -82,6 +82,16 @@ function toLocalInput(value: string | null) {
 function fromLocalInput(value: string) {
   return value ? new Date(value).toISOString() : null;
 }
+function isSafeCampaignLink(value: string) {
+  if (!value) return true;
+  if (value.startsWith("/") && !value.startsWith("//") && !value.includes("\\")) return true;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 const bannerFormatPreferenceLabels: Record<NonNullable<BannerMetadata["banner_format_preference"]>, string> = {
   leaderboard: "Faixa horizontal · 5:1 · até 1200 × 240 px",
   rectangle: "Retangular · 2:1 · até 600 × 300 px",
@@ -187,7 +197,7 @@ export default function AdminAdvertisingPage() {
     if (!form.title.trim()) { setError("Informe o título da campanha."); return; }
     if (form.campaign_status === "active" && !image) { setError("Informe a URL pública da imagem antes de ativar a campanha."); return; }
     if (image && !/^https?:\/\//i.test(image)) { setError("A imagem deve ser informada por uma URL pública iniciada em https:// ou http://."); return; }
-    if (link && !/^https?:\/\//i.test(link) && !link.startsWith("/")) { setError("O destino deve ser uma URL http(s) ou um caminho interno iniciado por /."); return; }
+    if (!isSafeCampaignLink(link)) { setError("O destino deve ser uma URL http:// ou https:// válida, ou um caminho interno iniciado por uma única barra. Links externos devem usar http(s)."); return; }
     if (form.starts_at && form.ends_at && new Date(form.ends_at).getTime() < new Date(form.starts_at).getTime()) { setError("O encerramento não pode ser anterior ao início."); return; }
     const rawValue = form.commercial_value.trim();
     const normalizedValue = rawValue.includes(",") ? rawValue.replace(/\./g, "").replace(",", ".") : rawValue;
