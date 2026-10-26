@@ -379,6 +379,8 @@ export default function AdminAdvertisingPage() {
       delete metadata.budget_estimate;
       delete metadata.submitted_at;
       delete metadata.intake_source;
+      delete metadata.next_follow_up_at;
+      delete metadata.follow_up_note;
       const payload = {
         title: `Cópia de ${label}`.slice(0, 160),
         image_path: banner.image_path,
