@@ -363,7 +363,7 @@ export default function AdminAdvertisingPage() {
     ] as const;
     const escapeCsv = (value: string) => {
       // Neutraliza fórmulas em planilhas quando campos controlados por anunciantes começam com caracteres executáveis.
-      const safeValue = /^[\\u0000-\\u0020]*[=+\\-@]/.test(value) ? "'" + value : value;
+      const safeValue = /^[\u0000-\u0020]*[=+\-@]/.test(value) ? "'" + value : value;
       return '"' + safeValue.replace(/"/g, '""') + '"';
     };
     const csv = [columns.map(([label]) => escapeCsv(label)).join(";"), ...filteredBanners.map(banner => columns.map(([, getValue]) => escapeCsv(String(getValue(banner) ?? ""))).join(";"))].join("\r\n");
