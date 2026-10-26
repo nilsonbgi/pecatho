@@ -11,6 +11,8 @@ type BannerMetadata = {
   campaign_status?: "lead" | "quoted" | "approved" | "active" | "paused" | "completed" | "rejected";
   campaign_status_history?: { from: string; to: string; changed_at: string; changed_by: string | null }[];
   commercial_interaction_history?: { type: "call" | "email" | "whatsapp" | "meeting" | "note"; summary: string; created_at: string; created_by: string | null }[];
+  next_follow_up_at?: string | null;
+  follow_up_note?: string | null;
   advertiser_name?: string;
   contact_name?: string;
   contact_email?: string;
@@ -57,12 +59,14 @@ type FormState = {
   commercial_value: string;
   budget_estimate: string;
   notes: string;
+  next_follow_up_at: string;
+  follow_up_note: string;
 };
 const emptyForm: FormState = {
   id: "", title: "", image_path: "", link_url: "", target: "_self", placement: "home_top",
   banner_format: "leaderboard", sort_order: "0", starts_at: "", ends_at: "", campaign_type: "advertiser",
   campaign_status: "lead", advertiser_name: "", contact_name: "", contact_email: "", contact_whatsapp: "",
-  commercial_value: "", budget_estimate: "", notes: "",
+  commercial_value: "", budget_estimate: "", notes: "", next_follow_up_at: "", follow_up_note: "",
 };
 const bannerFormatDetails: Record<NonNullable<BannerMetadata["banner_format"]>, { label: string; maxWidth: number; ratio: string }> = {
   leaderboard: { label: "Faixa horizontal · 5:1 · até 1200 × 240 px", maxWidth: 1200, ratio: "5 / 1" },
@@ -191,6 +195,8 @@ export default function AdminAdvertisingPage() {
       commercial_value: meta.intake_source === "public_advertising_form" ? "" : meta.commercial_value || "",
       budget_estimate: meta.budget_estimate || (meta.intake_source === "public_advertising_form" ? meta.commercial_value || "" : ""),
       notes: readBannerFormatPreference(meta.notes).notes,
+      next_follow_up_at: toLocalInput(meta.next_follow_up_at || null),
+      follow_up_note: meta.follow_up_note || "",
     });
     setMessage(""); setError("");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -250,6 +256,8 @@ export default function AdminAdvertisingPage() {
         commercial_value: rawValue ? normalizedValue : null,
         budget_estimate: form.budget_estimate.trim() || null,
         notes: form.notes.trim() || null,
+        next_follow_up_at: form.next_follow_up_at ? fromLocalInput(form.next_follow_up_at) : null,
+        follow_up_note: form.follow_up_note.trim() || null,
       },
     };
     setSaving(true);
@@ -371,6 +379,8 @@ export default function AdminAdvertisingPage() {
       delete metadata.budget_estimate;
       delete metadata.submitted_at;
       delete metadata.intake_source;
+      delete metadata.next_follow_up_at;
+      delete metadata.follow_up_note;
       const payload = {
         title: `Cópia de ${label}`.slice(0, 160),
         image_path: banner.image_path,
@@ -459,6 +469,8 @@ export default function AdminAdvertisingPage() {
       ["Fim", (banner: Banner) => banner.ends_at || ""],
       ["URL da arte", (banner: Banner) => banner.image_path || ""],
       ["Destino", (banner: Banner) => banner.link_url || ""],
+      ["Próximo acompanhamento", (banner: Banner) => banner.metadata?.next_follow_up_at || ""],
+      ["Nota do acompanhamento", (banner: Banner) => banner.metadata?.follow_up_note || ""],
       ["Observações", (banner: Banner) => readBannerFormatPreference(banner.metadata?.notes).notes],
     ] as const;
     const escapeCsv = (value: string) => {
@@ -494,6 +506,10 @@ export default function AdminAdvertisingPage() {
     }
     if (campaignTypeFilter !== "all" && (banner.metadata?.campaign_type === "pecatho" ? "pecatho" : "advertiser") !== campaignTypeFilter) return false;
     if (placementFilter !== "all" && (banner.placement || "home") !== placementFilter) return false;
+    if (filter === "followup") {
+      const due = banner.metadata?.next_follow_up_at ? new Date(banner.metadata.next_follow_up_at).getTime() : NaN;
+      return Number.isFinite(due) && due <= Date.now() && !["completed", "rejected"].includes(status);
+    }
     if (filter === "active") return isCurrentlyLive(banner);
     if (filter === "scheduled") return isScheduled(banner);
     if (filter === "expired") return isExpired(banner);
@@ -501,6 +517,11 @@ export default function AdminAdvertisingPage() {
     return true;
   });
   const activeCount = banners.filter(isCurrentlyLive).length;
+  const followUpDueCount = banners.filter((banner) => {
+    const due = banner.metadata?.next_follow_up_at ? new Date(banner.metadata.next_follow_up_at).getTime() : NaN;
+    const status = banner.metadata?.campaign_status || (banner.active ? "active" : "lead");
+    return Number.isFinite(due) && due <= Date.now() && !["completed", "rejected"].includes(status);
+  }).length;
   const scheduledCount = banners.filter((banner) => {
     const now = Date.now();
     return banner.active &&
@@ -545,6 +566,7 @@ export default function AdminAdvertisingPage() {
         <article className="card"><div className="cardIcon">◷</div><h2>{scheduledCount} programadas</h2><p>Ativas, com início futuro</p></article>
         <article className="card"><div className="cardIcon">↗</div><h2>{pendingCount} em negociação</h2><p>Contato, proposta ou aprovação</p></article>
         <article className="card"><div className="cardIcon">R$</div><h2>{money(String(commercialValueTotal))}</h2><p>Valor comercial registrado em {campaignsWithCommercialValue} campanhas de anunciantes; não representa recebimentos confirmados</p></article>
+        <article className="card"><div className="cardIcon">◷</div><h2>{followUpDueCount} acompanhamentos vencidos</h2><p>Retornos programados para agora ou antes, exceto campanhas encerradas ou recusadas</p></article>
       </div>
       {message && <p className="formSuccess" role="status">{message}</p>}
       {error && <p className="formError" role="alert">{error}</p>}
@@ -594,6 +616,10 @@ export default function AdminAdvertisingPage() {
             <label>Orçamento estimado informado (R$ ou texto)<input maxLength={80} value={form.budget_estimate} onChange={e => setForm({ ...form, budget_estimate: e.target.value })} placeholder="Orçamento indicado pelo solicitante" /></label>
           </div>
           <div className="formRow">
+            <label>Próximo contato / retorno<input type="datetime-local" value={form.next_follow_up_at} onChange={e => setForm({ ...form, next_follow_up_at: e.target.value })} /><small style={{ color: "#aeb3c0", fontWeight: 400 }}>Define quando a equipe deve retomar a negociação; não altera o período de veiculação.</small></label>
+            <label>Nota do acompanhamento<input maxLength={500} value={form.follow_up_note} onChange={e => setForm({ ...form, follow_up_note: e.target.value })} placeholder="Ex.: cobrar aprovação da proposta" /></label>
+          </div>
+          <div className="formRow">
             <label>Início da veiculação<input type="datetime-local" value={form.starts_at} onChange={e => setForm({ ...form, starts_at: e.target.value })} /></label>
             <label>Fim da veiculação<input type="datetime-local" value={form.ends_at} onChange={e => setForm({ ...form, ends_at: e.target.value })} /></label>
           </div>
@@ -607,14 +633,14 @@ export default function AdminAdvertisingPage() {
         </form>
       </section>
       <section className="authCard">
-        <div style={{ display: "grid", gap: 12 }}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}><h2 style={{ margin: 0 }}>Carteira de campanhas</h2><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><button type="button" className="secondaryButton" disabled={filteredBanners.length === 0 || loading} onClick={exportCampaignsCsv}>Exportar CSV ({filteredBanners.length})</button><button type="button" className="secondaryButton" disabled={loading || saving || updatingCampaignId !== null} onClick={() => void loadBanners()}>{loading ? "Atualizando campanhas…" : "Atualizar campanhas"}</button></div></div><div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))", gap: 10 }}><label>Buscar campanha ou anunciante<input type="search" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Título, empresa, contato, e-mail…" /></label><label>Tipo de campanha<select value={campaignTypeFilter} onChange={e => setCampaignTypeFilter(e.target.value)}><option value="all">Todos os tipos</option><option value="advertiser">Publicidade de anunciante</option><option value="pecatho">Campanha própria Pecatho</option></select></label><label>Cadastro a partir de<input type="date" value={createdFrom} max={createdTo || undefined} onChange={e => setCreatedFrom(e.target.value)} /></label><label>Cadastro até<input type="date" value={createdTo} min={createdFrom || undefined} onChange={e => setCreatedTo(e.target.value)} /></label><label>Etapa comercial<select value={filter} onChange={e => setFilter(e.target.value)}><option value="all">Todas as etapas</option><option value="active">Veiculando agora</option><option value="scheduled">Programadas (início futuro)</option><option value="expired">Período encerrado</option>{Object.entries(statusLabels).filter(([value]) => value !== "active").map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Posição<select value={placementFilter} onChange={e => setPlacementFilter(e.target.value)}><option value="all">Todas as posições</option><option value="home">Página inicial</option><option value="home_top">Página inicial · superior</option><option value="home_mid">Página inicial · intermediária</option><option value="home_bottom">Página inicial · inferior</option><option value="fans">Pecatho Fans</option><option value="catalog">Catálogo</option></select></label></div><p style={{ margin: 0, color: "#aeb3c0", fontSize: 13 }}>{filteredBanners.length} de {banners.length} campanhas exibidas.</p></div>
+        <div style={{ display: "grid", gap: 12 }}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}><h2 style={{ margin: 0 }}>Carteira de campanhas</h2><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><button type="button" className="secondaryButton" disabled={filteredBanners.length === 0 || loading} onClick={exportCampaignsCsv}>Exportar CSV ({filteredBanners.length})</button><button type="button" className="secondaryButton" disabled={loading || saving || updatingCampaignId !== null} onClick={() => void loadBanners()}>{loading ? "Atualizando campanhas…" : "Atualizar campanhas"}</button></div></div><div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))", gap: 10 }}><label>Buscar campanha ou anunciante<input type="search" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Título, empresa, contato, e-mail…" /></label><label>Tipo de campanha<select value={campaignTypeFilter} onChange={e => setCampaignTypeFilter(e.target.value)}><option value="all">Todos os tipos</option><option value="advertiser">Publicidade de anunciante</option><option value="pecatho">Campanha própria Pecatho</option></select></label><label>Cadastro a partir de<input type="date" value={createdFrom} max={createdTo || undefined} onChange={e => setCreatedFrom(e.target.value)} /></label><label>Cadastro até<input type="date" value={createdTo} min={createdFrom || undefined} onChange={e => setCreatedTo(e.target.value)} /></label><label>Etapa comercial<select value={filter} onChange={e => setFilter(e.target.value)}><option value="all">Todas as etapas</option><option value="active">Veiculando agora</option><option value="scheduled">Programadas (início futuro)</option><option value="expired">Período encerrado</option><option value="followup">Acompanhamento vencido</option>{Object.entries(statusLabels).filter(([value]) => value !== "active").map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Posição<select value={placementFilter} onChange={e => setPlacementFilter(e.target.value)}><option value="all">Todas as posições</option><option value="home">Página inicial</option><option value="home_top">Página inicial · superior</option><option value="home_mid">Página inicial · intermediária</option><option value="home_bottom">Página inicial · inferior</option><option value="fans">Pecatho Fans</option><option value="catalog">Catálogo</option></select></label></div><p style={{ margin: 0, color: "#aeb3c0", fontSize: 13 }}>{filteredBanners.length} de {banners.length} campanhas exibidas.</p></div>
         {loading ? <p>Carregando campanhas…</p> : filteredBanners.length === 0 ? <p>Nenhuma campanha encontrada para este filtro.</p> : <div style={{ display: "grid", gap: 14, marginTop: 16 }}>{filteredBanners.map(banner => {
           const meta = banner.metadata || {};
           const status = meta.campaign_status || (banner.active ? "active" : "lead");
           return <article key={banner.id} style={{ display: "grid", gridTemplateColumns: "minmax(100px,180px) minmax(0,1fr)", gap: 16, padding: 16, border: "1px solid rgba(255,255,255,.12)", borderRadius: 14, background: "rgba(255,255,255,.025)" }}>
             <div style={{ minHeight: 90, borderRadius: 10, overflow: "hidden", background: "#11131a" }}>{banner.image_path && <img src={banner.image_path} alt="" style={{ width: "100%", height: "100%", minHeight: 90, objectFit: "cover" }} />}</div>
             <div style={{ minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}><div><h3 style={{ margin: "0 0 6px", overflowWrap: "anywhere" }}>{banner.title || "Campanha sem título"}</h3><p style={{ margin: "0 0 6px", color: "#aeb3c0" }}>{meta.campaign_type === "pecatho" ? "Campanha própria Pecatho" : "Publicidade de anunciante"} · {campaignDisplayStatus(banner, status)}</p>{(meta.banner_format_preference || readBannerFormatPreference(meta.notes).preference) && <p style={{ margin: "6px 0", color: "#e7c33f", fontSize: 13, fontWeight: 650 }}>Formato solicitado: {bannerFormatPreferenceLabels[(meta.banner_format_preference || readBannerFormatPreference(meta.notes).preference)!]}</p>}<p style={{ margin: 0, color: "#aeb3c0", fontSize: 13 }}>{meta.advertiser_name || "Anunciante não informado"} · Valor combinado: {money(meta.commercial_value)}</p>{meta.budget_estimate && <p style={{ margin: "5px 0 0", color: "#c4c8d1", fontSize: 12 }}>Orçamento estimado informado: {meta.budget_estimate}</p>}<p style={{ margin: "6px 0 0", color: "#8f96a7", fontSize: 12 }}>Posição: {banner.placement || "home"} · Ordem: {banner.sort_order} · {formatDate(banner.starts_at)} a {formatDate(banner.ends_at)}</p>{meta.intake_source === "public_advertising_form" && meta.submitted_at && <p style={{ margin: "5px 0 0", color: "#8f96a7", fontSize: 12 }}>Solicitação recebida em: {new Date(meta.submitted_at).toLocaleString("pt-BR")}</p>}</div><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><button type="button" className="secondaryButton" disabled={updatingCampaignId === banner.id || saving} onClick={() => beginEdit(banner)}>Editar</button><button type="button" className="secondaryButton" disabled={updatingCampaignId === banner.id || saving} onClick={() => void duplicateCampaign(banner)}>Duplicar</button><button type="button" className="secondaryButton" disabled={updatingCampaignId === banner.id || saving} onClick={() => void deleteCampaign(banner)}>Excluir</button></div></div>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}><div><h3 style={{ margin: "0 0 6px", overflowWrap: "anywhere" }}>{banner.title || "Campanha sem título"}</h3><p style={{ margin: "0 0 6px", color: "#aeb3c0" }}>{meta.campaign_type === "pecatho" ? "Campanha própria Pecatho" : "Publicidade de anunciante"} · {campaignDisplayStatus(banner, status)}</p>{(meta.banner_format_preference || readBannerFormatPreference(meta.notes).preference) && <p style={{ margin: "6px 0", color: "#e7c33f", fontSize: 13, fontWeight: 650 }}>Formato solicitado: {bannerFormatPreferenceLabels[(meta.banner_format_preference || readBannerFormatPreference(meta.notes).preference)!]}</p>}<p style={{ margin: 0, color: "#aeb3c0", fontSize: 13 }}>{meta.advertiser_name || "Anunciante não informado"} · Valor combinado: {money(meta.commercial_value)}</p>{meta.budget_estimate && <p style={{ margin: "5px 0 0", color: "#c4c8d1", fontSize: 12 }}>Orçamento estimado informado: {meta.budget_estimate}</p>}<p style={{ margin: "6px 0 0", color: "#8f96a7", fontSize: 12 }}>Posição: {banner.placement || "home"} · Ordem: {banner.sort_order} · {formatDate(banner.starts_at)} a {formatDate(banner.ends_at)}</p>{meta.next_follow_up_at && <p style={{ margin: "6px 0 0", color: new Date(meta.next_follow_up_at).getTime() <= Date.now() && !["completed", "rejected"].includes(status) ? "#ffb4a9" : "#e7c33f", fontSize: 12, fontWeight: 650 }}>Próximo acompanhamento: {new Date(meta.next_follow_up_at).toLocaleString("pt-BR")}{new Date(meta.next_follow_up_at).getTime() <= Date.now() && !["completed", "rejected"].includes(status) ? " · VENCIDO" : ""}{meta.follow_up_note ? " · " + meta.follow_up_note : ""}</p>}{meta.intake_source === "public_advertising_form" && meta.submitted_at && <p style={{ margin: "5px 0 0", color: "#8f96a7", fontSize: 12 }}>Solicitação recebida em: {new Date(meta.submitted_at).toLocaleString("pt-BR")}</p>}</div><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><button type="button" className="secondaryButton" disabled={updatingCampaignId === banner.id || saving} onClick={() => beginEdit(banner)}>Editar</button><button type="button" className="secondaryButton" disabled={updatingCampaignId === banner.id || saving} onClick={() => void duplicateCampaign(banner)}>Duplicar</button><button type="button" className="secondaryButton" disabled={updatingCampaignId === banner.id || saving} onClick={() => void deleteCampaign(banner)}>Excluir</button></div></div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}><label style={{ display: "flex", alignItems: "center", gap: 8 }}>Etapa rápida<select disabled={loading || saving || updatingCampaignId !== null} value={status} onChange={e => void setCampaignStatus(banner, e.target.value as NonNullable<BannerMetadata["campaign_status"]>)}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>{meta.contact_email && <a href={`mailto:${meta.contact_email}`} className="secondaryButton">E-mail</a>}{meta.contact_whatsapp && <a href={`https://wa.me/${meta.contact_whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="secondaryButton">WhatsApp</a>}</div>
               <details style={{ marginTop: 12, borderTop: "1px solid rgba(255,255,255,.08)", paddingTop: 10 }}>
                 <summary style={{ cursor: "pointer", color: "#e7c33f", fontSize: 12, fontWeight: 750 }}>Registrar contato / acompanhamento</summary>
