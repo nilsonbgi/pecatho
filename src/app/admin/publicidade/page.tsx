@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/browser";
 type BannerMetadata = {
   campaign_type?: "advertiser" | "pecatho";
   campaign_status?: "lead" | "quoted" | "approved" | "active" | "paused" | "completed" | "rejected";
+  campaign_status_history?: { from: string; to: string; changed_at: string; changed_by: string | null }[];
   advertiser_name?: string;
   contact_name?: string;
   contact_email?: string;
@@ -264,7 +265,23 @@ export default function AdminAdvertisingPage() {
         return;
       }
     }
-    const metadata = { ...(banner.metadata || {}), campaign_status: status };
+    const previousStatus = banner.metadata?.campaign_status || (banner.active ? "active" : "lead");
+    if (status === previousStatus) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    const history = Array.isArray(banner.metadata?.campaign_status_history) ? banner.metadata.campaign_status_history : [];
+    const metadata = {
+      ...(banner.metadata || {}),
+      campaign_status: status,
+      campaign_status_history: [
+        ...history,
+        {
+          from: previousStatus,
+          to: status,
+          changed_at: new Date().toISOString(),
+          changed_by: user?.email || user?.id || null,
+        },
+      ].slice(-50),
+    };
     setUpdatingCampaignId(banner.id);
     try {
       const { error: updateError } = await supabase.from("banners")
@@ -409,6 +426,17 @@ export default function AdminAdvertisingPage() {
             <div style={{ minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}><div><h3 style={{ margin: "0 0 6px", overflowWrap: "anywhere" }}>{banner.title || "Campanha sem título"}</h3><p style={{ margin: "0 0 6px", color: "#aeb3c0" }}>{meta.campaign_type === "pecatho" ? "Campanha própria Pecatho" : "Publicidade de anunciante"} · {campaignDisplayStatus(banner, status)}</p>{(meta.banner_format_preference || readBannerFormatPreference(meta.notes).preference) && <p style={{ margin: "6px 0", color: "#e7c33f", fontSize: 13, fontWeight: 650 }}>Formato solicitado: {bannerFormatPreferenceLabels[(meta.banner_format_preference || readBannerFormatPreference(meta.notes).preference)!]}</p>}<p style={{ margin: 0, color: "#aeb3c0", fontSize: 13 }}>{meta.advertiser_name || "Anunciante não informado"} · Valor combinado: {money(meta.commercial_value)}</p>{meta.budget_estimate && <p style={{ margin: "5px 0 0", color: "#c4c8d1", fontSize: 12 }}>Orçamento estimado informado: {meta.budget_estimate}</p>}<p style={{ margin: "6px 0 0", color: "#8f96a7", fontSize: 12 }}>Posição: {banner.placement || "home"} · Ordem: {banner.sort_order} · {formatDate(banner.starts_at)} a {formatDate(banner.ends_at)}</p>{meta.intake_source === "public_advertising_form" && meta.submitted_at && <p style={{ margin: "5px 0 0", color: "#8f96a7", fontSize: 12 }}>Solicitação recebida em: {new Date(meta.submitted_at).toLocaleString("pt-BR")}</p>}</div><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><button type="button" className="secondaryButton" disabled={updatingCampaignId === banner.id || saving} onClick={() => beginEdit(banner)}>Editar</button><button type="button" className="secondaryButton" disabled={updatingCampaignId === banner.id || saving} onClick={() => void deleteCampaign(banner)}>Excluir</button></div></div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}><label style={{ display: "flex", alignItems: "center", gap: 8 }}>Etapa rápida<select disabled={loading || saving || updatingCampaignId !== null} value={status} onChange={e => void setCampaignStatus(banner, e.target.value as NonNullable<BannerMetadata["campaign_status"]>)}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>{meta.contact_email && <a href={`mailto:${meta.contact_email}`} className="secondaryButton">E-mail</a>}{meta.contact_whatsapp && <a href={`https://wa.me/${meta.contact_whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="secondaryButton">WhatsApp</a>}</div>
+              {Array.isArray(meta.campaign_status_history) && meta.campaign_status_history.length > 0 && <details style={{ marginTop: 12, borderTop: "1px solid rgba(255,255,255,.08)", paddingTop: 10 }}>
+                <summary style={{ cursor: "pointer", color: "#e7c33f", fontSize: 12, fontWeight: 750 }}>Histórico comercial ({meta.campaign_status_history.length})</summary>
+                <ol style={{ display: "grid", gap: 8, margin: "10px 0 0", paddingLeft: 20 }}>
+                  {[...meta.campaign_status_history].slice(-10).reverse().map((entry, index) => <li key={entry.changed_at + "-" + index} style={{ color: "#c4c8d1", fontSize: 12, lineHeight: 1.55 }}>
+                    <strong>{statusLabels[entry.to as NonNullable<BannerMetadata["campaign_status"]>] || entry.to}</strong>
+                    {" · de "}{statusLabels[entry.from as NonNullable<BannerMetadata["campaign_status"]>] || entry.from}
+                    {" · "}{new Date(entry.changed_at).toLocaleString("pt-BR")}
+                    {entry.changed_by ? " · " + entry.changed_by : ""}
+                  </li>)}
+                </ol>
+              </details>}
               {readBannerFormatPreference(meta.notes).notes && <p style={{ margin: "10px 0 0", color: "#c4c8d1", whiteSpace: "pre-wrap" }}>{readBannerFormatPreference(meta.notes).notes}</p>}
             </div>
           </article>;
