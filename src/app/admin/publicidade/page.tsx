@@ -258,6 +258,10 @@ export default function AdminAdvertisingPage() {
         setError("Não é possível ativar esta campanha: a data de encerramento é anterior ao início.");
         return;
       }
+      if (!isSafeCampaignLink((banner.link_url || "").trim())) {
+        setError("Não é possível ativar esta campanha: corrija o destino para uma URL http:// ou https:// válida, ou um caminho interno iniciado por uma única barra.");
+        return;
+      }
     }
     const metadata = { ...(banner.metadata || {}), campaign_status: status };
     setUpdatingCampaignId(banner.id);
