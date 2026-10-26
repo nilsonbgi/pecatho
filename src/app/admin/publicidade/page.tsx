@@ -205,9 +205,23 @@ export default function AdminAdvertisingPage() {
     const normalizedValue = rawValue.includes(",") ? rawValue.replace(/\./g, "").replace(",", ".") : rawValue;
     if (rawValue && (!Number.isFinite(Number(normalizedValue)) || Number(normalizedValue) < 0)) { setError("Informe um valor comercial válido, sem valores negativos."); return; }
     const campaignActive = form.campaign_status === "active";
-    const existingMetadata = form.id
-      ? banners.find((banner) => banner.id === form.id)?.metadata || {}
-      : {};
+    const existingBanner = form.id ? banners.find((banner) => banner.id === form.id) : undefined;
+    const existingMetadata = existingBanner?.metadata || {};
+    const previousStatus = existingMetadata.campaign_status || (existingBanner?.active ? "active" : "lead");
+    const statusChanged = Boolean(form.id && previousStatus !== form.campaign_status);
+    let statusHistory = Array.isArray(existingMetadata.campaign_status_history) ? existingMetadata.campaign_status_history : [];
+    if (statusChanged) {
+      const { data: { user } } = await supabase.auth.getUser();
+      statusHistory = [
+        ...statusHistory,
+        {
+          from: previousStatus,
+          to: form.campaign_status,
+          changed_at: new Date().toISOString(),
+          changed_by: user?.email || user?.id || null,
+        },
+      ].slice(-50);
+    }
     const payload = {
       title: form.title.trim(),
       image_path: image || null,
@@ -222,6 +236,7 @@ export default function AdminAdvertisingPage() {
         ...existingMetadata,
         campaign_type: form.campaign_type,
         campaign_status: form.campaign_status,
+        ...(statusChanged ? { campaign_status_history: statusHistory } : {}),
         banner_format: form.banner_format,
         banner_format_preference: existingMetadata.banner_format_preference || readBannerFormatPreference(typeof existingMetadata.notes === "string" ? existingMetadata.notes : "").preference,
         advertiser_name: form.advertiser_name.trim() || null,
