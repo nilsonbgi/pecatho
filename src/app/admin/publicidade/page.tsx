@@ -343,6 +343,37 @@ export default function AdminAdvertisingPage() {
   };
   const isExpired = (banner: Banner) =>
     !!banner.ends_at && new Date(banner.ends_at).getTime() < Date.now();
+  function exportCampaignsCsv() {
+    const columns = [
+      ["Título", (banner: Banner) => banner.title || ""],
+      ["Tipo", (banner: Banner) => banner.metadata?.campaign_type === "pecatho" ? "Campanha própria Pecatho" : "Publicidade de anunciante"],
+      ["Etapa comercial", (banner: Banner) => campaignDisplayStatus(banner, banner.metadata?.campaign_status || (banner.active ? "active" : "lead"))],
+      ["Anunciante", (banner: Banner) => banner.metadata?.advertiser_name || ""],
+      ["Contato", (banner: Banner) => banner.metadata?.contact_name || ""],
+      ["E-mail", (banner: Banner) => banner.metadata?.contact_email || ""],
+      ["WhatsApp", (banner: Banner) => banner.metadata?.contact_whatsapp || ""],
+      ["Valor combinado (R$)", (banner: Banner) => banner.metadata?.commercial_value || ""],
+      ["Orçamento estimado", (banner: Banner) => banner.metadata?.budget_estimate || ""],
+      ["Posição", (banner: Banner) => banner.placement || "home"],
+      ["Início", (banner: Banner) => banner.starts_at || ""],
+      ["Fim", (banner: Banner) => banner.ends_at || ""],
+      ["URL da arte", (banner: Banner) => banner.image_path || ""],
+      ["Destino", (banner: Banner) => banner.link_url || ""],
+      ["Observações", (banner: Banner) => readBannerFormatPreference(banner.metadata?.notes).notes],
+    ] as const;
+    const escapeCsv = (value: string) => '"' + value.replace(/"/g, '""') + '"';
+    const csv = [columns.map(([label]) => escapeCsv(label)).join(";"), ...filteredBanners.map(banner => columns.map(([, getValue]) => escapeCsv(String(getValue(banner) ?? ""))).join(";"))].join("\r\n");
+    const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "pecatho-campanhas-" + new Date().toISOString().slice(0, 10) + ".csv";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
   const filteredBanners = banners.filter((banner) => {
     const status = banner.metadata?.campaign_status || (banner.active ? "active" : "lead");
     const needle = searchTerm.trim().toLocaleLowerCase("pt-BR");
@@ -443,7 +474,7 @@ export default function AdminAdvertisingPage() {
         </form>
       </section>
       <section className="authCard">
-        <div style={{ display: "grid", gap: 12 }}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}><h2 style={{ margin: 0 }}>Carteira de campanhas</h2><button type="button" className="secondaryButton" disabled={loading || saving || updatingCampaignId !== null} onClick={() => void loadBanners()}>{loading ? "Atualizando campanhas…" : "Atualizar campanhas"}</button></div><div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))", gap: 10 }}><label>Buscar campanha ou anunciante<input type="search" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Título, empresa, contato, e-mail…" /></label><label>Tipo de campanha<select value={campaignTypeFilter} onChange={e => setCampaignTypeFilter(e.target.value)}><option value="all">Todos os tipos</option><option value="advertiser">Publicidade de anunciante</option><option value="pecatho">Campanha própria Pecatho</option></select></label><label>Etapa comercial<select value={filter} onChange={e => setFilter(e.target.value)}><option value="all">Todas as etapas</option><option value="active">Veiculando agora</option><option value="scheduled">Programadas (início futuro)</option><option value="expired">Período encerrado</option>{Object.entries(statusLabels).filter(([value]) => value !== "active").map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Posição<select value={placementFilter} onChange={e => setPlacementFilter(e.target.value)}><option value="all">Todas as posições</option><option value="home">Página inicial</option><option value="home_top">Página inicial · superior</option><option value="home_mid">Página inicial · intermediária</option><option value="home_bottom">Página inicial · inferior</option><option value="fans">Pecatho Fans</option><option value="catalog">Catálogo</option></select></label></div><p style={{ margin: 0, color: "#aeb3c0", fontSize: 13 }}>{filteredBanners.length} de {banners.length} campanhas exibidas.</p></div>
+        <div style={{ display: "grid", gap: 12 }}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}><h2 style={{ margin: 0 }}>Carteira de campanhas</h2><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><button type="button" className="secondaryButton" disabled={filteredBanners.length === 0 || loading} onClick={exportCampaignsCsv}>Exportar CSV ({filteredBanners.length})</button><button type="button" className="secondaryButton" disabled={loading || saving || updatingCampaignId !== null} onClick={() => void loadBanners()}>{loading ? "Atualizando campanhas…" : "Atualizar campanhas"}</button></div></div><div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))", gap: 10 }}><label>Buscar campanha ou anunciante<input type="search" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Título, empresa, contato, e-mail…" /></label><label>Tipo de campanha<select value={campaignTypeFilter} onChange={e => setCampaignTypeFilter(e.target.value)}><option value="all">Todos os tipos</option><option value="advertiser">Publicidade de anunciante</option><option value="pecatho">Campanha própria Pecatho</option></select></label><label>Etapa comercial<select value={filter} onChange={e => setFilter(e.target.value)}><option value="all">Todas as etapas</option><option value="active">Veiculando agora</option><option value="scheduled">Programadas (início futuro)</option><option value="expired">Período encerrado</option>{Object.entries(statusLabels).filter(([value]) => value !== "active").map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Posição<select value={placementFilter} onChange={e => setPlacementFilter(e.target.value)}><option value="all">Todas as posições</option><option value="home">Página inicial</option><option value="home_top">Página inicial · superior</option><option value="home_mid">Página inicial · intermediária</option><option value="home_bottom">Página inicial · inferior</option><option value="fans">Pecatho Fans</option><option value="catalog">Catálogo</option></select></label></div><p style={{ margin: 0, color: "#aeb3c0", fontSize: 13 }}>{filteredBanners.length} de {banners.length} campanhas exibidas.</p></div>
         {loading ? <p>Carregando campanhas…</p> : filteredBanners.length === 0 ? <p>Nenhuma campanha encontrada para este filtro.</p> : <div style={{ display: "grid", gap: 14, marginTop: 16 }}>{filteredBanners.map(banner => {
           const meta = banner.metadata || {};
           const status = meta.campaign_status || (banner.active ? "active" : "lead");
