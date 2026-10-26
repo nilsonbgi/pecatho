@@ -581,6 +581,11 @@ export default function AdminAdvertisingPage() {
     return Number.isFinite(due) && due > now && due <= now + 7 * 24 * 60 * 60 * 1000 &&
       !["completed", "rejected"].includes(status);
   }).length;
+  const followUpMissingCount = banners.filter((banner) => {
+    const due = banner.metadata?.next_follow_up_at ? new Date(banner.metadata.next_follow_up_at).getTime() : NaN;
+    const status = banner.metadata?.campaign_status || (banner.active ? "active" : "lead");
+    return !Number.isFinite(due) && !["completed", "rejected"].includes(status);
+  }).length;
   const scheduledCount = banners.filter((banner) => {
     const now = Date.now();
     return banner.active &&
@@ -627,6 +632,7 @@ export default function AdminAdvertisingPage() {
         <article className="card"><div className="cardIcon">R$</div><h2>{money(String(commercialValueTotal))}</h2><p>Valor comercial registrado em {campaignsWithCommercialValue} campanhas de anunciantes; não representa recebimentos confirmados</p></article>
         <article className="card"><div className="cardIcon">◷</div><h2>{followUpDueCount} acompanhamentos vencidos</h2><p>Retornos programados para agora ou antes, exceto campanhas encerradas ou recusadas</p></article>
         <article className="card"><div className="cardIcon">↻</div><h2>{followUpUpcomingCount} retornos nos próximos 7 dias</h2><p>Acompanhamentos futuros para organizar a agenda comercial</p></article>
+        <article className="card"><div className="cardIcon">!</div><h2>{followUpMissingCount} sem retorno agendado</h2><p>Campanhas abertas que precisam de uma próxima ação comercial definida</p></article>
       </div>
       {message && <p className="formSuccess" role="status">{message}</p>}
       {error && <p className="formError" role="alert">{error}</p>}
