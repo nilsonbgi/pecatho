@@ -342,7 +342,7 @@ export default function AdminAdvertisingPage() {
       (!banner.ends_at || new Date(banner.ends_at).getTime() >= now);
   };
   const isExpired = (banner: Banner) =>
-    banner.active && !!banner.ends_at && new Date(banner.ends_at).getTime() < Date.now();
+    !!banner.ends_at && new Date(banner.ends_at).getTime() < Date.now();
   const filteredBanners = banners.filter((banner) => {
     const status = banner.metadata?.campaign_status || (banner.active ? "active" : "lead");
     const needle = searchTerm.trim().toLocaleLowerCase("pt-BR");
