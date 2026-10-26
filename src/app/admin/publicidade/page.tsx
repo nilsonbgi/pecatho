@@ -361,7 +361,11 @@ export default function AdminAdvertisingPage() {
       ["Destino", (banner: Banner) => banner.link_url || ""],
       ["Observações", (banner: Banner) => readBannerFormatPreference(banner.metadata?.notes).notes],
     ] as const;
-    const escapeCsv = (value: string) => '"' + value.replace(/"/g, '""') + '"';
+    const escapeCsv = (value: string) => {
+      // Neutraliza fórmulas em planilhas quando campos controlados por anunciantes começam com caracteres executáveis.
+      const safeValue = /^[\\u0000-\\u0020]*[=+\\-@]/.test(value) ? "'" + value : value;
+      return '"' + safeValue.replace(/"/g, '""') + '"';
+    };
     const csv = [columns.map(([label]) => escapeCsv(label)).join(";"), ...filteredBanners.map(banner => columns.map(([, getValue]) => escapeCsv(String(getValue(banner) ?? ""))).join(";"))].join("\r\n");
     const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -371,7 +375,7 @@ export default function AdminAdvertisingPage() {
     document.body.appendChild(link);
     link.click();
     link.remove();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   const filteredBanners = banners.filter((banner) => {
