@@ -9,6 +9,16 @@ type HomeCompanion = { id:string; slug:string|null; title:string|null; display_n
 type HomeCreator = { id:string; slug:string; display_name:string; bio:string|null; avatar_url:string|null; premium_featured?:boolean; plan_featured_card?:boolean };
 type HomeBanner = { id:string; title:string|null; image_path:string|null; link_url:string|null; target:string|null; placement:string|null; sort_order:number; starts_at:string|null; ends_at:string|null; metadata:Record<string,unknown> };
 type HomeBannerFormat = "leaderboard" | "rectangle" | "square" | "vertical";
+function isSafeCampaignLink(value: string) {
+  if (!value) return true;
+  if (value.startsWith("/") && !value.startsWith("//") && !value.includes("\\")) return true;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 const homeBannerFormats: Record<HomeBannerFormat, { maxWidth:number; ratio:string }> = {
   leaderboard: { maxWidth:1200, ratio:"5 / 1" }, rectangle: { maxWidth:600, ratio:"2 / 1" },
   square: { maxWidth:600, ratio:"1 / 1" }, vertical: { maxWidth:300, ratio:"1 / 2" },
@@ -78,7 +88,9 @@ export default function HomePage() {
       const rawFormat = String(banner.metadata?.banner_format || "leaderboard");
       const format: HomeBannerFormat = rawFormat in homeBannerFormats ? rawFormat as HomeBannerFormat : "leaderboard";
       const size = homeBannerFormats[format];
-      return <Link className={`pLiveBanner pLiveBanner-${format}`} style={{ maxWidth: size.maxWidth, flex: `0 1 ${size.maxWidth}px`, aspectRatio: size.ratio }} href={banner.link_url || "/fans"} key={banner.id} target={banner.target === "_blank" ? "_blank" : undefined} rel={banner.target === "_blank" ? "noopener noreferrer" : undefined} aria-label={banner.title || "Campanha Pecatho"}>
+      const requestedHref = (banner.link_url || "").trim();
+      const href = isSafeCampaignLink(requestedHref) && requestedHref ? requestedHref : "/fans";
+      return <Link className={`pLiveBanner pLiveBanner-${format}`} style={{ maxWidth: size.maxWidth, flex: `0 1 ${size.maxWidth}px`, aspectRatio: size.ratio }} href={href} key={banner.id} target={banner.target === "_blank" ? "_blank" : undefined} rel={banner.target === "_blank" ? "noopener noreferrer" : undefined} aria-label={banner.title || "Campanha Pecatho"}>
         <img src={banner.image_path!} alt={banner.title || "Campanha Pecatho"} loading="lazy" />
         <span>{banner.title || "Em destaque no Pecatho"}</span>
       </Link>;
