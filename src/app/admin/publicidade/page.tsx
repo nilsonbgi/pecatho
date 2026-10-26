@@ -553,9 +553,12 @@ export default function AdminAdvertisingPage() {
     }
     if (campaignTypeFilter !== "all" && (banner.metadata?.campaign_type === "pecatho" ? "pecatho" : "advertiser") !== campaignTypeFilter) return false;
     if (placementFilter !== "all" && (banner.placement || "home") !== placementFilter) return false;
-    if (filter === "followup") {
+    if (filter === "followup" || filter === "followup_upcoming") {
       const due = banner.metadata?.next_follow_up_at ? new Date(banner.metadata.next_follow_up_at).getTime() : NaN;
-      return Number.isFinite(due) && due <= Date.now() && !["completed", "rejected"].includes(status);
+      const now = Date.now();
+      const upcomingLimit = now + 7 * 24 * 60 * 60 * 1000;
+      if (!Number.isFinite(due) || ["completed", "rejected"].includes(status)) return false;
+      return filter === "followup" ? due <= now : due > now && due <= upcomingLimit;
     }
     if (filter === "active") return isCurrentlyLive(banner);
     if (filter === "scheduled") return isScheduled(banner);
@@ -568,6 +571,13 @@ export default function AdminAdvertisingPage() {
     const due = banner.metadata?.next_follow_up_at ? new Date(banner.metadata.next_follow_up_at).getTime() : NaN;
     const status = banner.metadata?.campaign_status || (banner.active ? "active" : "lead");
     return Number.isFinite(due) && due <= Date.now() && !["completed", "rejected"].includes(status);
+  }).length;
+  const followUpUpcomingCount = banners.filter((banner) => {
+    const due = banner.metadata?.next_follow_up_at ? new Date(banner.metadata.next_follow_up_at).getTime() : NaN;
+    const status = banner.metadata?.campaign_status || (banner.active ? "active" : "lead");
+    const now = Date.now();
+    return Number.isFinite(due) && due > now && due <= now + 7 * 24 * 60 * 60 * 1000 &&
+      !["completed", "rejected"].includes(status);
   }).length;
   const scheduledCount = banners.filter((banner) => {
     const now = Date.now();
@@ -614,6 +624,7 @@ export default function AdminAdvertisingPage() {
         <article className="card"><div className="cardIcon">↗</div><h2>{pendingCount} em negociação</h2><p>Contato, proposta ou aprovação</p></article>
         <article className="card"><div className="cardIcon">R$</div><h2>{money(String(commercialValueTotal))}</h2><p>Valor comercial registrado em {campaignsWithCommercialValue} campanhas de anunciantes; não representa recebimentos confirmados</p></article>
         <article className="card"><div className="cardIcon">◷</div><h2>{followUpDueCount} acompanhamentos vencidos</h2><p>Retornos programados para agora ou antes, exceto campanhas encerradas ou recusadas</p></article>
+        <article className="card"><div className="cardIcon">↻</div><h2>{followUpUpcomingCount} retornos nos próximos 7 dias</h2><p>Acompanhamentos futuros para organizar a agenda comercial</p></article>
       </div>
       {message && <p className="formSuccess" role="status">{message}</p>}
       {error && <p className="formError" role="alert">{error}</p>}
@@ -680,7 +691,7 @@ export default function AdminAdvertisingPage() {
         </form>
       </section>
       <section className="authCard">
-        <div style={{ display: "grid", gap: 12 }}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}><h2 style={{ margin: 0 }}>Carteira de campanhas</h2><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><button type="button" className="secondaryButton" disabled={filteredBanners.length === 0 || loading} onClick={exportCampaignsCsv}>Exportar CSV ({filteredBanners.length})</button><button type="button" className="secondaryButton" disabled={loading || saving || updatingCampaignId !== null} onClick={() => void loadBanners()}>{loading ? "Atualizando campanhas…" : "Atualizar campanhas"}</button></div></div><div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))", gap: 10 }}><label>Buscar campanha ou anunciante<input type="search" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Título, empresa, contato, e-mail…" /></label><label>Tipo de campanha<select value={campaignTypeFilter} onChange={e => setCampaignTypeFilter(e.target.value)}><option value="all">Todos os tipos</option><option value="advertiser">Publicidade de anunciante</option><option value="pecatho">Campanha própria Pecatho</option></select></label><label>Cadastro a partir de<input type="date" value={createdFrom} max={createdTo || undefined} onChange={e => setCreatedFrom(e.target.value)} /></label><label>Cadastro até<input type="date" value={createdTo} min={createdFrom || undefined} onChange={e => setCreatedTo(e.target.value)} /></label><label>Etapa comercial<select value={filter} onChange={e => setFilter(e.target.value)}><option value="all">Todas as etapas</option><option value="active">Veiculando agora</option><option value="scheduled">Programadas (início futuro)</option><option value="expired">Período encerrado</option><option value="followup">Acompanhamento vencido</option>{Object.entries(statusLabels).filter(([value]) => value !== "active").map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Posição<select value={placementFilter} onChange={e => setPlacementFilter(e.target.value)}><option value="all">Todas as posições</option><option value="home">Página inicial</option><option value="home_top">Página inicial · superior</option><option value="home_mid">Página inicial · intermediária</option><option value="home_bottom">Página inicial · inferior</option><option value="fans">Pecatho Fans</option><option value="catalog">Catálogo</option></select></label></div><p style={{ margin: 0, color: "#aeb3c0", fontSize: 13 }}>{filteredBanners.length} de {banners.length} campanhas exibidas.</p></div>
+        <div style={{ display: "grid", gap: 12 }}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}><h2 style={{ margin: 0 }}>Carteira de campanhas</h2><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><button type="button" className="secondaryButton" disabled={filteredBanners.length === 0 || loading} onClick={exportCampaignsCsv}>Exportar CSV ({filteredBanners.length})</button><button type="button" className="secondaryButton" disabled={loading || saving || updatingCampaignId !== null} onClick={() => void loadBanners()}>{loading ? "Atualizando campanhas…" : "Atualizar campanhas"}</button></div></div><div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))", gap: 10 }}><label>Buscar campanha ou anunciante<input type="search" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Título, empresa, contato, e-mail…" /></label><label>Tipo de campanha<select value={campaignTypeFilter} onChange={e => setCampaignTypeFilter(e.target.value)}><option value="all">Todos os tipos</option><option value="advertiser">Publicidade de anunciante</option><option value="pecatho">Campanha própria Pecatho</option></select></label><label>Cadastro a partir de<input type="date" value={createdFrom} max={createdTo || undefined} onChange={e => setCreatedFrom(e.target.value)} /></label><label>Cadastro até<input type="date" value={createdTo} min={createdFrom || undefined} onChange={e => setCreatedTo(e.target.value)} /></label><label>Etapa comercial<select value={filter} onChange={e => setFilter(e.target.value)}><option value="all">Todas as etapas</option><option value="active">Veiculando agora</option><option value="scheduled">Programadas (início futuro)</option><option value="expired">Período encerrado</option><option value="followup">Acompanhamento vencido</option><option value="followup_upcoming">Retornos nos próximos 7 dias</option>{Object.entries(statusLabels).filter(([value]) => value !== "active").map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Posição<select value={placementFilter} onChange={e => setPlacementFilter(e.target.value)}><option value="all">Todas as posições</option><option value="home">Página inicial</option><option value="home_top">Página inicial · superior</option><option value="home_mid">Página inicial · intermediária</option><option value="home_bottom">Página inicial · inferior</option><option value="fans">Pecatho Fans</option><option value="catalog">Catálogo</option></select></label></div><p style={{ margin: 0, color: "#aeb3c0", fontSize: 13 }}>{filteredBanners.length} de {banners.length} campanhas exibidas.</p></div>
         {loading ? <p>Carregando campanhas…</p> : filteredBanners.length === 0 ? <p>Nenhuma campanha encontrada para este filtro.</p> : <div style={{ display: "grid", gap: 14, marginTop: 16 }}>{filteredBanners.map(banner => {
           const meta = banner.metadata || {};
           const status = meta.campaign_status || (banner.active ? "active" : "lead");
