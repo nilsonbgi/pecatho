@@ -73,7 +73,7 @@ export default function HomePage() {
       setFeaturedCompanions(companions.slice(0,12));
       setFeaturedCreators(((creatorsResult.data??[]) as HomeCreator[]).slice(0,12));
       const now=Date.now();
-      setHomeBanners(((bannersResult.data??[]) as HomeBanner[]).filter(b=>(!b.placement||["home","home_top","home_mid","home_bottom"].includes(b.placement))&&(!b.starts_at||new Date(b.starts_at).getTime()<=now)&&(!b.ends_at||new Date(b.ends_at).getTime()>=now)&&typeof b.image_path==="string"&&/^https?:\/\//i.test(b.image_path)).slice(0,8));
+      setHomeBanners(((bannersResult.data??[]) as HomeBanner[]).filter(b=>(!b.placement||["home","home_top","home_mid","home_bottom"].includes(b.placement))&&(!b.starts_at||new Date(b.starts_at).getTime()<=now)&&(!b.ends_at||new Date(b.ends_at).getTime()>=now)&&typeof b.image_path==="string"&&/^https?:\/\//i.test(b.image_path)).slice(0,30));
     };
     void load().catch(error=>console.error("Falha ao carregar vitrines da página inicial:",error));
     return ()=>{active=false;};
@@ -82,7 +82,7 @@ export default function HomePage() {
   useEffect(()=>{if(featuredCreators.length<2)return;const timer=window.setInterval(()=>setCreatorIndex(i=>(i+1)%featuredCreators.length),5000);return()=>window.clearInterval(timer);},[featuredCreators.length]);
 
   function renderHomeBanners(placements: string[]) {
-    const banners = homeBanners.filter((banner) => placements.includes(banner.placement || "home_top"));
+    const banners = homeBanners.filter((banner) => placements.includes(banner.placement || "home_top")).slice(0, 8);
     if (!banners.length) return null;
     return <div className="pBannerRail" aria-label="Campanhas publicitárias em destaque">{banners.map((banner) => {
       const rawFormat = String(banner.metadata?.banner_format || "leaderboard");
