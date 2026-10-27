@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import ReferralShareCard from "./ReferralShareCard";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,7 @@ export default async function Painel() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
   const { data: profile } = await supabase.from("profiles").select("display_name,username,status,account_type").eq("id", user.id).single();
+  const { data: affiliateCode } = await supabase.rpc("get_my_pecatho_affiliate_code");
   if (profile?.account_type === "customer") redirect("/painel/cliente");
   const { data: staffRole } = await supabase
     .from("user_roles")
@@ -33,6 +35,7 @@ export default async function Painel() {
     <main className="shell advertiserDashboard"><nav className="topbar"><div className="brand"><span className="brandMark">P</span><span>Pecatho</span></div><div className="navLinks"><Link href="/">Página inicial</Link><Link href="/anunciantes">Acompanhantes</Link>{canAccessAdministration && <Link href="/admin" className="navCta">Administração</Link>}</div></nav>
       <section className="hero"><nav className="dashboardSectionNav" aria-label="Navegação rápida do painel"><Link href="#operacao">Operação</Link><Link href="#relacionamento">Relacionamento</Link><Link href="#financeiro">Financeiro</Link><Link href="#conta">Conta</Link></nav><div className="eyebrow">PECATHO · ÁREA DA ACOMPANHANTE</div><h1>Olá, <em>{profile?.display_name || user.email}</em></h1><p className="heroCopy">Sua central de operação reúne anúncio, mídia, disponibilidade, relacionamento e Pecatho Fans em uma única experiência.</p><div className="dashboardQuickLinks"><Link href="/anunciantes">Explorar acompanhantes</Link><Link href="/painel/financeiro">Financeiro</Link>{advertiser && (advertiser.status === "published" && advertiser.slug ? <Link href={`/anunciantes/${advertiser.slug}`}>Ver meu posicionamento</Link> : <Link href="/painel/anuncio/revisao">Ver situação do anúncio</Link>)}<Link href="/fans">Pecatho Fans</Link><Link href="/parceiros">Parceiros</Link><Link href="/painel/mensagens">Mensagens</Link></div>
         <section id="operacao" className="pillars">
+          {affiliateCode && <ReferralShareCard code={String(affiliateCode)} siteUrl={process.env.NEXT_PUBLIC_SITE_URL || "https://www.pecatho.com"} />}
           <article className="card"><div className="cardIcon">A</div><h2>Meu anúncio Pecatho</h2><p>{advertiser ? advertiser.title : "Você ainda não criou um anúncio de serviços."}</p><p>Status: {advertiser ? publicationStatus[advertiser.status] || advertiser.status : "Não iniciado"}</p><div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:12}}><Link className="secondaryButton" href="/painel/anuncio">{advertiser ? "Editar anúncio" : "Criar anúncio"}</Link>{advertiser&&<Link className="secondaryButton" href="/painel/anuncio/operacional">Disponibilidade, preços e pagamentos</Link>}{advertiser&&<Link className="secondaryButton" href="/painel/anuncio/revisao">Revisar antes de enviar</Link>}</div></article>
           <article className="card"><div className="cardIcon">V</div><h2>Verificação do anúncio</h2><p>{advertiser ? verificationStatus[advertiser.verification_status] || advertiser.verification_status : "Não há anúncio para verificar."}</p>{advertiser&&<Link className="secondaryButton" href="/painel/anuncio/revisao">Conferir pendências</Link>}</article>
           {advertiser&&<article className="card"><div className="cardIcon">M</div><h2>Fotos e vídeos</h2><p>Defina, mídia por mídia, o que será público e o que ficará protegido por pagamento.</p><Link className="secondaryButton" href="/painel/anuncio/midias">Gerenciar acesso às mídias</Link></article>}

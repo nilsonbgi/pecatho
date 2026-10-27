@@ -56,7 +56,8 @@ export default function CadastroPage() {
       const supabase = createClient();
       const referralParam = new URLSearchParams(window.location.search).get("ref");
       const referralCreatorId = referralParam && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(referralParam) ? referralParam : null;
-      const registrationData = { display_name: name.trim(), cpf: onlyDigits(cpf), birth_date: birthDate, phone: phone.trim(), cep: onlyDigits(cep), street, number, complement, neighborhood, city, uf, ibge_code: String(ibgeCode), entry_mode: entryMode, referral_creator_id: referralCreatorId };
+      const referralCode = referralParam && !referralCreatorId && /^[A-Za-z0-9_-]{3,64}$/.test(referralParam) ? referralParam.toUpperCase() : null;
+      const registrationData = { display_name: name.trim(), cpf: onlyDigits(cpf), birth_date: birthDate, phone: phone.trim(), cep: onlyDigits(cep), street, number, complement, neighborhood, city, uf, ibge_code: String(ibgeCode), entry_mode: entryMode, referral_creator_id: referralCreatorId, referral_code: referralCode };
       const { data, error: signUpError } = await supabase.auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: `${window.location.origin}/auth/callback`, data: registrationData } });
       if (signUpError) throw signUpError;
       if (!data.user) throw new Error("Não foi possível criar a conta.");
