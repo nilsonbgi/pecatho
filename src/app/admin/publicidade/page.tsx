@@ -594,6 +594,15 @@ export default function AdminAdvertisingPage() {
       (!banner.ends_at || new Date(banner.ends_at).getTime() >= now);
   }).length;
   const pendingCount = banners.filter((banner) => ["lead", "quoted", "approved"].includes(banner.metadata?.campaign_status || "")).length;
+  const commercialFunnelStages: { status: NonNullable<BannerMetadata["campaign_status"]>; label: string; count: number }[] = [
+    { status: "lead", label: "Contato recebido", count: banners.filter((banner) => banner.metadata?.campaign_type !== "pecatho" && (banner.metadata?.campaign_status || (banner.active ? "active" : "lead")) === "lead").length },
+    { status: "quoted", label: "Proposta enviada", count: banners.filter((banner) => banner.metadata?.campaign_type !== "pecatho" && (banner.metadata?.campaign_status || (banner.active ? "active" : "lead")) === "quoted").length },
+    { status: "approved", label: "Aprovada", count: banners.filter((banner) => banner.metadata?.campaign_type !== "pecatho" && (banner.metadata?.campaign_status || (banner.active ? "active" : "lead")) === "approved").length },
+    { status: "active", label: "Veiculando", count: banners.filter((banner) => banner.metadata?.campaign_type !== "pecatho" && isCurrentlyLive(banner)).length },
+    { status: "paused", label: "Pausada", count: banners.filter((banner) => banner.metadata?.campaign_type !== "pecatho" && (banner.metadata?.campaign_status || (banner.active ? "active" : "lead")) === "paused").length },
+    { status: "completed", label: "Encerrada", count: banners.filter((banner) => banner.metadata?.campaign_type !== "pecatho" && (banner.metadata?.campaign_status || (banner.active ? "active" : "lead")) === "completed").length },
+    { status: "rejected", label: "Recusada", count: banners.filter((banner) => banner.metadata?.campaign_type !== "pecatho" && (banner.metadata?.campaign_status || (banner.active ? "active" : "lead")) === "rejected").length },
+  ];
   const commercialValueTotal = banners.reduce((total, banner) => {
     if (banner.metadata?.campaign_type === "pecatho") return total;
     const rawValue = banner.metadata?.commercial_value?.trim();
@@ -634,6 +643,15 @@ export default function AdminAdvertisingPage() {
         <article className="card"><div className="cardIcon">↻</div><h2>{followUpUpcomingCount} retornos nos próximos 7 dias</h2><p>Acompanhamentos futuros para organizar a agenda comercial</p></article>
         <article className="card"><div className="cardIcon">!</div><h2>{followUpMissingCount} sem retorno agendado</h2><p>Campanhas abertas que precisam de uma próxima ação comercial definida</p></article>
       </div>
+      <section className="authCard" style={{ marginBottom: 24 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <div><h2 style={{ margin: 0 }}>Funil comercial de anunciantes</h2><p style={{ margin: "6px 0 0", color: "#aeb3c0", fontSize: 13 }}>Selecione uma etapa para abrir a carteira já filtrada. Campanhas próprias do Pecatho não entram nestes números.</p></div>
+          <button type="button" className="secondaryButton" onClick={() => { setCampaignTypeFilter("advertiser"); setFilter("all"); }}>Ver todas as negociações</button>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 145px), 1fr))", gap: 10, marginTop: 16 }}>
+          {commercialFunnelStages.map((stage) => <button key={stage.status} type="button" className="secondaryButton" onClick={() => { setCampaignTypeFilter("advertiser"); setFilter(stage.status); }} aria-label={`Filtrar carteira: ${stage.label}, ${stage.count} campanhas`} style={{ display: "grid", gap: 6, textAlign: "left", whiteSpace: "normal", minHeight: 82, alignContent: "center" }}><span style={{ color: "#aeb3c0", fontSize: 12 }}>{stage.label}</span><strong style={{ fontSize: 24, lineHeight: 1.1, color: "#e7c33f" }}>{stage.count}</strong><span style={{ color: "#aeb3c0", fontSize: 11 }}>Ver campanhas →</span></button>)}
+        </div>
+      </section>
       {message && <p className="formSuccess" role="status">{message}</p>}
       {error && <p className="formError" role="alert">{error}</p>}
       <section className="authCard" style={{ marginBottom: 28 }}>
