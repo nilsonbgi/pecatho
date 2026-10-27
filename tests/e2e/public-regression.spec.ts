@@ -116,8 +116,8 @@ test('cadastro preserves the complete five-step onboarding flow without creating
   await expect(page.getByText('Falta só confirmar seu e-mail.')).toBeVisible();
   await expect(page.getByRole('link', { name: /Ir para o login/i })).toBeVisible();
   expect(signupRequestBody, 'The referral signup request must be captured').not.toBeNull();
-  const userMetadata = signupRequestBody?.options && typeof signupRequestBody.options === 'object'
-    ? (signupRequestBody.options as { data?: { referral_code?: string } }).data
+  const userMetadata = signupRequestBody?.data && typeof signupRequestBody.data === 'object'
+    ? signupRequestBody.data as { referral_code?: string }
     : undefined;
   expect(userMetadata?.referral_code, 'The referral code from the signup URL must be sent in Supabase Auth user metadata').toBe(referralCode);
 });
