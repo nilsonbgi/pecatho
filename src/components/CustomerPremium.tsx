@@ -75,7 +75,10 @@ export default function CustomerPremium() {
         body: JSON.stringify({ plan_id: plan.id, duration_days: durationDays, ...(creatorId ? { creator_id: creatorId } : {}) }),
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || "Não foi possível iniciar o pagamento.");
+      if (!response.ok) {
+        const detail = typeof payload.detail === "string" && payload.detail.trim() ? ` Detalhe técnico: ${payload.detail.slice(0, 500)}` : "";
+        throw new Error((payload.error || "Não foi possível iniciar o pagamento.") + detail);
+      }
       if (typeof payload.checkout_url !== "string") throw new Error("O Mercado Pago não retornou o checkout.");
       window.location.assign(payload.checkout_url);
     } catch (e) {
