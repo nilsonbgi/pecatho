@@ -94,6 +94,30 @@ $replace$);
 END;
 $migration$;
 
+-- Consulta segura do próprio código, sem depender de política SELECT direta na tabela interna.
+CREATE OR REPLACE FUNCTION public.get_my_pecatho_affiliate_code()
+RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = 'pg_catalog', 'public'
+AS $function$
+DECLARE
+  v_user_id uuid := auth.uid();
+  v_code text;
+BEGIN
+  IF v_user_id IS NULL THEN RAISE EXCEPTION 'AUTH_REQUIRED'; END IF;
+  SELECT a.code INTO v_code
+  FROM public.affiliates a
+  WHERE a.user_id = v_user_id AND a.active = true
+  ORDER BY a.created_at ASC
+  LIMIT 1;
+  RETURN v_code;
+END;
+$function$;
+
+REVOKE ALL ON FUNCTION public.get_my_pecatho_affiliate_code() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_my_pecatho_affiliate_code() TO authenticated;
+
 -- Registra a indicação pelo usuário indicador, mantendo compatibilidade com o fluxo antigo.
 CREATE OR REPLACE FUNCTION public.record_pecatho_affiliate_referral_by_user(p_affiliate_user_id uuid)
 RETURNS jsonb
