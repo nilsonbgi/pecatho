@@ -25,8 +25,11 @@ test('cadastro preserves the complete five-step onboarding flow without creating
   // This suite may run against the production URL. Intercept Supabase Auth signup so
   // the browser validates the full completion UI without creating accounts or sending email.
   let signupIntercepted = false;
-  await page.route(/\/auth\/v1\/signup(?:\?.*)?$/, async (route) => {
+  let signupRequestBody: { [key: string]: unknown } | null = null;
+  const referralCode = 'PTESTAFFILIATE123';
+  await page.route(/\\/auth\\/v1\\/signup(?:\\?.*)?$/, async (route) => {
     signupIntercepted = true;
+    signupRequestBody = route.request().postDataJSON() as { [key: string]: unknown };
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -50,7 +53,7 @@ test('cadastro preserves the complete five-step onboarding flow without creating
     });
   });
 
-  await page.goto('/cadastro', { waitUntil: 'domcontentloaded' });
+  await page.goto(`/cadastro?ref=${referralCode}`, { waitUntil: 'domcontentloaded' });
 
   await expect(page.getByText('Etapa 1 de 5')).toBeVisible();
   await expect(page.getByRole('button', { name: /Quero ser acompanhante/i })).toBeVisible();
@@ -112,6 +115,11 @@ test('cadastro preserves the complete five-step onboarding flow without creating
   await expect.poll(() => signupIntercepted).toBe(true);
   await expect(page.getByText('Falta só confirmar seu e-mail.')).toBeVisible();
   await expect(page.getByRole('link', { name: /Ir para o login/i })).toBeVisible();
+  expect(signupRequestBody, 'The referral signup request must be captured').not.toBeNull();
+  const userMetadata = signupRequestBody?.options && typeof signupRequestBody.options === 'object'
+    ? (signupRequestBody.options as { data?: { referral_code?: string } }).data
+    : undefined;
+  expect(userMetadata?.referral_code, 'The referral code from the signup URL must be sent in Supabase Auth user metadata').toBe(referralCode);
 });
 
 test('cadastro remains usable on mobile without horizontal overflow', async ({ page }) => {
