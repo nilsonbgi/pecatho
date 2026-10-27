@@ -146,8 +146,8 @@ export default function AdminAdvertisingPage() {
   useEffect(() => {
     let intervalId: number | undefined;
     const initialTimeoutId = window.setTimeout(() => {
-      setCurrentTime((currentTime ?? 0));
-      intervalId = window.setInterval(() => setCurrentTime((currentTime ?? 0)), 60_000);
+      setCurrentTime(Date.now());
+      intervalId = window.setInterval(() => setCurrentTime(Date.now()), 60_000);
     }, 0);
     return () => {
       window.clearTimeout(initialTimeoutId);
