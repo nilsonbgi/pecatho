@@ -24,12 +24,14 @@ for (const route of publicRoutes) {
 test('cadastro preserves the complete five-step onboarding flow without creating production users', async ({ page }) => {
   // This suite may run against the production URL. Intercept Supabase Auth signup so
   // the browser validates the full completion UI without creating accounts or sending email.
-  let signupIntercepted = false;
-  let signupRequestBody: { [key: string]: unknown } | null = null;
+  const signupCapture: {
+    intercepted: boolean;
+    requestBody: { [key: string]: unknown } | null;
+  } = { intercepted: false, requestBody: null };
   const referralCode = 'PTESTAFFILIATE123';
   await page.route(/\/auth\/v1\/signup(?:\?.*)?$/, async (route) => {
-    signupIntercepted = true;
-    signupRequestBody = route.request().postDataJSON() as { [key: string]: unknown };
+    signupCapture.intercepted = true;
+    signupCapture.requestBody = route.request().postDataJSON() as { [key: string]: unknown };
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -108,16 +110,16 @@ test('cadastro preserves the complete five-step onboarding flow without creating
 
   // Advancing to review must never submit the form or create an Auth user.
   await expect(page.getByText('Etapa 5 de 5')).toBeVisible();
-  expect(signupIntercepted, 'Signup must not run before the final review confirmation').toBe(false);
+  expect(signupCapture.intercepted, 'Signup must not run before the final review confirmation').toBe(false);
   await expect(page.getByText('Usuário de Teste')).toBeVisible();
   await expect(page.getByText('Curitiba — PR')).toBeVisible();
   await page.getByRole('button', { name: /Criar minha conta/i }).click();
-  await expect.poll(() => signupIntercepted).toBe(true);
+  await expect.poll(() => signupCapture.intercepted).toBe(true);
   await expect(page.getByText('Falta só confirmar seu e-mail.')).toBeVisible();
   await expect(page.getByRole('link', { name: /Ir para o login/i })).toBeVisible();
-  expect(signupRequestBody, 'The referral signup request must be captured').not.toBeNull();
-  const userMetadata = signupRequestBody?.data && typeof signupRequestBody.data === 'object'
-    ? signupRequestBody.data as { referral_code?: string }
+  expect(signupCapture.requestBody, 'The referral signup request must be captured').not.toBeNull();
+  const userMetadata = signupCapture.requestBody?.data && typeof signupCapture.requestBody.data === 'object'
+    ? signupCapture.requestBody.data as { referral_code?: string }
     : undefined;
   expect(userMetadata?.referral_code, 'The referral code from the signup URL must be sent in Supabase Auth user metadata').toBe(referralCode);
 });
