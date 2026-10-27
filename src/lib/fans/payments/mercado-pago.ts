@@ -21,7 +21,16 @@ export async function createMercadoPagoPreference(input: MercadoPagoPreferenceIn
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
   if (!baseUrl) throw new Error("NEXT_PUBLIC_APP_URL não configurado.");
 
-  const notificationUrl = new URL("/api/fans/payments/mercadopago/webhook", baseUrl).toString();
+  const protectionBypassToken = process.env.VERCEL_PREVIEW_PROTECTION_BYPASS;
+  const withPreviewProtectionBypass = (value: string) => {
+    if (!protectionBypassToken) return value;
+    const url = new URL(value);
+    url.searchParams.set("x-vercel-protection-bypass", protectionBypassToken);
+    return url.toString();
+  };
+  const notificationUrl = withPreviewProtectionBypass(
+    new URL("/api/fans/payments/mercadopago/webhook", baseUrl).toString(),
+  );
   const productType = input.productType ?? "digital_content";
   const channel = productType === "fans_boost"
     ? "pecatho_fans_boost"
@@ -68,9 +77,9 @@ export async function createMercadoPagoPreference(input: MercadoPagoPreferenceIn
       payer: { email: input.buyerEmail },
       notification_url: notificationUrl,
       back_urls: {
-        success: successUrl,
-        pending: `${baseUrl}/fans/checkout/pendente?order=${encodeURIComponent(input.orderId)}&product_type=${encodeURIComponent(productType)}`,
-        failure: `${baseUrl}/fans/checkout/falha?order=${encodeURIComponent(input.orderId)}&product_type=${encodeURIComponent(productType)}`,
+        success: withPreviewProtectionBypass(successUrl),
+        pending: withPreviewProtectionBypass(`${baseUrl}/fans/checkout/pendente?order=${encodeURIComponent(input.orderId)}&product_type=${encodeURIComponent(productType)}`),
+        failure: withPreviewProtectionBypass(`${baseUrl}/fans/checkout/falha?order=${encodeURIComponent(input.orderId)}&product_type=${encodeURIComponent(productType)}`),
       },
       auto_return: "approved",
       metadata: {
