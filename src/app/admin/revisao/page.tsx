@@ -2,7 +2,7 @@
 
 import "../admin-redesign.css";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/browser";
 
@@ -13,7 +13,7 @@ type Verification = { id: string; status: string; provider: string | null; submi
 const labels: Record<string, string> = { draft: "Rascunho", pending_review: "Em análise", published: "Publicado", paused: "Pausado", suspended: "Suspenso", rejected: "Rejeitado", unverified: "Não verificado", pending: "Pendente", verified: "Verificado" };
 
 export default function ReviewPage() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [advertisers, setAdvertisers] = useState<Advertiser[]>([]);
   const [selected, setSelected] = useState<Advertiser | null>(null);
@@ -31,7 +31,7 @@ export default function ReviewPage() {
   const [error, setError] = useState("");
   const [loadingQueue, setLoadingQueue] = useState(false);
 
-  async function loadAdvertisers() {
+  const loadAdvertisers = useCallback(async () => {
     setLoadingQueue(true);
     setError("");
     try {
@@ -43,7 +43,7 @@ export default function ReviewPage() {
     } finally {
       setLoadingQueue(false);
     }
-  }
+  }, [supabase]);
 
   useEffect(() => {
     (async () => {
@@ -54,7 +54,7 @@ export default function ReviewPage() {
       if (!role) return;
       await loadAdvertisers();
     })();
-  }, []);
+  }, [loadAdvertisers, supabase]);
 
   async function openAdvertiser(item: Advertiser) {
     setSelected(item); setBusy(true); setMessage(""); setError("");
