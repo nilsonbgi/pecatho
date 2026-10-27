@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/browser";
 
@@ -16,7 +16,7 @@ type Plan = {
 const money = (v: number | string) => Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function AdminProfessionalPremiumPage() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -39,7 +39,7 @@ export default function AdminProfessionalPremiumPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     const { data, error: loadError } = await supabase.from("pecatho_customer_premium_plans")
       .select("id,plan_key,name,description,price,duration_days,benefits,active,sort_order,audience,feature_flags,card_style,badge_label")
@@ -47,7 +47,7 @@ export default function AdminProfessionalPremiumPage() {
     if (loadError) setError("Não foi possível carregar os planos. Confirme se a migration de diferenciais Premium foi aplicada.");
     else setPlans((data ?? []) as Plan[]);
     setLoading(false);
-  }
+  }, [supabase]);
 
   useEffect(() => {
     let mounted = true;
@@ -62,7 +62,7 @@ export default function AdminProfessionalPremiumPage() {
       else setLoading(false);
     })();
     return () => { mounted = false; };
-  }, []);
+  }, [load, supabase]);
 
   function reset() {
     setEditingId(null); setPlanKey(""); setName(""); setDescription(""); setPrice(""); setDuration("30");
