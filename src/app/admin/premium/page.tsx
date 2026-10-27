@@ -341,14 +341,6 @@ export default function AdminCustomerPremiumPage() {
     }
   }
 
-  function changeCustomerDiscount(nextDiscount: string) {
-    setDiscountPercent(nextDiscount);
-    if (audience === "customer") {
-      const suggested = suggestedCustomerPrice(Number(durationDays), Number(nextDiscount));
-      if (suggested !== null) setPrice(suggested);
-    }
-  }
-
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);

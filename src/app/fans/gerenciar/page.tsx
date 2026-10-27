@@ -10,15 +10,13 @@ type CountResult={count:number|null};
 export default async function FansManagePage(){
  const supabase=await createClient();const {data:{user}}=await supabase.auth.getUser();if(!user)redirect("/login");
  const {data:creator}=await supabase.from("fans_creators").select("id,slug,display_name,bio,status,avatar_url,advertiser_profile_id").eq("user_id",user.id).maybeSingle();if(!creator)redirect("/fans/ativar");
- const [plans,posts,subscribers,purchases,tips,payouts,activity]=await Promise.all([
+ const [plans,posts,subscribers,purchases,activity]=await Promise.all([
   supabase.from("fans_plans").select("id",{count:"exact",head:true}).eq("creator_id",creator.id),
   supabase.from("fans_posts").select("id",{count:"exact",head:true}).eq("creator_id",creator.id),
   supabase.from("fans_subscriptions").select("id",{count:"exact",head:true}).eq("creator_id",creator.id),
   supabase.from("fans_purchases").select("id",{count:"exact",head:true}).eq("creator_id",creator.id),
-  supabase.from("fans_tips").select("id",{count:"exact",head:true}).eq("creator_id",creator.id),
-  supabase.from("fans_payout_requests").select("id",{count:"exact",head:true}).eq("creator_id",creator.id),
   supabase.from("fans_notifications").select("id,type,read_at,created_at",{count:"exact"}).eq("user_id",user.id).in("type",["fans_like","fans_comment"]).order("created_at",{ascending:false}).limit(5)
- ]) as [CountResult,CountResult,CountResult,CountResult,CountResult,CountResult,{data:{id:string;type:string;read_at:string|null;created_at:string}[]|null;count:number|null}];
+ ]) as [CountResult,CountResult,CountResult,CountResult,{data:{id:string;type:string;read_at:string|null;created_at:string}[]|null;count:number|null}];
  const activePlans=await supabase.from("fans_plans").select("id",{count:"exact",head:true}).eq("creator_id",creator.id).eq("status","active");
  const publishedPosts=await supabase.from("fans_posts").select("id",{count:"exact",head:true}).eq("creator_id",creator.id).eq("status","published");
  const {data:boostRows}=await supabase.from("fans_boosts").select("view_count,status,ends_at").eq("creator_id",creator.id);
