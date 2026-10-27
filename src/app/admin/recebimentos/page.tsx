@@ -205,15 +205,6 @@ export default function AdminPayoutsPage() {
     [payouts, filter],
   );
 
-  const totals = useMemo(() => ({
-    requested: payouts
-      .filter((payout) => ["requested", "approved", "processing"].includes(payout.status))
-      .reduce((sum, payout) => sum + Number(payout.amount), 0),
-    paid: payouts
-      .filter((payout) => payout.status === "paid")
-      .reduce((sum, payout) => sum + Number(payout.amount), 0),
-  }), [payouts]);
-
   if (authorized === null) {
     return <main className="shell"><section className="hero"><h1>Carregando recebimentos...</h1></section></main>;
   }
