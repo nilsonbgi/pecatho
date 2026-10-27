@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/browser";
 
@@ -14,7 +14,7 @@ const statuses: Record<string,string> = {submitted:"Recebida",under_review:"Em a
 const outcomes: Record<string,string> = {no_action:"Sem medida",warning:"Advertência",temporary_suspension:"Suspensão temporária",permanent_suspension:"Suspensão permanente",content_removal:"Remoção de conteúdo"};
 
 export default function GovernanceAdminPage(){
- const supabase=createClient();
+ const supabase=useMemo(()=>createClient(),[]);
  const [authorized,setAuthorized]=useState<boolean|null>(null);
  const [reports,setReports]=useState<Report[]>([]);
  const [selected,setSelected]=useState<Report|null>(null);
@@ -35,7 +35,7 @@ export default function GovernanceAdminPage(){
   const searchable=[report.id,report.reporter_user_id,report.target_user_id,report.category,categories[report.category]||"",report.justification].join(" ").toLocaleLowerCase("pt-BR");
   return matchesStatus&&(!term||searchable.includes(term));
  });
- async function load(){
+ const load=useCallback(async()=>{
   setLoadingQueue(true);
   setError("");
   try{
@@ -47,8 +47,8 @@ export default function GovernanceAdminPage(){
   }finally{
    setLoadingQueue(false);
   }
- }
- useEffect(()=>{(async()=>{const {data:{user}}=await supabase.auth.getUser();if(!user){setAuthorized(false);return;}const {data:role,error:roleError}=await supabase.from("user_roles").select("role").eq("user_id",user.id).in("role",["super_admin","admin","moderator","support"]).limit(1).maybeSingle();if(roleError){setError(roleError.message);setAuthorized(false);return;}setAuthorized(Boolean(role));if(role)await load();})();},[]);
+ },[supabase]);
+ useEffect(()=>{let active=true;(async()=>{const {data:{user}}=await supabase.auth.getUser();if(!active)return;if(!user){setAuthorized(false);return;}const {data:role,error:roleError}=await supabase.from("user_roles").select("role").eq("user_id",user.id).in("role",["super_admin","admin","moderator","support"]).limit(1).maybeSingle();if(!active)return;if(roleError){setError(roleError.message);setAuthorized(false);return;}setAuthorized(Boolean(role));if(role)await load();})();return()=>{active=false;};},[load,supabase]);
  async function openReport(report:Report){
   setSelected(report);setEvidence([]);setError("");setMessage("");setTriageNote(report.triage_note||"");setDecision(d=>({...d,rationale:"",suspension_until:""}));
   const [{data,error:evidenceError},{data:historyData,error:historyError}]=await Promise.all([
