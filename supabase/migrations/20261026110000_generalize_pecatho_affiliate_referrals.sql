@@ -49,6 +49,7 @@ DECLARE
 BEGIN
   SELECT pg_get_functiondef('private.capture_registration_metadata()'::regprocedure)
     INTO v_definition;
+  v_definition := replace(v_definition, E'\\r\\n', E'\\n');
 
   v_original := v_definition;
   v_definition := replace(v_definition,
@@ -147,6 +148,7 @@ DECLARE
 BEGIN
   SELECT pg_get_functiondef('public.post_pecatho_affiliate_commission()'::regprocedure)
     INTO v_definition;
+  v_definition := replace(v_definition, E'\\r\\n', E'\\n');
   v_original := v_definition;
 
   v_definition := replace(v_definition,
