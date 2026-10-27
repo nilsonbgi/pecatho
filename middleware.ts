@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const FALLBACK_SUPABASE_URL = "https://haplmoswsojbibgamqju.supabase.co";
 const FALLBACK_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_gbJA-2Tqt7SCeqokRLFuCQ_ubJy7QvD";
-const FANS_HOSTS = new Set(["fans.pecatho.com.br", "www.fans.pecatho.com.br"]);
+const FANS_HOSTS = new Set(["fans.pecatho.com"]);
 
 function applySecurityHeaders(response: NextResponse) {
   response.headers.set("X-Content-Type-Options", "nosniff");
