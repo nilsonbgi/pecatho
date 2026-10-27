@@ -27,7 +27,7 @@ test('cadastro preserves the complete five-step onboarding flow without creating
   let signupIntercepted = false;
   let signupRequestBody: { [key: string]: unknown } | null = null;
   const referralCode = 'PTESTAFFILIATE123';
-  await page.route(/\\/auth\\/v1\\/signup(?:\\?.*)?$/, async (route) => {
+  await page.route(/\/auth\/v1\/signup(?:\?.*)?$/, async (route) => {
     signupIntercepted = true;
     signupRequestBody = route.request().postDataJSON() as { [key: string]: unknown };
     await route.fulfill({
