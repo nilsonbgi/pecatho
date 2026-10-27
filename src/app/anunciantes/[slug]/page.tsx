@@ -120,7 +120,9 @@ export default function PublicAdvertiserPage() {
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
+    const loadingTimeoutId = window.setTimeout(() => {
+      if (active) setLoading(true);
+    }, 0);
     setError("");
     setProfile(null);
     setFans(null);
@@ -198,7 +200,10 @@ export default function PublicAdvertiserPage() {
         setPremiumEntitlementLoaded(true);
       }
     })().catch((err) => { console.error(err); if (active) { setError("Não foi possível carregar este perfil."); setLoading(false); } });
-    return () => { active = false; };
+    return () => {
+      active = false;
+      window.clearTimeout(loadingTimeoutId);
+    };
   }, [params.slug]);
 
   const filteredMedia = useMemo(() => media.filter((item) => mediaTab === "all" || (mediaTab === "gif" ? isGifMedia(item) : item.kind === mediaTab && !isGifMedia(item))), [media, mediaTab]);
