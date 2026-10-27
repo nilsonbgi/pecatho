@@ -141,6 +141,19 @@ export default function AdminAdvertisingPage() {
   const [campaignTypeFilter, setCampaignTypeFilter] = useState("all");
   const [createdFrom, setCreatedFrom] = useState("");
   const [createdTo, setCreatedTo] = useState("");
+  const [currentTime, setCurrentTime] = useState<number | null>(null);
+
+  useEffect(() => {
+    let intervalId: number | undefined;
+    const initialTimeoutId = window.setTimeout(() => {
+      setCurrentTime((currentTime ?? 0));
+      intervalId = window.setInterval(() => setCurrentTime((currentTime ?? 0)), 60_000);
+    }, 0);
+    return () => {
+      window.clearTimeout(initialTimeoutId);
+      if (intervalId !== undefined) window.clearInterval(intervalId);
+    };
+  }, []);
 
   const loadBanners = useCallback(async () => {
     setLoading(true);
@@ -474,25 +487,25 @@ export default function AdminAdvertisingPage() {
   }
 
   const isCurrentlyLive = (banner: Banner) => {
-    const now = Date.now();
+    const now = (currentTime ?? 0);
     return banner.active && (!banner.starts_at || new Date(banner.starts_at).getTime() <= now) && (!banner.ends_at || new Date(banner.ends_at).getTime() >= now);
   };
   const campaignDisplayStatus = (banner: Banner, status: string) => {
     if (status !== "active" || !banner.active) return statusLabels[status as NonNullable<BannerMetadata["campaign_status"]>] || status;
-    const now = Date.now();
+    const now = (currentTime ?? 0);
     if (banner.ends_at && new Date(banner.ends_at).getTime() < now) return "Período encerrado";
     if (banner.starts_at && new Date(banner.starts_at).getTime() > now) return "Programada";
     return "Veiculando";
   };
   const isScheduled = (banner: Banner) => {
-    const now = Date.now();
+    const now = (currentTime ?? 0);
     return banner.active &&
       !!banner.starts_at &&
       new Date(banner.starts_at).getTime() > now &&
       (!banner.ends_at || new Date(banner.ends_at).getTime() >= now);
   };
   const isExpired = (banner: Banner) =>
-    !!banner.ends_at && new Date(banner.ends_at).getTime() < Date.now();
+    !!banner.ends_at && new Date(banner.ends_at).getTime() < (currentTime ?? 0);
   function exportCampaignsCsv() {
     const columns = [
       ["Título", (banner: Banner) => banner.title || ""],
@@ -555,7 +568,7 @@ export default function AdminAdvertisingPage() {
     if (placementFilter !== "all" && (banner.placement || "home") !== placementFilter) return false;
     if (filter === "followup" || filter === "followup_upcoming" || filter === "followup_missing") {
       const due = banner.metadata?.next_follow_up_at ? new Date(banner.metadata.next_follow_up_at).getTime() : NaN;
-      const now = Date.now();
+      const now = (currentTime ?? 0);
       const upcomingLimit = now + 7 * 24 * 60 * 60 * 1000;
       if (["completed", "rejected"].includes(status)) return false;
       if (filter === "followup_missing") return !Number.isFinite(due);
@@ -572,12 +585,12 @@ export default function AdminAdvertisingPage() {
   const followUpDueCount = banners.filter((banner) => {
     const due = banner.metadata?.next_follow_up_at ? new Date(banner.metadata.next_follow_up_at).getTime() : NaN;
     const status = banner.metadata?.campaign_status || (banner.active ? "active" : "lead");
-    return Number.isFinite(due) && due <= Date.now() && !["completed", "rejected"].includes(status);
+    return Number.isFinite(due) && due <= (currentTime ?? 0) && !["completed", "rejected"].includes(status);
   }).length;
   const followUpUpcomingCount = banners.filter((banner) => {
     const due = banner.metadata?.next_follow_up_at ? new Date(banner.metadata.next_follow_up_at).getTime() : NaN;
     const status = banner.metadata?.campaign_status || (banner.active ? "active" : "lead");
-    const now = Date.now();
+    const now = (currentTime ?? 0);
     return Number.isFinite(due) && due > now && due <= now + 7 * 24 * 60 * 60 * 1000 &&
       !["completed", "rejected"].includes(status);
   }).length;
@@ -587,7 +600,7 @@ export default function AdminAdvertisingPage() {
     return !Number.isFinite(due) && !["completed", "rejected"].includes(status);
   }).length;
   const scheduledCount = banners.filter((banner) => {
-    const now = Date.now();
+    const now = (currentTime ?? 0);
     return banner.active &&
       !!banner.starts_at &&
       new Date(banner.starts_at).getTime() > now &&
@@ -724,7 +737,7 @@ export default function AdminAdvertisingPage() {
           return <article key={banner.id} style={{ display: "grid", gridTemplateColumns: "minmax(100px,180px) minmax(0,1fr)", gap: 16, padding: 16, border: "1px solid rgba(255,255,255,.12)", borderRadius: 14, background: "rgba(255,255,255,.025)" }}>
             <div style={{ minHeight: 90, borderRadius: 10, overflow: "hidden", background: "#11131a" }}>{banner.image_path && <img src={banner.image_path} alt="" style={{ width: "100%", height: "100%", minHeight: 90, objectFit: "cover" }} />}</div>
             <div style={{ minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}><div><h3 style={{ margin: "0 0 6px", overflowWrap: "anywhere" }}>{banner.title || "Campanha sem título"}</h3><p style={{ margin: "0 0 6px", color: "#aeb3c0" }}>{meta.campaign_type === "pecatho" ? "Campanha própria Pecatho" : "Publicidade de anunciante"} · {campaignDisplayStatus(banner, status)}</p>{(meta.banner_format_preference || readBannerFormatPreference(meta.notes).preference) && <p style={{ margin: "6px 0", color: "#e7c33f", fontSize: 13, fontWeight: 650 }}>Formato solicitado: {bannerFormatPreferenceLabels[(meta.banner_format_preference || readBannerFormatPreference(meta.notes).preference)!]}</p>}<p style={{ margin: 0, color: "#aeb3c0", fontSize: 13 }}>{meta.advertiser_name || "Anunciante não informado"} · Valor combinado: {money(meta.commercial_value)}</p>{meta.budget_estimate && <p style={{ margin: "5px 0 0", color: "#c4c8d1", fontSize: 12 }}>Orçamento estimado informado: {meta.budget_estimate}</p>}<p style={{ margin: "6px 0 0", color: "#8f96a7", fontSize: 12 }}>Posição: {banner.placement || "home"} · Ordem: {banner.sort_order} · {formatDate(banner.starts_at)} a {formatDate(banner.ends_at)}</p>{meta.next_follow_up_at && <p style={{ margin: "6px 0 0", color: new Date(meta.next_follow_up_at).getTime() <= Date.now() && !["completed", "rejected"].includes(status) ? "#ffb4a9" : "#e7c33f", fontSize: 12, fontWeight: 650 }}>Próximo acompanhamento: {new Date(meta.next_follow_up_at).toLocaleString("pt-BR")}{new Date(meta.next_follow_up_at).getTime() <= Date.now() && !["completed", "rejected"].includes(status) ? " · VENCIDO" : ""}{meta.follow_up_note ? " · " + meta.follow_up_note : ""}</p>}{meta.intake_source === "public_advertising_form" && meta.submitted_at && <p style={{ margin: "5px 0 0", color: "#8f96a7", fontSize: 12 }}>Solicitação recebida em: {new Date(meta.submitted_at).toLocaleString("pt-BR")}</p>}</div><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{meta.next_follow_up_at && <button type="button" className="secondaryButton" disabled={updatingCampaignId === banner.id || saving || loading} onClick={() => void completeFollowUp(banner)}>Concluir acompanhamento</button>}<button type="button" className="secondaryButton" disabled={updatingCampaignId === banner.id || saving} onClick={() => beginEdit(banner)}>Editar</button><button type="button" className="secondaryButton" disabled={updatingCampaignId === banner.id || saving} onClick={() => void duplicateCampaign(banner)}>Duplicar</button><button type="button" className="secondaryButton" disabled={updatingCampaignId === banner.id || saving} onClick={() => void deleteCampaign(banner)}>Excluir</button></div></div>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}><div><h3 style={{ margin: "0 0 6px", overflowWrap: "anywhere" }}>{banner.title || "Campanha sem título"}</h3><p style={{ margin: "0 0 6px", color: "#aeb3c0" }}>{meta.campaign_type === "pecatho" ? "Campanha própria Pecatho" : "Publicidade de anunciante"} · {campaignDisplayStatus(banner, status)}</p>{(meta.banner_format_preference || readBannerFormatPreference(meta.notes).preference) && <p style={{ margin: "6px 0", color: "#e7c33f", fontSize: 13, fontWeight: 650 }}>Formato solicitado: {bannerFormatPreferenceLabels[(meta.banner_format_preference || readBannerFormatPreference(meta.notes).preference)!]}</p>}<p style={{ margin: 0, color: "#aeb3c0", fontSize: 13 }}>{meta.advertiser_name || "Anunciante não informado"} · Valor combinado: {money(meta.commercial_value)}</p>{meta.budget_estimate && <p style={{ margin: "5px 0 0", color: "#c4c8d1", fontSize: 12 }}>Orçamento estimado informado: {meta.budget_estimate}</p>}<p style={{ margin: "6px 0 0", color: "#8f96a7", fontSize: 12 }}>Posição: {banner.placement || "home"} · Ordem: {banner.sort_order} · {formatDate(banner.starts_at)} a {formatDate(banner.ends_at)}</p>{meta.next_follow_up_at && <p style={{ margin: "6px 0 0", color: new Date(meta.next_follow_up_at).getTime() <= (currentTime ?? 0) && !["completed", "rejected"].includes(status) ? "#ffb4a9" : "#e7c33f", fontSize: 12, fontWeight: 650 }}>Próximo acompanhamento: {new Date(meta.next_follow_up_at).toLocaleString("pt-BR")}{new Date(meta.next_follow_up_at).getTime() <= (currentTime ?? 0) && !["completed", "rejected"].includes(status) ? " · VENCIDO" : ""}{meta.follow_up_note ? " · " + meta.follow_up_note : ""}</p>}{meta.intake_source === "public_advertising_form" && meta.submitted_at && <p style={{ margin: "5px 0 0", color: "#8f96a7", fontSize: 12 }}>Solicitação recebida em: {new Date(meta.submitted_at).toLocaleString("pt-BR")}</p>}</div><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{meta.next_follow_up_at && <button type="button" className="secondaryButton" disabled={updatingCampaignId === banner.id || saving || loading} onClick={() => void completeFollowUp(banner)}>Concluir acompanhamento</button>}<button type="button" className="secondaryButton" disabled={updatingCampaignId === banner.id || saving} onClick={() => beginEdit(banner)}>Editar</button><button type="button" className="secondaryButton" disabled={updatingCampaignId === banner.id || saving} onClick={() => void duplicateCampaign(banner)}>Duplicar</button><button type="button" className="secondaryButton" disabled={updatingCampaignId === banner.id || saving} onClick={() => void deleteCampaign(banner)}>Excluir</button></div></div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}><label style={{ display: "flex", alignItems: "center", gap: 8 }}>Etapa rápida<select disabled={loading || saving || updatingCampaignId !== null} value={status} onChange={e => void setCampaignStatus(banner, e.target.value as NonNullable<BannerMetadata["campaign_status"]>)}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>{meta.contact_email && <a href={`mailto:${meta.contact_email}`} className="secondaryButton">E-mail</a>}{meta.contact_whatsapp && <a href={`https://wa.me/${meta.contact_whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="secondaryButton">WhatsApp</a>}</div>
               <details style={{ marginTop: 12, borderTop: "1px solid rgba(255,255,255,.08)", paddingTop: 10 }}>
                 <summary style={{ cursor: "pointer", color: "#e7c33f", fontSize: 12, fontWeight: 750 }}>Registrar contato / acompanhamento</summary>
