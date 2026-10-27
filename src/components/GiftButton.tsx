@@ -60,7 +60,10 @@ export default function GiftButton({ recipientType, recipientId, recipientName, 
       const provider = await providerResponse.json().catch(() => ({}));
 
       if (!providerResponse.ok || !provider.checkout_url) {
-        throw new Error(provider?.error || "Não foi possível abrir o pagamento.");
+        const detail = typeof provider?.detail === "string" && provider.detail.trim()
+          ? ` Detalhe técnico: ${provider.detail.slice(0, 500)}`
+          : "";
+        throw new Error((provider?.error || "Não foi possível abrir o pagamento.") + detail);
       }
 
       window.location.href = provider.checkout_url;
