@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/browser";
 
@@ -67,7 +67,7 @@ type PublicationPlan = {
 };
 
 export default function AdminCustomerPremiumPage() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [plans, setPlans] = useState<PremiumPlan[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -132,7 +132,7 @@ export default function AdminCustomerPremiumPage() {
     return statusMatches && audienceMatches && (!term || searchable.includes(term));
   });
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoadingPlans(true);
     try {
       const [{ data, error: loadError }, { data: publicationData, error: publicationError }] = await Promise.all([
@@ -160,7 +160,7 @@ export default function AdminCustomerPremiumPage() {
     } finally {
       setLoadingPlans(false);
     }
-  }
+  }, [supabase]);
 
   useEffect(() => {
     let mounted = true;
@@ -177,7 +177,7 @@ export default function AdminCustomerPremiumPage() {
       }
     })();
     return () => { mounted = false; };
-  }, []);
+  }, [load, supabase]);
 
   function edit(plan: PremiumPlan) {
     setEditingId(plan.id);
