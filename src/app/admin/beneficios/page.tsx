@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/browser";
 
@@ -26,7 +26,7 @@ const money = (type: string, value: number | string) => type === "percentage"
   : Number(value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function AdminBenefitsPage() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [benefits, setBenefits] = useState<Benefit[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
@@ -43,7 +43,7 @@ export default function AdminBenefitsPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
-  async function load() {
+  const load = useCallback(async () => {
     const [{ data: benefitRows, error: benefitError }, { data: venueRows }] = await Promise.all([
       supabase.from("pecatho_reward_benefits").select("id,name,description,points_cost,discount_type,discount_value,partner_venue_id,max_redemptions,redeemed_count,starts_at,ends_at,active").order("created_at", { ascending: false }),
       supabase.from("partner_venues").select("id,name").eq("status", "published").order("name"),
@@ -51,7 +51,7 @@ export default function AdminBenefitsPage() {
     if (benefitError) throw benefitError;
     setBenefits((benefitRows ?? []) as Benefit[]);
     setVenues((venueRows ?? []) as Venue[]);
-  }
+  }, [supabase]);
 
   useEffect(() => {
     let mounted = true;
@@ -67,7 +67,7 @@ export default function AdminBenefitsPage() {
       }
     })();
     return () => { mounted = false; };
-  }, []);
+  }, [load, supabase]);
 
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
