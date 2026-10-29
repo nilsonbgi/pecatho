@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import CustomerProfessionalReviews from "@/components/CustomerProfessionalReviews";
 import PecathoBenefits from "@/components/PecathoBenefits";
 import CustomerPremium from "@/components/CustomerPremium";
+import ReferralShareCard from "../ReferralShareCard";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,7 @@ export default async function ClientePainel() {
   if (!["customer", "both"].includes(profile?.account_type ?? "")) redirect("/painel");
 
   const admin = createAdminClient();
-  const [{ data: sales }, { count: mediaPurchases }, { count: followingCount }, { count: conversationCount }, { count: unreadNotifications }, { data: reviews }, { data: gifts }, { data: pointAccount }, { data: pointHistory }] = await Promise.all([
+  const [{ data: sales }, { count: mediaPurchases }, { count: followingCount }, { count: conversationCount }, { count: unreadNotifications }, { data: reviews }, { data: gifts }, { data: pointAccount }, { data: pointHistory }, { data: creator }, { data: affiliateCode }] = await Promise.all([
     admin.from("digital_content_sales").select("amount,status").eq("buyer_user_id", user.id),
     admin.from("profile_media_purchases").select("id", { count: "exact", head: true }).eq("buyer_user_id", user.id).eq("status", "paid"),
     admin.from("user_follows").select("profile_id", { count: "exact", head: true }).eq("follower_id", user.id),
@@ -31,6 +32,8 @@ export default async function ClientePainel() {
     admin.from("pecatho_gifts").select("id,amount,status,recipient_type,recipient_id,created_at").eq("buyer_user_id", user.id).order("created_at", { ascending: false }).limit(8),
     admin.from("pecatho_user_points").select("balance,updated_at").eq("user_id", user.id).maybeSingle(),
     admin.from("pecatho_points_ledger").select("id,points,description,created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(6),
+    admin.from("fans_creators").select("id,status").eq("user_id", user.id).eq("status", "active").maybeSingle(),
+    supabase.rpc("get_my_pecatho_affiliate_code"),
   ]);
 
   const paidSales = (sales ?? []).filter((sale) => sale.status === "paid");
@@ -47,6 +50,7 @@ export default async function ClientePainel() {
         <div className="eyebrow">PECATHO · ÁREA DO CLIENTE</div>
         <h1>Olá, <em>{profile?.display_name || user.email}</em></h1>
         <p className="heroCopy">Seu espaço é separado das áreas profissionais. Aqui você contrata serviços, conversa com acompanhantes, acompanha seus conteúdos e constrói sua reputação como cliente.</p>
+        {creator && affiliateCode && <section className="pillars"><ReferralShareCard code={String(affiliateCode)} siteUrl={process.env.NEXT_PUBLIC_SITE_URL || "https://www.pecatho.com"} /></section>}
         <section id="resumo" className="pillars">
           <article className="card"><div className="cardIcon">★</div><h2>Minha reputação</h2><p className="financeBig">{average !== null ? average.toFixed(1) + " / 5" : "Ainda sem rating"}</p><p>{ratings.length ? ratings.length + " avaliação" + (ratings.length === 1 ? "" : "ões") + " verificada" + (ratings.length === 1 ? "" : "s") + "." : "Sua nota será construída somente a partir de interações verificadas."}</p></article>
           <article className="card"><div className="cardIcon">C</div><h2>Conteúdos comprados</h2><p className="financeBig">{paidSales.length}</p><p>{money(spent)} em compras confirmadas.</p><Link className="secondaryButton" href="/conteudos/minhas-compras">Minha biblioteca</Link></article>
