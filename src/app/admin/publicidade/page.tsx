@@ -131,6 +131,7 @@ export default function AdminAdvertisingPage() {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingArtwork, setUploadingArtwork] = useState(false);
   const [updatingCampaignId, setUpdatingCampaignId] = useState<string | null>(null);
   const [interactionDrafts, setInteractionDrafts] = useState<Record<string, { type: "call" | "email" | "whatsapp" | "meeting" | "note"; summary: string }>>({});
   const [message, setMessage] = useState("");
@@ -213,6 +214,28 @@ export default function AdminAdvertisingPage() {
     });
     setMessage(""); setError("");
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function uploadArtwork(file: File | undefined) {
+    if (!file) return;
+    setError(""); setMessage("");
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type)) { setError("Envie uma imagem JPG, PNG ou WebP."); return; }
+    if (file.size > 5 * 1024 * 1024) { setError("A arte deve ter no máximo 5 MB."); return; }
+    setUploadingArtwork(true);
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) { setError("Sua sessão expirou. Entre novamente para enviar a arte."); return; }
+      const extension = file.type === "image/jpeg" ? "jpg" : file.type === "image/png" ? "png" : "webp";
+      const path = `${user.id}/${crypto.randomUUID()}.${extension}`;
+      const { error: uploadError } = await supabase.storage.from("pecatho-banners").upload(path, file, { contentType: file.type, cacheControl: "31536000", upsert: false });
+      if (uploadError) { setError(`Não foi possível enviar a arte: ${uploadError.message}`); return; }
+      const { data } = supabase.storage.from("pecatho-banners").getPublicUrl(path);
+      setForm(current => ({ ...current, image_path: data.publicUrl }));
+      setMessage("Arte enviada. Confira a prévia e salve a campanha.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Falha ao enviar a arte. Tente novamente.");
+    } finally { setUploadingArtwork(false); }
   }
 
   async function saveCampaign(event: FormEvent<HTMLFormElement>) {
@@ -676,7 +699,8 @@ export default function AdminAdvertisingPage() {
             <label>Tipo de campanha<select value={form.campaign_type} onChange={e => setForm({ ...form, campaign_type: e.target.value as FormState["campaign_type"] })}><option value="advertiser">Publicidade de anunciante</option><option value="pecatho">Campanha própria Pecatho</option></select></label>
           </div>
           <div className="formRow">
-            <label>URL pública da imagem<input type="url" value={form.image_path} onChange={e => setForm({ ...form, image_path: e.target.value })} placeholder="https://… (obrigatória para veicular)" /></label>
+            <label>Enviar arte da campanha<input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploadingArtwork} onChange={e => { void uploadArtwork(e.target.files?.[0]); e.currentTarget.value = ""; }} /><small>JPG, PNG ou WebP · até 5 MB. Somente a equipe administrativa pode enviar arquivos.</small></label>
+            <label>Ou informar URL pública da imagem<input type="url" value={form.image_path} onChange={e => setForm({ ...form, image_path: e.target.value })} placeholder="https://… (obrigatória para veicular)" /></label>
             <label>Link ao clicar<input type="text" value={form.link_url} onChange={e => setForm({ ...form, link_url: e.target.value })} placeholder="/fans ou https://…" /></label>
           </div>
           <div style={{ marginTop: 14, padding: 14, border: "1px solid rgba(255,255,255,.12)", borderRadius: 14, background: "rgba(255,255,255,.025)" }}>
@@ -726,7 +750,7 @@ export default function AdminAdvertisingPage() {
             <label>Abertura do link<select value={form.target} onChange={e => setForm({ ...form, target: e.target.value as FormState["target"] })}><option value="_self">Na mesma aba</option><option value="_blank">Nova aba</option></select></label>
           </div>
           <label style={{ display: "block", marginTop: 12 }}>Observações comerciais<textarea rows={3} maxLength={3000} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Condições acordadas, material pendente, responsável pelo atendimento…" /></label>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 20 }}><button type="submit" className="primaryButton" disabled={saving}>{saving ? "Salvando…" : form.id ? "Salvar alterações" : "Cadastrar campanha"}</button>{form.id && <button type="button" className="secondaryButton" onClick={() => setForm(emptyForm)}>Cancelar edição</button>}</div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 20 }}><button type="submit" className="primaryButton" disabled={saving || uploadingArtwork}>{uploadingArtwork ? "Enviando arte…" : saving ? "Salvando…" : form.id ? "Salvar alterações" : "Cadastrar campanha"}</button>{form.id && <button type="button" className="secondaryButton" onClick={() => setForm(emptyForm)}>Cancelar edição</button>}</div>
         </form>
       </section>
       <section className="authCard">
