@@ -139,6 +139,7 @@ export default function AdminAdvertisingPage() {
   const [filter, setFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [placementFilter, setPlacementFilter] = useState("all");
+  const [campaignSort, setCampaignSort] = useState<"priority" | "recent" | "value">("priority");
   const [campaignTypeFilter, setCampaignTypeFilter] = useState("all");
   const [createdFrom, setCreatedFrom] = useState("");
   const [createdTo, setCreatedTo] = useState("");
@@ -604,6 +605,29 @@ export default function AdminAdvertisingPage() {
     if (filter !== "all" && status !== filter) return false;
     return true;
   });
+  const sortedFilteredBanners = [...filteredBanners].sort((a, b) => {
+    if (campaignSort === "recent") return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    if (campaignSort === "value") {
+      const valueOf = (banner: Banner) => {
+        const raw = banner.metadata?.commercial_value?.trim() || "";
+        const normalized = raw.includes(",") ? raw.replace(/\\./g, "").replace(",", ".") : raw;
+        const value = Number(normalized);
+        return Number.isFinite(value) && value >= 0 ? value : -1;
+      };
+      return valueOf(b) - valueOf(a) || new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }
+    const followUpRank = (banner: Banner) => {
+      const status = banner.metadata?.campaign_status || (banner.active ? "active" : "lead");
+      if (["completed", "rejected"].includes(status)) return { rank: 3, due: Number.POSITIVE_INFINITY };
+      const due = banner.metadata?.next_follow_up_at ? new Date(banner.metadata.next_follow_up_at).getTime() : NaN;
+      if (Number.isFinite(due) && due <= (currentTime ?? 0)) return { rank: 0, due };
+      if (Number.isFinite(due)) return { rank: 1, due };
+      return { rank: 2, due: Number.POSITIVE_INFINITY };
+    };
+    const left = followUpRank(a);
+    const right = followUpRank(b);
+    return left.rank - right.rank || left.due - right.due || new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
   const activeCount = banners.filter(isCurrentlyLive).length;
   const followUpDueCount = banners.filter((banner) => {
     const due = banner.metadata?.next_follow_up_at ? new Date(banner.metadata.next_follow_up_at).getTime() : NaN;
@@ -629,7 +653,7 @@ export default function AdminAdvertisingPage() {
       new Date(banner.starts_at).getTime() > now &&
       (!banner.ends_at || new Date(banner.ends_at).getTime() >= now);
   }).length;
-  const pendingCount = banners.filter((banner) => ["lead", "quoted", "approved"].includes(banner.metadata?.campaign_status || "")).length;
+  const pendingCount = banners.filter((banner) => banner.metadata?.campaign_type !== "pecatho" && ["lead", "quoted", "approved"].includes(banner.metadata?.campaign_status || "")).length;
   const commercialFunnelStages: { status: NonNullable<BannerMetadata["campaign_status"]>; label: string; count: number }[] = [
     { status: "lead", label: "Contato recebido", count: banners.filter((banner) => banner.metadata?.campaign_type !== "pecatho" && (banner.metadata?.campaign_status || (banner.active ? "active" : "lead")) === "lead").length },
     { status: "quoted", label: "Proposta enviada", count: banners.filter((banner) => banner.metadata?.campaign_type !== "pecatho" && (banner.metadata?.campaign_status || (banner.active ? "active" : "lead")) === "quoted").length },
@@ -754,8 +778,8 @@ export default function AdminAdvertisingPage() {
         </form>
       </section>
       <section className="authCard">
-        <div style={{ display: "grid", gap: 12 }}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}><h2 style={{ margin: 0 }}>Carteira de campanhas</h2><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><button type="button" className="secondaryButton" disabled={filteredBanners.length === 0 || loading} onClick={exportCampaignsCsv}>Exportar CSV ({filteredBanners.length})</button><button type="button" className="secondaryButton" disabled={loading || saving || updatingCampaignId !== null} onClick={() => void loadBanners()}>{loading ? "Atualizando campanhas…" : "Atualizar campanhas"}</button></div></div><div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))", gap: 10 }}><label>Buscar campanha ou anunciante<input type="search" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Título, empresa, contato, e-mail…" /></label><label>Tipo de campanha<select value={campaignTypeFilter} onChange={e => setCampaignTypeFilter(e.target.value)}><option value="all">Todos os tipos</option><option value="advertiser">Publicidade de anunciante</option><option value="pecatho">Campanha própria Pecatho</option></select></label><label>Cadastro a partir de<input type="date" value={createdFrom} max={createdTo || undefined} onChange={e => setCreatedFrom(e.target.value)} /></label><label>Cadastro até<input type="date" value={createdTo} min={createdFrom || undefined} onChange={e => setCreatedTo(e.target.value)} /></label><label>Etapa comercial<select value={filter} onChange={e => setFilter(e.target.value)}><option value="all">Todas as etapas</option><option value="active">Veiculando agora</option><option value="scheduled">Programadas (início futuro)</option><option value="expired">Período encerrado</option><option value="followup">Acompanhamento vencido</option><option value="followup_upcoming">Retornos nos próximos 7 dias</option><option value="followup_missing">Sem retorno agendado</option>{Object.entries(statusLabels).filter(([value]) => value !== "active").map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Posição<select value={placementFilter} onChange={e => setPlacementFilter(e.target.value)}><option value="all">Todas as posições</option><option value="home">Página inicial</option><option value="home_top">Página inicial · superior</option><option value="home_mid">Página inicial · intermediária</option><option value="home_bottom">Página inicial · inferior</option><option value="fans">Pecatho Fans</option><option value="catalog">Catálogo</option></select></label></div><p style={{ margin: 0, color: "#aeb3c0", fontSize: 13 }}>{filteredBanners.length} de {banners.length} campanhas exibidas.</p></div>
-        {loading ? <p>Carregando campanhas…</p> : filteredBanners.length === 0 ? <p>Nenhuma campanha encontrada para este filtro.</p> : <div style={{ display: "grid", gap: 14, marginTop: 16 }}>{filteredBanners.map(banner => {
+        <div style={{ display: "grid", gap: 12 }}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}><h2 style={{ margin: 0 }}>Carteira de campanhas</h2><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><button type="button" className="secondaryButton" disabled={filteredBanners.length === 0 || loading} onClick={exportCampaignsCsv}>Exportar CSV ({filteredBanners.length})</button><button type="button" className="secondaryButton" disabled={loading || saving || updatingCampaignId !== null} onClick={() => void loadBanners()}>{loading ? "Atualizando campanhas…" : "Atualizar campanhas"}</button></div></div><div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))", gap: 10 }}><label>Buscar campanha ou anunciante<input type="search" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Título, empresa, contato, e-mail…" /></label><label>Tipo de campanha<select value={campaignTypeFilter} onChange={e => setCampaignTypeFilter(e.target.value)}><option value="all">Todos os tipos</option><option value="advertiser">Publicidade de anunciante</option><option value="pecatho">Campanha própria Pecatho</option></select></label><label>Cadastro a partir de<input type="date" value={createdFrom} max={createdTo || undefined} onChange={e => setCreatedFrom(e.target.value)} /></label><label>Cadastro até<input type="date" value={createdTo} min={createdFrom || undefined} onChange={e => setCreatedTo(e.target.value)} /></label><label>Etapa comercial<select value={filter} onChange={e => setFilter(e.target.value)}><option value="all">Todas as etapas</option><option value="active">Veiculando agora</option><option value="scheduled">Programadas (início futuro)</option><option value="expired">Período encerrado</option><option value="followup">Acompanhamento vencido</option><option value="followup_upcoming">Retornos nos próximos 7 dias</option><option value="followup_missing">Sem retorno agendado</option>{Object.entries(statusLabels).filter(([value]) => value !== "active").map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Ordenar carteira<select value={campaignSort} onChange={e => setCampaignSort(e.target.value as "priority" | "recent" | "value")}><option value="priority">Prioridade de acompanhamento</option><option value="recent">Mais recentes primeiro</option><option value="value">Maior valor comercial</option></select></label><label>Posição<select value={placementFilter} onChange={e => setPlacementFilter(e.target.value)}><option value="all">Todas as posições</option><option value="home">Página inicial</option><option value="home_top">Página inicial · superior</option><option value="home_mid">Página inicial · intermediária</option><option value="home_bottom">Página inicial · inferior</option><option value="fans">Pecatho Fans</option><option value="catalog">Catálogo</option></select></label></div><p style={{ margin: 0, color: "#aeb3c0", fontSize: 13 }}>{filteredBanners.length} de {banners.length} campanhas exibidas.</p></div>
+        {loading ? <p>Carregando campanhas…</p> : filteredBanners.length === 0 ? <p>Nenhuma campanha encontrada para este filtro.</p> : <div style={{ display: "grid", gap: 14, marginTop: 16 }}>{sortedFilteredBanners.map(banner => {
           const meta = banner.metadata || {};
           const status = meta.campaign_status || (banner.active ? "active" : "lead");
           return <article key={banner.id} style={{ display: "grid", gridTemplateColumns: "minmax(100px,180px) minmax(0,1fr)", gap: 16, padding: 16, border: "1px solid rgba(255,255,255,.12)", borderRadius: 14, background: "rgba(255,255,255,.025)" }}>
