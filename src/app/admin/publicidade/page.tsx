@@ -610,7 +610,7 @@ export default function AdminAdvertisingPage() {
     if (campaignSort === "value") {
       const valueOf = (banner: Banner) => {
         const raw = banner.metadata?.commercial_value?.trim() || "";
-        const normalized = raw.includes(",") ? raw.replace(/\\./g, "").replace(",", ".") : raw;
+        const normalized = raw.includes(",") ? raw.replace(/\./g, "").replace(",", ".") : raw;
         const value = Number(normalized);
         return Number.isFinite(value) && value >= 0 ? value : -1;
       };
