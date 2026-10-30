@@ -88,34 +88,156 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/login?error=registration_profile", url.origin));
   }
 
-  if (cep.length === 8 && street && number && neighborhood && city && /^[A-Z]{2}$/.test(uf) && /^\d{7}$/.test(ibgeCode)) {
-    const { data: cityRow, error: cityError } = await supabase.from("cities").select("id,state_id,name,ibge_code").eq("ibge_code", ibgeCode).maybeSingle();
-    if (!cityError && cityRow) {
-      const { data: stateRow, error: stateError } = await supabase.from("states").select("id,uf,name").eq("id", cityRow.state_id).maybeSingle();
-      if (!stateError && stateRow && stateRow.uf === uf && cityRow.name.toLocaleLowerCase("pt-BR") === city.toLocaleLowerCase("pt-BR")) {
-        await supabase.from("user_addresses").update({ is_primary: false }).eq("user_id", user.id);
-        const coordinates = await geocode(`${street}, ${number}, ${neighborhood}, ${city}, ${uf}`, cep);
-        const publicLatitude = coordinates ? Number(coordinates.latitude.toFixed(2)) : null; const publicLongitude = coordinates ? Number(coordinates.longitude.toFixed(2)) : null;
-        const { data: existingAddress } = await supabase.from("user_addresses").select("id").eq("user_id", user.id).eq("is_primary", true).maybeSingle();
-        const address = { user_id: user.id, address_type: "primary", zipcode: cep, street, number, complement: complement || null, city_id: cityRow.id, state_id: cityRow.state_id, latitude: coordinates?.latitude ?? null, longitude: coordinates?.longitude ?? null, public_latitude: publicLatitude, public_longitude: publicLongitude, location_visibility: coordinates ? "approximate" : "private", is_primary: true };
-        if (existingAddress?.id) await supabase.from("user_addresses").update(address).eq("id", existingAddress.id); else await supabase.from("user_addresses").insert(address);
+  if (cep.length !== 8 || !street || !number || !neighborhood || !city || !/^[A-Z]{2}$/.test(uf) || !/^\d{7}$/.test(ibgeCode)) {
+    console.error("[auth/callback] Dados de endereço incompletos.");
+    return NextResponse.redirect(new URL("/login?error=registration_address", url.origin));
+  }
+
+  const { data: cityRow, error: cityError } = await supabase
+    .from("cities")
+    .select("id,state_id,name,ibge_code")
+    .eq("ibge_code", ibgeCode)
+    .maybeSingle();
+
+  if (cityError || !cityRow) {
+    console.error("[auth/callback] Município não localizado:", cityError);
+    return NextResponse.redirect(new URL("/login?error=registration_address", url.origin));
+  }
+
+  const { data: stateRow, error: stateError } = await supabase
+    .from("states")
+    .select("id,uf,name")
+    .eq("id", cityRow.state_id)
+    .maybeSingle();
+
+  if (stateError || !stateRow || stateRow.uf !== uf || cityRow.name.toLocaleLowerCase("pt-BR") !== city.toLocaleLowerCase("pt-BR")) {
+    console.error("[auth/callback] Município/UF divergente:", stateError);
+    return NextResponse.redirect(new URL("/login?error=registration_address", url.origin));
+  }
+
+  const coordinates = await geocode(`${street}, ${number}, ${neighborhood}, ${city}, ${uf}`, cep);
+  const publicLatitude = coordinates ? Number(coordinates.latitude.toFixed(2)) : null;
+  const publicLongitude = coordinates ? Number(coordinates.longitude.toFixed(2)) : null;
+  const address = {
+    user_id: user.id,
+    address_type: "primary",
+    zipcode: cep,
+    street,
+    number,
+    complement: complement || null,
+    city_id: cityRow.id,
+    state_id: cityRow.state_id,
+    latitude: coordinates?.latitude ?? null,
+    longitude: coordinates?.longitude ?? null,
+    public_latitude: publicLatitude,
+    public_longitude: publicLongitude,
+    location_visibility: coordinates ? "approximate" : "private",
+    is_primary: true,
+  };
+
+  const { data: existingAddress, error: existingAddressError } = await supabase
+    .from("user_addresses")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("is_primary", true)
+    .maybeSingle();
+
+  if (existingAddressError) {
+    console.error("[auth/callback] Falha ao consultar endereço principal:", existingAddressError);
+    return NextResponse.redirect(new URL("/login?error=registration_address", url.origin));
+  }
+
+  const addressResult = existingAddress?.id
+    ? await supabase.from("user_addresses").update(address).eq("id", existingAddress.id)
+    : await supabase.from("user_addresses").insert(address);
+
+  if (addressResult.error) {
+    console.error("[auth/callback] Falha ao salvar endereço:", addressResult.error);
+    return NextResponse.redirect(new URL("/login?error=registration_address", url.origin));
+  }
+
+  const primaryAddressId = existingAddress?.id;
+  let addressCleanup = supabase.from("user_addresses").update({ is_primary: false }).eq("user_id", user.id);
+  if (primaryAddressId) addressCleanup = addressCleanup.neq("id", primaryAddressId);
+  const { error: addressCleanupError } = await addressCleanup;
+
+  if (addressCleanupError) {
+    console.error("[auth/callback] Falha ao normalizar endereço principal:", addressCleanupError);
+    return NextResponse.redirect(new URL("/login?error=registration_address", url.origin));
+  }
+
+  if ((entryMode === "advertiser" || entryMode === "both") && name) {
+    const { data: advertiser, error: advertiserLookupError } = await supabase
+      .from("advertiser_profiles")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (advertiserLookupError) {
+      console.error("[auth/callback] Falha ao consultar perfil de acompanhante:", advertiserLookupError);
+      return NextResponse.redirect(new URL("/login?error=registration_profile_type", url.origin));
+    }
+
+    if (!advertiser) {
+      const { error: advertiserInsertError } = await supabase.from("advertiser_profiles").insert({
+        user_id: user.id,
+        display_name: name,
+        title: `Perfil de ${name}`,
+        summary: "Complete sua apresentação para publicar seu anúncio no Pecatho.",
+        status: "draft",
+        verification_status: "unverified",
+        pricing: {},
+        service_options: {},
+        payment_options: {},
+        social_links: {},
+      });
+
+      if (advertiserInsertError) {
+        console.error("[auth/callback] Falha ao criar perfil de acompanhante:", advertiserInsertError);
+        return NextResponse.redirect(new URL("/login?error=registration_profile_type", url.origin));
       }
     }
   }
 
-  if ((entryMode === "advertiser" || entryMode === "both") && name) {
-    const { data: advertiser } = await supabase.from("advertiser_profiles").select("id").eq("user_id", user.id).maybeSingle();
-    if (!advertiser) {
-      await supabase.from("advertiser_profiles").insert({ user_id: user.id, display_name: name, title: `Perfil de ${name}`, summary: "Complete sua apresentação para publicar seu anúncio no Pecatho.", status: "draft", verification_status: "unverified", pricing: {}, service_options: {}, payment_options: {}, social_links: {} });
-    }
-  }
-
   if ((entryMode === "fans" || entryMode === "both") && name) {
-    const { data: creator } = await supabase.from("fans_creators").select("id").eq("user_id", user.id).maybeSingle();
+    const { data: creator, error: creatorLookupError } = await supabase
+      .from("fans_creators")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (creatorLookupError) {
+      console.error("[auth/callback] Falha ao consultar perfil Fans:", creatorLookupError);
+      return NextResponse.redirect(new URL("/login?error=registration_profile_type", url.origin));
+    }
+
     if (!creator) {
-      const base = slugify(name); const suffix = user.id.replace(/-/g, "").slice(0, 8);
-      const { data: advertiser } = await supabase.from("advertiser_profiles").select("id").eq("user_id", user.id).maybeSingle();
-      await supabase.from("fans_creators").insert({ user_id: user.id, advertiser_profile_id: advertiser?.id ?? null, slug: `${base}-${suffix}`, display_name: name, bio: "Complete sua apresentação para começar a criar no Pecatho Fans.", status: "active" });
+      const base = slugify(name);
+      const suffix = user.id.replace(/-/g, "").slice(0, 8);
+      const { data: advertiser, error: advertiserLookupError } = await supabase
+        .from("advertiser_profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (advertiserLookupError) {
+        console.error("[auth/callback] Falha ao consultar perfil associado:", advertiserLookupError);
+        return NextResponse.redirect(new URL("/login?error=registration_profile_type", url.origin));
+      }
+
+      const { error: creatorInsertError } = await supabase.from("fans_creators").insert({
+        user_id: user.id,
+        advertiser_profile_id: advertiser?.id ?? null,
+        slug: `${base}-${suffix}`,
+        display_name: name,
+        bio: "Complete sua apresentação para começar a criar no Pecatho Fans.",
+        status: "active",
+      });
+
+      if (creatorInsertError) {
+        console.error("[auth/callback] Falha ao criar perfil Fans:", creatorInsertError);
+        return NextResponse.redirect(new URL("/login?error=registration_profile_type", url.origin));
+      }
     }
   }
 
