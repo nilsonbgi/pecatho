@@ -28,6 +28,12 @@ export async function GET(request: Request) {
   if (userError || !userData.user) return NextResponse.redirect(new URL("/login?error=missing_user", url.origin));
 
   const user = userData.user;
+
+  // Password recovery uses the same PKCE callback, but it must not consume
+  // a registration intent or attempt to create a new profile.
+  if (url.searchParams.get("type") === "recovery") {
+    return NextResponse.redirect(new URL("/redefinir-senha", url.origin));
+  }
   const { data: intent, error: intentError } = await supabase.rpc("consume_registration_intent", { p_user_id: user.id });
   if (intentError) return NextResponse.redirect(new URL("/login?error=registration_data", url.origin));
 
