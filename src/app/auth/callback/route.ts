@@ -53,11 +53,39 @@ export async function GET(request: Request) {
     await supabase.rpc("record_pecatho_affiliate_referral_by_user", { p_affiliate_user_id: referralAffiliateUserId });
   }
 
-  if (name && user.email && validCpf(cpf) && isAdult(birthDate)) {
-    const { data: existingCpf, error: cpfError } = await supabase.from("profiles").select("id").eq("cpf", cpf).neq("id", user.id).maybeSingle();
-    if (!cpfError && !existingCpf) {
-      await supabase.from("profiles").upsert({ id: user.id, display_name: name, legal_name: name, email: user.email, phone, cpf, birth_date: birthDate }, { onConflict: "id" });
-    }
+  if (!name || !user.email || !validCpf(cpf) || !isAdult(birthDate)) {
+    return NextResponse.redirect(new URL("/login?error=registration_profile", url.origin));
+  }
+
+  const { data: existingCpf, error: cpfError } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("cpf", cpf)
+    .neq("id", user.id)
+    .maybeSingle();
+
+  if (cpfError) {
+    return NextResponse.redirect(new URL("/login?error=registration_profile", url.origin));
+  }
+
+  if (existingCpf) {
+    return NextResponse.redirect(new URL("/login?error=cpf_in_use", url.origin));
+  }
+
+  // Identity fields are protected by guard_profile_sensitive_fields().
+  // The authorized RPC sets the transaction-local authorization flag and
+  // performs the update for the authenticated user.
+  const { error: profileError } = await supabase.rpc("update_my_profile", {
+    p_display_name: name,
+    p_legal_name: name,
+    p_phone: phone,
+    p_birth_date: birthDate,
+    p_cpf: cpf,
+  });
+
+  if (profileError) {
+    console.error("[auth/callback] Falha ao concluir perfil:", profileError);
+    return NextResponse.redirect(new URL("/login?error=registration_profile", url.origin));
   }
 
   if (cep.length === 8 && street && number && neighborhood && city && /^[A-Z]{2}$/.test(uf) && /^\d{7}$/.test(ibgeCode)) {
