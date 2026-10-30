@@ -83,6 +83,7 @@ export default function LoginPage() {
           <label>Senha<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required /></label>
           {error && <p className="formError">{error}</p>}
           <button className="primaryButton" disabled={busy}>{busy ? "Entrando..." : "Entrar"}</button>
+          <p className="authHint"><Link href="/recuperar-senha">Esqueceu sua senha?</Link></p>
           <p className="authHint">Ainda não possui conta? <Link href="/cadastro">Cadastre-se</Link></p>
         </form>
       </section>
