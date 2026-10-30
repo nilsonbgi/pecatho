@@ -28,23 +28,21 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 24
-      - name: Require authenticated E2E test credentials
+      - name: Require existing authenticated E2E fixtures
         env:
-          E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
-          E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
           E2E_CREATOR_PASSWORD: ${{ secrets.E2E_CREATOR_PASSWORD }}
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           missing=0
-          for name in E2E_TEST_EMAIL E2E_TEST_PASSWORD E2E_CREATOR_PASSWORD E2E_ADMIN_PASSWORD SUPABASE_SERVICE_ROLE_KEY; do
+          for name in E2E_CREATOR_PASSWORD E2E_ADMIN_PASSWORD SUPABASE_SERVICE_ROLE_KEY; do
             if [ -z "${!name}" ]; then
               echo "::error::Required GitHub Actions secret is missing: ${name}"
               missing=1
             fi
           done
           if [ "$missing" -ne 0 ]; then
-            echo "Authenticated regression tests must not be silently skipped. Configure the required authenticated E2E credentials in repository settings."
+            echo "Configure the existing creator and administrator E2E credentials and Supabase service role key in repository settings."
             exit 1
           fi
       - name: Install dependencies
@@ -85,8 +83,6 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Run browser regression suite
         env:
-          E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
-          E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
           E2E_CREATOR_EMAIL: social@pecatho.com
           E2E_CREATOR_PASSWORD: ${{ secrets.E2E_CREATOR_PASSWORD }}
           E2E_ADMIN_EMAIL: nilson.umasno@gmail.com
