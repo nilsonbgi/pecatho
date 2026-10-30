@@ -61,7 +61,7 @@ jobs:
             const relevant = vulnerabilities.filter(([, item]) => ["high", "critical"].includes(item.severity));
             if (!relevant.length) console.log("No high/critical package vulnerabilities reported.");
             for (const [name, item] of relevant) {
-              console.log("\\nPACKAGE:", name, "| severity:", item.severity, "| installed range:", item.range, "| direct:", item.isDirect, "| fix:", JSON.stringify(item.fixAvailable));
+              console.log("\nPACKAGE:", name, "| severity:", item.severity, "| installed range:", item.range, "| direct:", item.isDirect, "| fix:", JSON.stringify(item.fixAvailable));
               for (const advisory of item.via || []) {
                 if (typeof advisory === "string") console.log("  dependency:", advisory);
                 else console.log("  advisory:", advisory.title, "| range:", advisory.range, "| url:", advisory.url);
