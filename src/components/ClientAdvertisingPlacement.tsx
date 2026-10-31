@@ -54,7 +54,7 @@ export default function ClientAdvertisingPlacement({ placement }: { placement: "
       const now = Date.now();
       const eligible = (data as CatalogBanner[]).filter((banner) =>
         typeof banner.image_path === "string" &&
-        /^https?:\\/\\//i.test(banner.image_path) &&
+        /^https?:\/\//i.test(banner.image_path) &&
         (!banner.starts_at || new Date(banner.starts_at).getTime() <= now) &&
         (!banner.ends_at || new Date(banner.ends_at).getTime() >= now)
       );
