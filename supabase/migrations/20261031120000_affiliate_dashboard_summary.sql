@@ -16,9 +16,9 @@ begin
   end if;
 
   select jsonb_build_object(
-    'total_referrals', count(*),
-    'registered_referrals', count(*) filter (where r.status = 'registered'),
-    'qualified_referrals', count(*) filter (where r.status = 'qualified'),
+    'total_referrals', count(distinct r.id),
+    'registered_referrals', count(distinct r.id) filter (where r.status = 'registered'),
+    'qualified_referrals', count(distinct r.id) filter (where r.status = 'qualified'),
     'total_commission', coalesce(sum(coalesce(c.commission_amount, 0)), 0),
     'reversed_commission', coalesce(sum(coalesce(c.reversed_amount, 0)), 0),
     'net_commission', coalesce(sum(greatest(coalesce(c.commission_amount, 0) - coalesce(c.reversed_amount, 0), 0)), 0)
