@@ -1,12 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Props = { code: string; siteUrl: string };
 
 export default function ReferralShareCard({ code, siteUrl }: Props) {
   const [copied, setCopied] = useState(false);
-  const link = `${siteUrl.replace(/\/$/, "")}/cadastro?ref=${encodeURIComponent(code)}`;
+  const [currentSiteUrl, setCurrentSiteUrl] = useState(siteUrl.replace(/\/$/, ""));
+
+  useEffect(() => {
+    // Always share the host where the user is currently logged in. This keeps
+    // Vercel test accounts on pecatho.vercel.app instead of sending referrals
+    // to the future production domain before launch.
+    setCurrentSiteUrl(window.location.origin.replace(/\/$/, ""));
+  }, []);
+
+  const link = `${currentSiteUrl}/cadastro?ref=${encodeURIComponent(code)}`;
 
   async function copyLink() {
     try {
