@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import ClientAdvertisingPlacement from "@/components/ClientAdvertisingPlacement";
 import { createClient } from "@/lib/supabase/browser";
 
 type PricingPeriod = { minutes: number; price: number; period: string; starting_from?: boolean };
@@ -183,6 +184,7 @@ function AcompanhantesCatalog() {
       </>}</div>}
       {categories.length > 0 && <div className="categoryChips"><button type="button" className={`categoryChip ${!categoryId ? "active" : ""}`} onClick={() => selectCategory("")}>Todas</button>{categories.map((x) => <button type="button" className={`categoryChip ${categoryId === String(x.id) ? "active" : ""}`} key={x.id} onClick={() => selectCategory(String(x.id))}>{x.name}</button>)}</div>}
     </section>
+    <ClientAdvertisingPlacement placement="catalog" />
     <section className="discoveryResults" id="resultados"><div className="resultsHeader"><div><div className="eyebrow">PERFIS PUBLICADOS</div><h2>{loading ? "Encontrando perfis..." : `${advertisers.length}${advertisers.length < totalCount ? ` de ${totalCount}` : ""} ${totalCount === 1 ? "perfil encontrado" : "perfis encontrados"}`}</h2>{(stateId || cityId) && <div className="resultsMeta">{cityId ? `${cityName.get(Number(cityId)) || ""}, ` : ""}{stateId ? stateName.get(Number(stateId)) || "" : ""}</div>}<select className="discoverySort" aria-label="Ordenar resultados" value={sort} onChange={(e) => setSort(e.target.value)}><option value="recent">Mais recentes</option><option value="price_asc">Menor preço</option><option value="price_desc">Maior preço</option><option value="name">Nome A–Z</option></select></div>{(categoryId || stateId || cityId || query || activeFilterCount) && <button type="button" className="secondaryButton" onClick={clearAll}>Limpar filtros</button>}</div>
       {error && <div className="emptyDiscovery"><h2>Não foi possível carregar</h2><p>{error}</p><button type="button" className="primaryButton" onClick={() => window.location.reload()}>Tentar novamente</button></div>}
       {!loading && !error && advertisers.length === 0 && <div className="emptyDiscovery"><h2>Nenhum perfil encontrado.</h2><p>Ajuste os filtros ou aguarde novos anúncios publicados.</p><Link href="/cadastro" className="primaryButton">Quero anunciar</Link></div>}
